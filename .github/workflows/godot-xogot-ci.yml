@@ -59,13 +59,14 @@ jobs:
             exit 1
           fi
 
-      - name: Parse regression test entrypoint
+      - name: Parse regression entrypoints
         shell: bash
         run: |
           set -euo pipefail
-          timeout 60 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --check-only --log-file logs/parse.log
-          if grep -E "SCRIPT ERROR|^ERROR:" logs/parse.log; then
-            cat logs/parse.log
+          timeout 60 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --check-only --log-file logs/parse-core.log
+          timeout 60 ./godot --headless --path . --script res://tests/experience_systems_test.gd --check-only --log-file logs/parse-experience.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/parse-*.log; then
+            cat logs/parse-*.log
             exit 1
           fi
 
@@ -83,12 +84,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 60 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --log-file logs/tests.log
-          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests.log; then
-            cat logs/tests.log
+          timeout 60 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --log-file logs/tests-core.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-core.log; then
+            cat logs/tests-core.log
             exit 1
           fi
-          grep -F "[CI] PASS" logs/tests.log
+          grep -F "[CI] PASS" logs/tests-core.log
+
+      - name: Run experience regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --script res://tests/experience_systems_test.gd --log-file logs/tests-experience.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-experience.log; then
+            cat logs/tests-experience.log
+            exit 1
+          fi
+          grep -F "[CI-XP] PASS" logs/tests-experience.log
 
       - name: Upload diagnostics
         if: always()
