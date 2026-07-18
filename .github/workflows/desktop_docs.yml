@@ -1,0 +1,24 @@
+name: Desktop Build Artifact
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        uses: firebelley/install-godot@v2
+        with:
+          godot-version: "4.0.0"
+      - name: Run basic sanity check (print Godot version)
+        run: godot --version
+      - name: Create artifacts folder
+        run: mkdir -p artifacts
+      - name: Package docs
+        run: tar -czf artifacts/docs.tar.gz docs || true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitling-docs
+          path: artifacts/docs.tar.gz
