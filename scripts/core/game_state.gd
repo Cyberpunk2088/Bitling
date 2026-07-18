@@ -7,7 +7,7 @@ enum Phase { EGG, BABY, CHILD, TEEN, ADULT, SENIOR, LEGENDARY }
 enum Era { TERMINAL, PIXEL, VECTOR, FLAT, FLUID }
 enum Mood { ECSTATIC, HAPPY, CONTENT, NEUTRAL, TIRED, SAD, DISTRESSED }
 
-const SAVE_SCHEMA_VERSION := 7
+const SAVE_SCHEMA_VERSION := 8
 const MAX_LEVEL := 100
 const XP_PER_LEVEL := 100
 const SAVE_PATH := "user://bitling_save.json"
@@ -47,7 +47,11 @@ var settings: Dictionary = {
 	"high_contrast": false,
 	"reduce_motion": false,
 	"screen_reader": false,
-	"auto_save": true
+	"auto_save": true,
+	"social_discovery_enabled": false,
+	"voice_chat_enabled": false,
+	"video_chat_enabled": false,
+	"share_public_passport": false
 }
 
 var _autosave_elapsed: float = 0.0
@@ -64,6 +68,9 @@ func _ready() -> void:
 		initialize_new_game()
 	_register_daily_activity()
 	_evaluate_evolution()
+	_refresh_identity_and_emotion()
+	if has_node("/root/SocialSessionService"):
+		get_node("/root/SocialSessionService").reset_state()
 
 func _process(delta: float) -> void:
 	play_time_seconds += delta
@@ -92,15 +99,20 @@ func initialize_new_game() -> void:
 	story_flags = {"hatched": false, "tutorial_complete": false}
 	for service_path in [
 		"/root/CompanionBrain",
+		"/root/BitlingIdentity",
+		"/root/EmotionModel",
 		"/root/AdaptiveLearning",
 		"/root/EvolutionService",
 		"/root/VitalityService",
 		"/root/ExplorationService",
-		"/root/DialogueDirector"
+		"/root/DialogueDirector",
+		"/root/LineageService",
+		"/root/SocialSessionService"
 	]:
 		if has_node(service_path):
 			get_node(service_path).reset_state()
 	add_memory("awakening", "A faint signal appeared in the dark.")
+	_refresh_identity_and_emotion()
 	save_game_state()
 	state_changed.emit("new_game", true)
 
@@ -114,6 +126,7 @@ func hatch() -> void:
 	phase_changed.emit(phase)
 	state_changed.emit("hatched", true)
 	_evaluate_evolution()
+	_refresh_identity_and_emotion()
 	save_game_state()
 
 func gain_xp(amount: int, source: String = "unknown") -> void:
@@ -137,6 +150,7 @@ func gain_xp(amount: int, source: String = "unknown") -> void:
 		if old_level != level:
 			event_bus.level_changed.emit(old_level, level)
 	_evaluate_evolution()
+	_refresh_identity_and_emotion()
 
 func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward: int, tags: Array[String] = []) -> Dictionary:
 	if interaction_id.is_empty():
@@ -150,6 +164,8 @@ func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward:
 	gain_xp(xp_reward, interaction_id)
 	if has_node("/root/CompanionBrain"):
 		get_node("/root/CompanionBrain").observe_interaction(interaction_id, 1.0, {"tags": tags})
+	if has_node("/root/EmotionModel"):
+		get_node("/root/EmotionModel").apply_event(_emotion_event_for_interaction(interaction_id), 1.0, {"tags": tags})
 	if has_node("/root/QuestService"):
 		var event_name := str(effects.get("quest_event", ""))
 		if not event_name.is_empty():
@@ -157,6 +173,7 @@ func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward:
 	if has_node("/root/EventBus"):
 		get_node("/root/EventBus").interaction_completed.emit(interaction_id, tags)
 	_evaluate_evolution()
+	_refresh_identity_and_emotion()
 	var summary := get_state_summary()
 	state_changed.emit("interaction", {"id": interaction_id, "state": summary})
 	return summary
@@ -188,6 +205,7 @@ func update_stats(
 	_apply_need_delta("curiosity", curiosity_delta)
 	_apply_need_delta("health", health_delta)
 	_update_mood()
+	_refresh_identity_and_emotion()
 	state_changed.emit("stats", get_state_summary())
 
 func add_memory(type: String, text: String) -> void:
@@ -209,6 +227,7 @@ func add_memory(type: String, text: String) -> void:
 		get_node("/root/EventBus").memory_created.emit(memory.duplicate(true))
 
 func save_game_state() -> bool:
+	_refresh_identity_and_emotion()
 	var json := JSON.stringify(get_save_data())
 	var temporary := FileAccess.open(TEMP_SAVE_PATH, FileAccess.WRITE)
 	if temporary == null:
@@ -262,11 +281,14 @@ func get_save_data() -> Dictionary:
 		"streak": _export_service("/root/StreakService"),
 		"quests": _export_service("/root/QuestService"),
 		"companion": _export_service("/root/CompanionBrain"),
+		"identity": _export_service("/root/BitlingIdentity"),
+		"emotion": _export_service("/root/EmotionModel"),
 		"learning": _export_service("/root/AdaptiveLearning"),
 		"evolution": _export_service("/root/EvolutionService"),
 		"vitality": _export_service("/root/VitalityService"),
 		"exploration": _export_service("/root/ExplorationService"),
 		"dialogue": _export_service("/root/DialogueDirector"),
+		"lineage": _export_service("/root/LineageService"),
 		"last_saved_at": Time.get_datetime_string_from_system()
 	}
 
@@ -294,14 +316,20 @@ func apply_save_data(data: Dictionary) -> void:
 	_import_service("/root/StreakService", data.get("streak", {}))
 	_import_service("/root/QuestService", data.get("quests", {}))
 	_import_service("/root/CompanionBrain", data.get("companion", {}))
+	_import_service("/root/BitlingIdentity", data.get("identity", {}))
+	_import_service("/root/EmotionModel", data.get("emotion", {}))
 	_import_service("/root/AdaptiveLearning", data.get("learning", {}))
 	_import_service("/root/EvolutionService", data.get("evolution", {}))
 	_import_service("/root/ExplorationService", data.get("exploration", {}))
 	_import_service("/root/DialogueDirector", data.get("dialogue", {}))
 	_import_service("/root/VitalityService", data.get("vitality", {}))
+	_import_service("/root/LineageService", data.get("lineage", {}))
+	if has_node("/root/SocialSessionService"):
+		get_node("/root/SocialSessionService").reset_state()
 	_update_progression()
 	_update_mood()
 	_evaluate_evolution()
+	_refresh_identity_and_emotion()
 	state_changed.emit("loaded", true)
 
 func has_save_file() -> bool:
@@ -311,6 +339,12 @@ func get_state_summary() -> Dictionary:
 	var form_id := "signal"
 	if has_node("/root/EvolutionService"):
 		form_id = str(get_node("/root/EvolutionService").current_form)
+	var passport: Dictionary = {}
+	if has_node("/root/BitlingIdentity"):
+		passport = get_node("/root/BitlingIdentity").get_public_passport()
+	var emotion_snapshot: Dictionary = {}
+	if has_node("/root/EmotionModel"):
+		emotion_snapshot = get_node("/root/EmotionModel").get_snapshot()
 	return {
 		"level": level,
 		"xp": xp,
@@ -318,6 +352,9 @@ func get_state_summary() -> Dictionary:
 		"era": Era.keys()[era],
 		"mood": Mood.keys()[mood],
 		"form": form_id,
+		"bitling_id": passport.get("bitling_id", ""),
+		"cognitive_index": passport.get("cognitive_index", 40),
+		"dominant_emotion": emotion_snapshot.get("dominant_emotion", "calm"),
 		"hunger": hunger,
 		"energy": energy,
 		"happiness": happiness,
@@ -402,6 +439,40 @@ func _update_mood() -> void:
 func _evaluate_evolution() -> void:
 	if has_node("/root/EvolutionService"):
 		get_node("/root/EvolutionService").evaluate_runtime()
+
+func _refresh_identity_and_emotion() -> void:
+	var form_id := "signal"
+	if has_node("/root/EvolutionService"):
+		form_id = str(get_node("/root/EvolutionService").current_form)
+	var learning_rating := 20.0
+	if has_node("/root/AdaptiveLearning"):
+		learning_rating = float(get_node("/root/AdaptiveLearning").get_average_rating())
+	if has_node("/root/BitlingIdentity"):
+		get_node("/root/BitlingIdentity").refresh_development_metrics(
+			level,
+			str(Phase.keys()[phase]),
+			form_id,
+			learning_rating,
+			curiosity
+		)
+	if has_node("/root/EmotionModel"):
+		var relationship := 10.0
+		var trust := 10.0
+		if has_node("/root/CompanionBrain"):
+			relationship = float(get_node("/root/CompanionBrain").relationship_score)
+			trust = float(get_node("/root/CompanionBrain").trust)
+		get_node("/root/EmotionModel").update_from_game_state(str(Mood.keys()[mood]), relationship, trust)
+
+func _emotion_event_for_interaction(interaction_id: String) -> String:
+	if interaction_id.begins_with("care"):
+		return "care"
+	if interaction_id.begins_with("play") or interaction_id.begins_with("exploration"):
+		return "play"
+	if interaction_id.contains("learn"):
+		return "learn"
+	if interaction_id.begins_with("rest"):
+		return "rest"
+	return interaction_id
 
 func _export_service(path: String) -> Dictionary:
 	if not has_node(path):
