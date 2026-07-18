@@ -24,7 +24,7 @@ var _resolved: bool = false
 func _ready() -> void:
 	layer = 20
 	_build_ui()
-	visible = false
+	backdrop.visible = false
 	var event_bus := get_node_or_null("/root/EventBus")
 	if event_bus != null:
 		event_bus.interaction_completed.connect(_on_interaction_completed)
@@ -34,22 +34,18 @@ func _build_ui() -> void:
 	backdrop.color = COLOR_BACKDROP
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
-
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.add_child(center)
-
 	panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(320, 420)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	center.add_child(panel)
-
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 16)
 	panel.add_child(column)
-
 	var header := HBoxContainer.new()
 	column.add_child(header)
 	var title := Label.new()
@@ -66,12 +62,10 @@ func _build_ui() -> void:
 	close_button.custom_minimum_size = Vector2(48, 48)
 	close_button.pressed.connect(_close_overlay)
 	header.add_child(close_button)
-
 	progress_label = Label.new()
 	progress_label.add_theme_color_override("font_color", COLOR_MUTED)
 	progress_label.add_theme_font_size_override("font_size", 14)
 	column.add_child(progress_label)
-
 	question_label = Label.new()
 	question_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	question_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -79,7 +73,6 @@ func _build_ui() -> void:
 	question_label.add_theme_color_override("font_color", COLOR_TEXT)
 	question_label.add_theme_font_size_override("font_size", 20)
 	column.add_child(question_label)
-
 	var answers := VBoxContainer.new()
 	answers.add_theme_constant_override("separation", 10)
 	column.add_child(answers)
@@ -93,7 +86,6 @@ func _build_ui() -> void:
 		button.pressed.connect(_on_answer_pressed.bind(index))
 		answers.add_child(button)
 		answer_buttons.append(button)
-
 	feedback_label = Label.new()
 	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -102,7 +94,7 @@ func _build_ui() -> void:
 	column.add_child(feedback_label)
 
 func open_challenge() -> void:
-	if visible:
+	if backdrop.visible:
 		return
 	var learning := get_node_or_null("/root/AdaptiveLearning")
 	if learning == null:
@@ -121,7 +113,7 @@ func open_challenge() -> void:
 	for index in range(answer_buttons.size()):
 		answer_buttons[index].text = str(answers[index])
 		answer_buttons[index].disabled = false
-	visible = true
+	backdrop.visible = true
 	answer_buttons[0].grab_focus()
 
 func _on_answer_pressed(index: int) -> void:
@@ -144,9 +136,7 @@ func _on_answer_pressed(index: int) -> void:
 		feedback_label.text = "Richtig. %s  +%d XP" % [explanation, int(result.get("xp_reward", 0))]
 	else:
 		feedback_label.add_theme_color_override("font_color", COLOR_ACCENT)
-		feedback_label.text = "Fast. Die passende Antwort ist %s. %s" % [
-			str(result.get("correct_answer", "")), explanation
-		]
+		feedback_label.text = "Fast. Die passende Antwort ist %s. %s" % [str(result.get("correct_answer", "")), explanation]
 	_apply_result(result)
 	await get_tree().create_timer(1.6).timeout
 	_close_overlay()
@@ -177,7 +167,7 @@ func _on_interaction_completed(interaction_id: String, _tags: Array[String]) -> 
 		call_deferred("open_challenge")
 
 func _close_overlay() -> void:
-	visible = false
+	backdrop.visible = false
 	_current_challenge.clear()
 	_resolved = false
 
