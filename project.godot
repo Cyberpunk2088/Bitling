@@ -13,6 +13,8 @@ QuestService="*res://scripts/core/quest_service.gd"
 PlatformService="*res://scripts/core/platform_service.gd"
 CompanionBrain="*res://scripts/core/companion_brain.gd"
 WellbeingGuard="*res://scripts/core/wellbeing_guard.gd"
+AdaptiveLearning="*res://scripts/core/adaptive_learning.gd"
+EvolutionService="*res://scripts/core/evolution_service.gd"
 GameState="*res://scripts/core/game_state.gd"
 
 [display]
