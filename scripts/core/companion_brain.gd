@@ -50,7 +50,6 @@ func observe_interaction(action: String, strength: float = 1.0, context: Diction
 	last_interaction_timestamp = int(Time.get_unix_time_from_system())
 	interaction_counts[action] = int(interaction_counts.get(action, 0)) + 1
 	familiarity = clampf(familiarity + amount * 0.45, 0.0, 100.0)
-
 	match action:
 		"care":
 			relationship_score += 1.8 * amount
@@ -70,13 +69,18 @@ func observe_interaction(action: String, strength: float = 1.0, context: Diction
 			_shift_trait("independence", 0.25 * amount)
 		_:
 			relationship_score += 0.5 * amount
-
 	relationship_score = clampf(relationship_score, 0.0, 100.0)
 	trust = clampf(trust, 0.0, 100.0)
 	_remember_recent(action, context)
 	if not is_equal_approx(old_relationship, relationship_score):
 		relationship_changed.emit(old_relationship, relationship_score)
 	return get_snapshot()
+
+func nudge_trait(trait_name: String, delta: float) -> bool:
+	if not personality.has(trait_name) or is_zero_approx(delta):
+		return false
+	_shift_trait(trait_name, clampf(delta, -3.0, 3.0))
+	return true
 
 func choose_idle_intention() -> String:
 	var choices: Array[String] = ["observe", "play", "discover", "organize", "create", "rest"]
