@@ -1,13 +1,13 @@
 extends Node
 
-## Persistent source of truth for BITLING OMNI.
-## UI and gameplay systems communicate through methods and EventBus signals.
+## Authoritative persistent state for BITLING OMNI.
+## Domain services expose export_state/import_state contracts; UI never owns saves.
 
 enum Phase { EGG, BABY, CHILD, TEEN, ADULT, SENIOR, LEGENDARY }
 enum Era { TERMINAL, PIXEL, VECTOR, FLAT, FLUID }
 enum Mood { ECSTATIC, HAPPY, CONTENT, NEUTRAL, TIRED, SAD, DISTRESSED }
 
-const SAVE_SCHEMA_VERSION := 8
+const SAVE_SCHEMA_VERSION := 9
 const MAX_LEVEL := 100
 const XP_PER_LEVEL := 100
 const SAVE_PATH := "user://bitling_save.json"
@@ -37,7 +37,7 @@ var story_flags: Dictionary = {}
 var settings: Dictionary = {
 	"music_volume": 0.7,
 	"sfx_volume": 0.8,
-	"notifications_enabled": true,
+	"notifications_enabled": false,
 	"quiet_hours_start": 22,
 	"quiet_hours_end": 8,
 	"haptics_enabled": true,
@@ -73,8 +73,8 @@ func _ready() -> void:
 		get_node("/root/SocialSessionService").reset_state()
 
 func _process(delta: float) -> void:
-	play_time_seconds += delta
-	_autosave_elapsed += delta
+	play_time_seconds += maxf(delta, 0.0)
+	_autosave_elapsed += maxf(delta, 0.0)
 	if _autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 		_autosave_elapsed = 0.0
 		if bool(settings.get("auto_save", true)):
@@ -97,6 +97,7 @@ func initialize_new_game() -> void:
 	skill_points = 0
 	memories.clear()
 	story_flags = {"hatched": false, "tutorial_complete": false}
+
 	for service_path in [
 		"/root/CompanionBrain",
 		"/root/BitlingIdentity",
@@ -110,14 +111,19 @@ func initialize_new_game() -> void:
 		"/root/SocialSessionService"
 	]:
 		if has_node(service_path):
-			get_node(service_path).reset_state()
+			var service := get_node(service_path)
+			if service.has_method("reset_state"):
+				service.reset_state()
+
+	# DevelopmentProfile listens for this signal and resets against the newly
+	# created Bitling identity before the authoritative save is written.
+	state_changed.emit("new_game", true)
 	add_memory("awakening", "A faint signal appeared in the dark.")
 	_refresh_identity_and_emotion()
 	save_game_state()
-	state_changed.emit("new_game", true)
 
 func hatch() -> void:
-	if story_flags.get("hatched", false):
+	if bool(story_flags.get("hatched", false)):
 		return
 	story_flags["hatched"] = true
 	level = maxi(level, 10)
@@ -221,29 +227,34 @@ func add_memory(type: String, text: String) -> void:
 		"level": level
 	}
 	memories.append(memory)
-	if memories.size() > 50:
+	while memories.size() > 50:
 		memories.pop_front()
 	if has_node("/root/EventBus"):
 		get_node("/root/EventBus").memory_created.emit(memory.duplicate(true))
 
 func save_game_state() -> bool:
 	_refresh_identity_and_emotion()
-	var json := JSON.stringify(get_save_data())
 	var temporary := FileAccess.open(TEMP_SAVE_PATH, FileAccess.WRITE)
 	if temporary == null:
 		_push_save_failure("Could not open temporary save file")
 		return false
-	temporary.store_string(json)
+	temporary.store_string(JSON.stringify(get_save_data()))
 	temporary.close()
-	if FileAccess.file_exists(SAVE_PATH):
+
+	# Preserve only a known-good primary as backup. A corrupt primary must never
+	# replace the last recoverable snapshot.
+	if FileAccess.file_exists(SAVE_PATH) and not _read_save(SAVE_PATH).is_empty():
 		_copy_file(SAVE_PATH, BACKUP_SAVE_PATH)
 	if FileAccess.file_exists(SAVE_PATH):
 		var remove_error := DirAccess.remove_absolute(SAVE_PATH)
 		if remove_error != OK:
 			_push_save_failure("Could not replace existing save: %s" % remove_error)
 			return false
+
 	var rename_error := DirAccess.rename_absolute(TEMP_SAVE_PATH, SAVE_PATH)
 	if rename_error != OK:
+		if FileAccess.file_exists(BACKUP_SAVE_PATH):
+			_copy_file(BACKUP_SAVE_PATH, SAVE_PATH)
 		_push_save_failure("Atomic save replacement failed: %s" % rename_error)
 		return false
 	if has_node("/root/EventBus"):
@@ -251,11 +262,14 @@ func save_game_state() -> bool:
 	return true
 
 func load_game_state() -> bool:
-	for path in [SAVE_PATH, LEGACY_SAVE_PATH, BACKUP_SAVE_PATH]:
+	for path in [SAVE_PATH, BACKUP_SAVE_PATH, LEGACY_SAVE_PATH]:
 		var data := _read_save(path)
-		if not data.is_empty():
-			apply_save_data(data)
-			return true
+		if data.is_empty():
+			continue
+		apply_save_data(data)
+		if path == LEGACY_SAVE_PATH:
+			save_game_state()
+		return true
 	return false
 
 func get_save_data() -> Dictionary:
@@ -282,6 +296,7 @@ func get_save_data() -> Dictionary:
 		"quests": _export_service("/root/QuestService"),
 		"companion": _export_service("/root/CompanionBrain"),
 		"identity": _export_service("/root/BitlingIdentity"),
+		"development": _export_service("/root/DevelopmentProfile"),
 		"emotion": _export_service("/root/EmotionModel"),
 		"learning": _export_service("/root/AdaptiveLearning"),
 		"evolution": _export_service("/root/EvolutionService"),
@@ -307,16 +322,22 @@ func apply_save_data(data: Dictionary) -> void:
 	curiosity = clampf(float(data.get("curiosity", 50.0)), 0.0, 100.0)
 	health = clampf(float(data.get("health", 100.0)), 0.0, 100.0)
 	skill_points = maxi(int(data.get("skill_points", 0)), 0)
+
 	memories.clear()
 	for item in data.get("memories", []):
 		if item is Dictionary:
 			memories.append(item.duplicate(true))
+	while memories.size() > 50:
+		memories.pop_front()
+
 	story_flags = data.get("story_flags", {}).duplicate(true)
 	settings.merge(data.get("settings", {}), true)
 	_import_service("/root/StreakService", data.get("streak", {}))
 	_import_service("/root/QuestService", data.get("quests", {}))
 	_import_service("/root/CompanionBrain", data.get("companion", {}))
 	_import_service("/root/BitlingIdentity", data.get("identity", {}))
+	if data.has("development"):
+		_import_service("/root/DevelopmentProfile", data.get("development", {}))
 	_import_service("/root/EmotionModel", data.get("emotion", {}))
 	_import_service("/root/AdaptiveLearning", data.get("learning", {}))
 	_import_service("/root/EvolutionService", data.get("evolution", {}))
@@ -333,7 +354,7 @@ func apply_save_data(data: Dictionary) -> void:
 	state_changed.emit("loaded", true)
 
 func has_save_file() -> bool:
-	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(LEGACY_SAVE_PATH)
+	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(BACKUP_SAVE_PATH) or FileAccess.file_exists(LEGACY_SAVE_PATH)
 
 func get_state_summary() -> Dictionary:
 	var form_id := "signal"
@@ -345,6 +366,9 @@ func get_state_summary() -> Dictionary:
 	var emotion_snapshot: Dictionary = {}
 	if has_node("/root/EmotionModel"):
 		emotion_snapshot = get_node("/root/EmotionModel").get_snapshot()
+	var individual_iq := int(passport.get("intelligence_quotient", 100))
+	if has_node("/root/DevelopmentProfile"):
+		individual_iq = int(get_node("/root/DevelopmentProfile").get_intelligence_quotient())
 	return {
 		"level": level,
 		"xp": xp,
@@ -353,7 +377,7 @@ func get_state_summary() -> Dictionary:
 		"mood": Mood.keys()[mood],
 		"form": form_id,
 		"bitling_id": passport.get("bitling_id", ""),
-		"cognitive_index": passport.get("cognitive_index", 40),
+		"intelligence_quotient": individual_iq,
 		"dominant_emotion": emotion_snapshot.get("dominant_emotion", "calm"),
 		"hunger": hunger,
 		"energy": energy,
@@ -492,19 +516,40 @@ func _read_save(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var text := file.get_as_text()
 	file.close()
-	return parsed if parsed is Dictionary else {}
+	var parsed: Variant = JSON.parse_string(text)
+	if parsed is Dictionary and _is_supported_save(parsed):
+		return parsed
+	if path != LEGACY_SAVE_PATH:
+		return {}
+	var legacy := FileAccess.open(path, FileAccess.READ)
+	if legacy == null:
+		return {}
+	var legacy_value: Variant = legacy.get_var(true)
+	legacy.close()
+	return legacy_value if legacy_value is Dictionary and _is_supported_save(legacy_value) else {}
 
-func _copy_file(source_path: String, destination_path: String) -> void:
+func _is_supported_save(data: Dictionary) -> bool:
+	if data.is_empty():
+		return false
+	var schema := int(data.get("schema_version", 0))
+	if schema > SAVE_SCHEMA_VERSION:
+		return false
+	return data.has("level") or data.has("story_flags") or schema > 0
+
+func _copy_file(source_path: String, destination_path: String) -> bool:
 	var source := FileAccess.open(source_path, FileAccess.READ)
 	if source == null:
-		return
+		return false
 	var destination := FileAccess.open(destination_path, FileAccess.WRITE)
-	if destination != null:
-		destination.store_buffer(source.get_buffer(source.get_length()))
-		destination.close()
+	if destination == null:
+		source.close()
+		return false
+	destination.store_buffer(source.get_buffer(source.get_length()))
+	destination.close()
 	source.close()
+	return true
 
 func _push_save_failure(reason: String) -> void:
 	push_error("[GameState] %s" % reason)
