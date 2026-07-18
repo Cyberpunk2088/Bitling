@@ -122,6 +122,14 @@ func hatch_egg(egg_id: String, display_name: String = "") -> Dictionary:
 	var hatchling_name := display_name.strip_edges().left(24)
 	if hatchling_name.is_empty():
 		hatchling_name = "Nova"
+	var genome: Dictionary = egg.get("genome", {}).duplicate(true)
+	var inherited_traits := (
+		float(genome.get("curiosity", 50.0))
+		+ float(genome.get("creativity", 50.0))
+		+ float(genome.get("empathy", 50.0))
+	) / 15.0
+	var identity_variation := int(abs(hash(str(egg.get("egg_id", "egg"))))) % 21 - 10
+	var inherited_iq := clampi(82 + int(round(inherited_traits)) + identity_variation, 70, 160)
 	var hatchling_profile := {
 		"bitling_id": _new_hatchling_id(str(egg.get("egg_id", ""))),
 		"display_name": hatchling_name,
@@ -129,10 +137,10 @@ func hatch_egg(egg_id: String, display_name: String = "") -> Dictionary:
 		"generation": int(egg.get("generation", 2)),
 		"phase": "BABY",
 		"form_id": "spark",
-		"genome": egg.get("genome", {}).duplicate(true),
+		"genome": genome,
 		"height_cm": 14.0,
 		"weight_g": 320,
-		"cognitive_index": 40
+		"intelligence_quotient": inherited_iq
 	}
 	egg["hatched"] = true
 	egg["hatched_at"] = int(hatchling_profile.get("born_at", 0))
