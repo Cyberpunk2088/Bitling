@@ -16,6 +16,13 @@ const INTENT_KEYS := {
 	"debate": "intent.debate", "monologue": "intent.monologue",
 	"teach": "intent.teach", "goodbye": "intent.goodbye"
 }
+const PROTOCOL_INTENTS := {
+	"greet": "greet", "invite_play": "play_invite", "share_discovery": "share_discovery",
+	"comfort": "comfort", "celebrate": "celebrate", "ask_question": "ask_question",
+	"explain_pattern": "teach_pattern", "tell_joke": "tell_joke",
+	"debate": "ask_question", "monologue": "share_discovery",
+	"teach": "teach_pattern", "goodbye": "say_goodbye"
+}
 
 var current_locale: String = "de"
 var translations: Dictionary = {}
@@ -67,12 +74,11 @@ func render_bitling_speech(intent: String, payload: Dictionary = {}, locale: Str
 	var utterance: String = "Bii-luma!"
 	var language: Node = get_node_or_null("/root/BitlingLanguage")
 	if language != null and language.has_method("create_packet"):
-		var identity_id: String = "bitling"
-		var identity: Node = get_node_or_null("/root/BitlingIdentity")
-		if identity != null:
-			identity_id = str(identity.get_public_passport().get("bitling_id", "bitling"))
-		var packet: Dictionary = language.create_packet(identity_id, intent, {"primary": emotion_name}, payload)
-		utterance = str(packet.get("utterance", utterance))
+		var protocol_intent: String = str(PROTOCOL_INTENTS.get(intent, "greet"))
+		var emotion: Dictionary = {"dominant_emotion": emotion_name, "primary": emotion_name}
+		var packet: Dictionary = language.create_packet(protocol_intent, payload, emotion)
+		if not packet.is_empty() and language.has_method("render_utterance"):
+			utterance = str(language.render_utterance(packet))
 	var subtitle: String = translate_intent(intent, target_locale, payload)
 	var profile: Node = get_node_or_null("/root/DevelopmentProfile")
 	var human_speech: String = ""
@@ -86,7 +92,8 @@ func render_bitling_speech(intent: String, payload: Dictionary = {}, locale: Str
 	}
 
 func decode_peer_packet(packet: Dictionary, locale: String = "") -> Dictionary:
-	var intent: String = str(packet.get("intent", "unknown"))
+	var protocol_intent: String = str(packet.get("intent", "unknown"))
+	var intent: String = _display_intent_for_protocol(protocol_intent)
 	var payload: Dictionary = packet.get("payload", {})
 	return {
 		"speaker_id": str(packet.get("speaker_id", "")), "intent": intent,
@@ -118,6 +125,12 @@ func get_language_capabilities() -> Dictionary:
 		"bitling_language_teaching": true, "human_speech": legendary,
 		"peer_translation": legendary
 	}
+
+func _display_intent_for_protocol(protocol_intent: String) -> String:
+	for display_intent in PROTOCOL_INTENTS.keys():
+		if str(PROTOCOL_INTENTS[display_intent]) == protocol_intent:
+			return str(display_intent)
+	return "unknown"
 
 func _lookup(locale: String, key: String) -> String:
 	if not translations.has(locale):
