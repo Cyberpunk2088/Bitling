@@ -7,7 +7,7 @@ enum Phase { EGG, BABY, CHILD, TEEN, ADULT, SENIOR, LEGENDARY }
 enum Era { TERMINAL, PIXEL, VECTOR, FLAT, FLUID }
 enum Mood { ECSTATIC, HAPPY, CONTENT, NEUTRAL, TIRED, SAD, DISTRESSED }
 
-const SAVE_SCHEMA_VERSION := 6
+const SAVE_SCHEMA_VERSION := 7
 const MAX_LEVEL := 100
 const XP_PER_LEVEL := 100
 const SAVE_PATH := "user://bitling_save.json"
@@ -95,7 +95,8 @@ func initialize_new_game() -> void:
 		"/root/AdaptiveLearning",
 		"/root/EvolutionService",
 		"/root/VitalityService",
-		"/root/ExplorationService"
+		"/root/ExplorationService",
+		"/root/DialogueDirector"
 	]:
 		if has_node(service_path):
 			get_node(service_path).reset_state()
@@ -265,6 +266,7 @@ func get_save_data() -> Dictionary:
 		"evolution": _export_service("/root/EvolutionService"),
 		"vitality": _export_service("/root/VitalityService"),
 		"exploration": _export_service("/root/ExplorationService"),
+		"dialogue": _export_service("/root/DialogueDirector"),
 		"last_saved_at": Time.get_datetime_string_from_system()
 	}
 
@@ -295,6 +297,7 @@ func apply_save_data(data: Dictionary) -> void:
 	_import_service("/root/AdaptiveLearning", data.get("learning", {}))
 	_import_service("/root/EvolutionService", data.get("evolution", {}))
 	_import_service("/root/ExplorationService", data.get("exploration", {}))
+	_import_service("/root/DialogueDirector", data.get("dialogue", {}))
 	_import_service("/root/VitalityService", data.get("vitality", {}))
 	_update_progression()
 	_update_mood()
