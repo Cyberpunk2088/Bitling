@@ -33,7 +33,7 @@ XOGOT_FORBIDDEN_PATTERNS = {
 }
 
 ALLOWED_COGNITIVE_INDEX_FILES = {
-    Path("scripts/social/bitling_identity.gd"),  # schema migration only
+    Path("scripts/social/bitling_identity.gd"),
 }
 
 TEXT_SUFFIXES = {".gd", ".tscn", ".tres", ".cfg", ".md", ".py", ".json", ".yml", ".yaml", ".po", ".csv"}
@@ -143,7 +143,7 @@ def audit_export(findings: list[Finding]) -> dict[str, object]:
     if missing_names:
         add(findings, "EXPORT_PRESET_REQUIRED_MISSING", "blocker", f"Missing public platform presets: {', '.join(missing_names)}", EXPORT_PRESETS)
 
-    expected_platforms = {"Windows Desktop", "iOS", "Android", "Web", "Linux/BSD", "macOS"}
+    expected_platforms = {"Windows Desktop", "iOS", "Android", "Web", "Linux/X11", "macOS"}
     present_platforms = set(re.findall(r'^platform="([^"]+)"', text, re.MULTILINE))
     missing_platforms = sorted(expected_platforms - present_platforms)
     if missing_platforms:
@@ -188,7 +188,6 @@ def audit_content(findings: list[Finding]) -> dict[str, int]:
         rel = path.relative_to(ROOT)
         runtime_source = is_runtime_source(path)
 
-        # Secrets are scanned everywhere, including tests and tooling.
         for label, pattern in SECRET_PATTERNS.items():
             if pattern.search(text):
                 add(findings, "SECRET_DETECTED", "error", f"Possible {label} committed to the repository", path)
