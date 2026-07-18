@@ -162,4 +162,4 @@ func _integrity_token(packet: Dictionary) -> int:
 	])
 
 func _nonce() -> int:
-	return int(Time.get_ticks_usec() ^ Time.get_unix_time_from_system() ^ get_instance_id())
+	return int(Time.get_ticks_usec()) ^ int(Time.get_unix_time_from_system()) ^ int(get_instance_id())
