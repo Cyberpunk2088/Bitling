@@ -7,7 +7,7 @@ enum Phase { EGG, BABY, CHILD, TEEN, ADULT, SENIOR, LEGENDARY }
 enum Era { TERMINAL, PIXEL, VECTOR, FLAT, FLUID }
 enum Mood { ECSTATIC, HAPPY, CONTENT, NEUTRAL, TIRED, SAD, DISTRESSED }
 
-const SAVE_SCHEMA_VERSION := 5
+const SAVE_SCHEMA_VERSION := 6
 const MAX_LEVEL := 100
 const XP_PER_LEVEL := 100
 const SAVE_PATH := "user://bitling_save.json"
@@ -90,12 +90,15 @@ func initialize_new_game() -> void:
 	skill_points = 0
 	memories.clear()
 	story_flags = {"hatched": false, "tutorial_complete": false}
-	if has_node("/root/CompanionBrain"):
-		get_node("/root/CompanionBrain").reset_state()
-	if has_node("/root/AdaptiveLearning"):
-		get_node("/root/AdaptiveLearning").reset_state()
-	if has_node("/root/EvolutionService"):
-		get_node("/root/EvolutionService").reset_state()
+	for service_path in [
+		"/root/CompanionBrain",
+		"/root/AdaptiveLearning",
+		"/root/EvolutionService",
+		"/root/VitalityService",
+		"/root/ExplorationService"
+	]:
+		if has_node(service_path):
+			get_node(service_path).reset_state()
 	add_memory("awakening", "A faint signal appeared in the dark.")
 	save_game_state()
 	state_changed.emit("new_game", true)
@@ -162,14 +165,14 @@ func apply_learning_result(result: Dictionary) -> Dictionary:
 		return get_state_summary()
 	var success := bool(result.get("success", false))
 	var reward := maxi(int(result.get("xp_reward", 0)), 0)
-	var tags: Array[String] = ["learn", "growth"]
+	var tags: Array[String] = ["learn", "growth", "challenge_result"]
 	var effects := {
 		"energy": -4.0,
 		"happiness": 5.0 if success else 2.0,
 		"curiosity": 12.0 if success else 5.0,
 		"quest_event": "discovery_completed"
 	}
-	return perform_interaction("learn", effects, reward, tags)
+	return perform_interaction("learning_result", effects, reward, tags)
 
 func update_stats(
 	hunger_delta: float = 0.0,
@@ -255,11 +258,13 @@ func get_save_data() -> Dictionary:
 		"memories": memories,
 		"story_flags": story_flags,
 		"settings": settings,
-		"streak": get_node("/root/StreakService").export_state() if has_node("/root/StreakService") else {},
-		"quests": get_node("/root/QuestService").export_state() if has_node("/root/QuestService") else {},
-		"companion": get_node("/root/CompanionBrain").export_state() if has_node("/root/CompanionBrain") else {},
-		"learning": get_node("/root/AdaptiveLearning").export_state() if has_node("/root/AdaptiveLearning") else {},
-		"evolution": get_node("/root/EvolutionService").export_state() if has_node("/root/EvolutionService") else {},
+		"streak": _export_service("/root/StreakService"),
+		"quests": _export_service("/root/QuestService"),
+		"companion": _export_service("/root/CompanionBrain"),
+		"learning": _export_service("/root/AdaptiveLearning"),
+		"evolution": _export_service("/root/EvolutionService"),
+		"vitality": _export_service("/root/VitalityService"),
+		"exploration": _export_service("/root/ExplorationService"),
 		"last_saved_at": Time.get_datetime_string_from_system()
 	}
 
@@ -284,16 +289,13 @@ func apply_save_data(data: Dictionary) -> void:
 			memories.append(item.duplicate(true))
 	story_flags = data.get("story_flags", {}).duplicate(true)
 	settings.merge(data.get("settings", {}), true)
-	if has_node("/root/StreakService"):
-		get_node("/root/StreakService").import_state(data.get("streak", {}))
-	if has_node("/root/QuestService"):
-		get_node("/root/QuestService").import_state(data.get("quests", {}))
-	if has_node("/root/CompanionBrain"):
-		get_node("/root/CompanionBrain").import_state(data.get("companion", {}))
-	if has_node("/root/AdaptiveLearning"):
-		get_node("/root/AdaptiveLearning").import_state(data.get("learning", {}))
-	if has_node("/root/EvolutionService"):
-		get_node("/root/EvolutionService").import_state(data.get("evolution", {}))
+	_import_service("/root/StreakService", data.get("streak", {}))
+	_import_service("/root/QuestService", data.get("quests", {}))
+	_import_service("/root/CompanionBrain", data.get("companion", {}))
+	_import_service("/root/AdaptiveLearning", data.get("learning", {}))
+	_import_service("/root/EvolutionService", data.get("evolution", {}))
+	_import_service("/root/ExplorationService", data.get("exploration", {}))
+	_import_service("/root/VitalityService", data.get("vitality", {}))
 	_update_progression()
 	_update_mood()
 	_evaluate_evolution()
@@ -397,6 +399,18 @@ func _update_mood() -> void:
 func _evaluate_evolution() -> void:
 	if has_node("/root/EvolutionService"):
 		get_node("/root/EvolutionService").evaluate_runtime()
+
+func _export_service(path: String) -> Dictionary:
+	if not has_node(path):
+		return {}
+	var service := get_node(path)
+	return service.export_state() if service.has_method("export_state") else {}
+
+func _import_service(path: String, data: Variant) -> void:
+	if has_node(path) and data is Dictionary:
+		var service := get_node(path)
+		if service.has_method("import_state"):
+			service.import_state(data)
 
 func _read_save(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
