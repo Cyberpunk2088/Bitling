@@ -1,8 +1,7 @@
 extends Node
 
 ## Original BITLING evolution paths.
-## Forms are unlocked by a combination of progression, personality, relationship
-## and demonstrated learning rather than level alone.
+## Forms depend on progression, personality, relationship and demonstrated learning.
 
 signal form_available(form_id: String)
 signal evolved(old_form: String, new_form: String)
@@ -77,7 +76,8 @@ var last_available_forms: Array[String] = []
 
 func evaluate_context(context: Dictionary) -> Array[String]:
 	var available: Array[String] = []
-	for form_id in FORMS.keys():
+	for value in FORMS.keys():
+		var form_id := str(value)
 		if form_id == current_form:
 			continue
 		var requirements: Dictionary = FORMS[form_id]
@@ -118,7 +118,8 @@ func select_evolution(form_id: String) -> bool:
 	return true
 
 func get_current_form() -> Dictionary:
-	var data: Dictionary = FORMS.get(current_form, FORMS.signal).duplicate(true)
+	var fallback: Dictionary = FORMS["signal"]
+	var data: Dictionary = FORMS.get(current_form, fallback).duplicate(true)
 	data["id"] = current_form
 	return data
 
@@ -175,4 +176,8 @@ func _meets_requirements(requirements: Dictionary, context: Dictionary) -> bool:
 	return true
 
 func _sort_forms_by_level(a: String, b: String) -> bool:
-	return int(FORMS[a].get("level", 1)) < int(FORMS[b].get("level", 1))
+	var level_a := int(FORMS[a].get("level", 1))
+	var level_b := int(FORMS[b].get("level", 1))
+	if level_a == level_b:
+		return a < b
+	return level_a < level_b
