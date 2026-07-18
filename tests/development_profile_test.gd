@@ -58,8 +58,9 @@ func _test_upbringing_and_autonomy() -> void:
 	var trained := float(profile.get_autonomy_score())
 	_assert(trained > initial, "Discipline and routine improve autonomy")
 	_assert(profile.can_self_entertain(), "Well-raised Bitling can entertain itself")
-	for index in range(12):
-		profile.record_interaction("teach_peer", ["social"], 5.0)
+	var social_tags: Array[String] = ["social"]
+	for _index in range(12):
+		profile.record_interaction("teach_peer", social_tags, 5.0)
 	_assert(profile.can_teach_peer(), "Highly trained Bitling can teach another Bitling")
 	var action: Dictionary = profile.choose_autonomous_action(true)
 	_assert(not str(action.get("id", "")).is_empty(), "Autonomous Bitling chooses a valid action")
