@@ -14,6 +14,8 @@ func _run() -> void:
 	_test_wellbeing_guard()
 	_test_adaptive_learning()
 	_test_evolution_service()
+	_test_vitality_service()
+	_test_exploration_service()
 	_test_game_state_progression_and_interactions()
 	_test_save_roundtrip()
 	if failures.is_empty():
@@ -35,6 +37,8 @@ func _ensure_runtime_nodes() -> void:
 		["WellbeingGuard", "res://scripts/core/wellbeing_guard.gd"],
 		["AdaptiveLearning", "res://scripts/core/adaptive_learning.gd"],
 		["EvolutionService", "res://scripts/core/evolution_service.gd"],
+		["VitalityService", "res://scripts/core/vitality_service.gd"],
+		["ExplorationService", "res://scripts/core/exploration_service.gd"],
 		["GameState", "res://scripts/core/game_state.gd"]
 	]
 	for definition in definitions:
@@ -99,11 +103,7 @@ func _test_wellbeing_guard() -> void:
 	var guard: Node = root.get_node("WellbeingGuard")
 	_assert(guard.validate_player_message("Schön, dass du da bist."), "Supportive copy is accepted")
 	_assert(not guard.validate_player_message("Du hast mich im Stich gelassen."), "Guilt-inducing copy is rejected")
-	var settings: Dictionary = {
-		"notifications_enabled": true,
-		"quiet_hours_start": 22,
-		"quiet_hours_end": 8
-	}
+	var settings: Dictionary = {"notifications_enabled": true, "quiet_hours_start": 22, "quiet_hours_end": 8}
 	_assert(not guard.can_send_notification(settings, 0, 23), "Quiet hours block notifications")
 	_assert(guard.can_send_notification(settings, 0, 12), "Daytime notification can pass")
 
@@ -131,20 +131,12 @@ func _test_evolution_service() -> void:
 	var evolution: Node = root.get_node("EvolutionService")
 	evolution.reset_state()
 	var high_traits := {
-		"curiosity": 90.0,
-		"empathy": 90.0,
-		"courage": 90.0,
-		"humor": 90.0,
-		"order": 90.0,
-		"creativity": 90.0,
-		"independence": 90.0
+		"curiosity": 90.0, "empathy": 90.0, "courage": 90.0, "humor": 90.0,
+		"order": 90.0, "creativity": 90.0, "independence": 90.0
 	}
 	var available: Array = evolution.evaluate_context({
-		"level": 90,
-		"relationship": 90.0,
-		"trust": 90.0,
-		"learning": 90.0,
-		"personality": high_traits
+		"level": 90, "relationship": 90.0, "trust": 90.0,
+		"learning": 90.0, "personality": high_traits
 	})
 	_assert(available.has("aurora"), "High mastery unlocks rare Aurora form")
 	_assert(evolution.select_evolution("aurora"), "Available evolution can be selected")
@@ -155,6 +147,43 @@ func _test_evolution_service() -> void:
 	_assert(str(evolution.current_form) == "aurora", "Evolution survives export/import")
 	_assert(evolution.discovered_forms.has("aurora"), "Discovered forms persist")
 
+func _test_vitality_service() -> void:
+	var state: Node = root.get_node("GameState")
+	var vitality: Node = root.get_node("VitalityService")
+	state.initialize_new_game()
+	state.hunger = 100.0
+	state.energy = 100.0
+	var live_deltas: Dictionary = vitality.apply_elapsed(3600.0, false)
+	_assert(float(live_deltas.get("hunger", 0.0)) < 0.0, "Live time gently changes saturation")
+	_assert(float(state.hunger) < 100.0 and float(state.energy) < 100.0, "Vitality tick reaches GameState")
+	state.hunger = 21.0
+	state.energy = 21.0
+	vitality.apply_elapsed(86400.0, true)
+	_assert(float(state.hunger) >= float(vitality.OFFLINE_SAFE_FLOOR), "Offline saturation respects safe floor")
+	_assert(float(state.energy) >= float(vitality.OFFLINE_SAFE_FLOOR), "Offline energy respects safe floor")
+
+func _test_exploration_service() -> void:
+	var exploration: Node = root.get_node("ExplorationService")
+	exploration.reset_state()
+	var first_stage: Dictionary = exploration.start_expedition(31337)
+	var first_id := str(first_stage.get("id", ""))
+	exploration.reset_state()
+	var repeated_stage: Dictionary = exploration.start_expedition(31337)
+	_assert(first_id == str(repeated_stage.get("id", "")), "Seeded expedition is deterministic")
+	var total_reward := 0
+	var final_result: Dictionary = {}
+	for _index in range(int(exploration.STAGES_PER_EXPEDITION)):
+		final_result = exploration.choose(0)
+		total_reward += int(final_result.get("xp_reward", 0))
+	_assert(bool(final_result.get("completed", false)), "Expedition completes after configured stages")
+	_assert(int(exploration.completed_expeditions) == 1, "Completed expedition count increments")
+	_assert(total_reward > 0, "Expedition choices award progression")
+	_assert(not exploration.discovered_events.is_empty(), "Expedition discoveries are remembered")
+	var exported: Dictionary = exploration.export_state()
+	exploration.reset_state()
+	exploration.import_state(exported)
+	_assert(int(exploration.completed_expeditions) == 1, "Exploration history survives export/import")
+
 func _test_game_state_progression_and_interactions() -> void:
 	var state: Node = root.get_node("GameState")
 	state.initialize_new_game()
@@ -164,12 +193,7 @@ func _test_game_state_progression_and_interactions() -> void:
 	var old_hunger: float = float(state.hunger)
 	var old_happiness: float = float(state.happiness)
 	var tags: Array[String] = ["care"]
-	state.perform_interaction(
-		"care",
-		{"hunger": 10.0, "happiness": 5.0, "quest_event": "care_action_completed"},
-		15,
-		tags
-	)
+	state.perform_interaction("care", {"hunger": 10.0, "happiness": 5.0, "quest_event": "care_action_completed"}, 15, tags)
 	_assert(float(state.hunger) > old_hunger, "Care interaction updates saturation")
 	_assert(float(state.happiness) > old_happiness, "Care interaction updates happiness")
 	_assert(int(state.total_xp) == 265, "Interaction XP is included in total XP")
@@ -186,18 +210,20 @@ func _test_save_roundtrip() -> void:
 	var state: Node = root.get_node("GameState")
 	var learning: Node = root.get_node("AdaptiveLearning")
 	var evolution: Node = root.get_node("EvolutionService")
+	var exploration: Node = root.get_node("ExplorationService")
 	learning.reset_state()
 	learning.record_result("logic", 4, true, 5.0)
 	evolution.reset_state()
 	var available: Array = evolution.evaluate_context({
-		"level": 10,
-		"relationship": 20.0,
-		"trust": 20.0,
-		"learning": 20.0,
-		"personality": {}
+		"level": 10, "relationship": 20.0, "trust": 20.0,
+		"learning": 20.0, "personality": {}
 	})
 	_assert(available.has("spark"), "Save fixture unlocks Spark")
 	_assert(evolution.select_evolution("spark"), "Save fixture selects Spark")
+	exploration.reset_state()
+	exploration.start_expedition(9)
+	for _index in range(int(exploration.STAGES_PER_EXPEDITION)):
+		exploration.choose(0)
 	state.level = 7
 	state.xp = 42
 	state.story_flags["ci_roundtrip"] = true
@@ -207,11 +233,13 @@ func _test_save_roundtrip() -> void:
 	state.story_flags.erase("ci_roundtrip")
 	learning.reset_state()
 	evolution.reset_state()
+	exploration.reset_state()
 	_assert(bool(state.load_game_state()), "Game state loads successfully")
 	_assert(int(state.level) == 7 and int(state.xp) == 42, "Progression survives save roundtrip")
 	_assert(bool(state.story_flags.get("ci_roundtrip", false)), "Story flags survive save roundtrip")
 	_assert(int(learning.get_skill_profile("logic").get("attempts", 0)) == 1, "Learning state survives game save roundtrip")
 	_assert(str(evolution.current_form) == "spark", "Evolution state survives game save roundtrip")
+	_assert(int(exploration.completed_expeditions) == 1, "Exploration state survives game save roundtrip")
 
 func _quest_ids(quests: Array) -> Array[String]:
 	var ids: Array[String] = []
