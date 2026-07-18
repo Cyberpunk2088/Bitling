@@ -7,7 +7,7 @@ enum Phase { EGG, BABY, CHILD, TEEN, ADULT, SENIOR, LEGENDARY }
 enum Era { TERMINAL, PIXEL, VECTOR, FLAT, FLUID }
 enum Mood { ECSTATIC, HAPPY, CONTENT, NEUTRAL, TIRED, SAD, DISTRESSED }
 
-const SAVE_SCHEMA_VERSION := 3
+const SAVE_SCHEMA_VERSION := 4
 const MAX_LEVEL := 100
 const XP_PER_LEVEL := 100
 const SAVE_PATH := "user://bitling_save.json"
@@ -16,6 +16,7 @@ const TEMP_SAVE_PATH := "user://bitling_save.tmp"
 const BACKUP_SAVE_PATH := "user://bitling_save.backup.json"
 const PHASE_THRESHOLDS := [0, 10, 25, 40, 60, 80, 95]
 const ERA_THRESHOLDS := [0, 15, 35, 55, 75]
+const AUTOSAVE_INTERVAL_SECONDS := 60.0
 
 var level: int = 1
 var xp: int = 0
@@ -49,6 +50,8 @@ var settings: Dictionary = {
 	"auto_save": true
 }
 
+var _autosave_elapsed: float = 0.0
+
 signal state_changed(key: String, value: Variant)
 signal level_up(new_level: int)
 signal phase_changed(new_phase: Phase)
@@ -56,13 +59,18 @@ signal era_changed(new_era: Era)
 signal mood_changed(new_mood: Mood)
 
 func _ready() -> void:
-	load_game_state()
-	if not has_save_file():
+	var loaded := load_game_state()
+	if not loaded:
 		initialize_new_game()
 	_register_daily_activity()
 
 func _process(delta: float) -> void:
 	play_time_seconds += delta
+	_autosave_elapsed += delta
+	if _autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
+		_autosave_elapsed = 0.0
+		if bool(settings.get("auto_save", true)):
+			save_game_state()
 
 func initialize_new_game() -> void:
 	level = 1
@@ -81,8 +89,11 @@ func initialize_new_game() -> void:
 	skill_points = 0
 	memories.clear()
 	story_flags = {"hatched": false, "tutorial_complete": false}
+	if has_node("/root/CompanionBrain"):
+		get_node("/root/CompanionBrain").reset_state()
 	add_memory("awakening", "A faint signal appeared in the dark.")
 	save_game_state()
+	state_changed.emit("new_game", true)
 
 func hatch() -> void:
 	if story_flags.get("hatched", false):
@@ -98,6 +109,7 @@ func hatch() -> void:
 func gain_xp(amount: int, source: String = "unknown") -> void:
 	if amount <= 0 or level >= MAX_LEVEL:
 		return
+	var old_level := level
 	xp += amount
 	total_xp += amount
 	while xp >= XP_PER_LEVEL and level < MAX_LEVEL:
@@ -106,46 +118,95 @@ func gain_xp(amount: int, source: String = "unknown") -> void:
 		skill_points += 1
 		level_up.emit(level)
 		_update_progression()
+	if level >= MAX_LEVEL:
+		xp = 0
 	state_changed.emit("xp", xp)
 	if has_node("/root/EventBus"):
-		get_node("/root/EventBus").xp_gained.emit(amount, source)
+		var event_bus := get_node("/root/EventBus")
+		event_bus.xp_gained.emit(float(amount), source)
+		if old_level != level:
+			event_bus.level_changed.emit(old_level, level)
 
-func update_stats(hunger_delta := 0.0, energy_delta := 0.0, happiness_delta := 0.0) -> void:
-	hunger = clampf(hunger + hunger_delta, 0.0, 100.0)
-	energy = clampf(energy + energy_delta, 0.0, 100.0)
-	happiness = clampf(happiness + happiness_delta, 0.0, 100.0)
+func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward: int, tags: Array[String] = []) -> Dictionary:
+	if interaction_id.is_empty():
+		return get_state_summary()
+
+	_apply_need_delta("hunger", float(effects.get("hunger", 0.0)))
+	_apply_need_delta("energy", float(effects.get("energy", 0.0)))
+	_apply_need_delta("happiness", float(effects.get("happiness", 0.0)))
+	_apply_need_delta("curiosity", float(effects.get("curiosity", 0.0)))
+	_apply_need_delta("health", float(effects.get("health", 0.0)))
+	_update_mood()
+	gain_xp(xp_reward, interaction_id)
+
+	if has_node("/root/CompanionBrain"):
+		get_node("/root/CompanionBrain").observe_interaction(interaction_id, 1.0, {"tags": tags})
+	if has_node("/root/QuestService"):
+		var event_name := str(effects.get("quest_event", ""))
+		if not event_name.is_empty():
+			get_node("/root/QuestService").record_event(event_name)
+	if has_node("/root/EventBus"):
+		get_node("/root/EventBus").interaction_completed.emit(interaction_id, tags)
+
+	var summary := get_state_summary()
+	state_changed.emit("interaction", {"id": interaction_id, "state": summary})
+	return summary
+
+func update_stats(
+	hunger_delta: float = 0.0,
+	energy_delta: float = 0.0,
+	happiness_delta: float = 0.0,
+	curiosity_delta: float = 0.0,
+	health_delta: float = 0.0
+) -> void:
+	_apply_need_delta("hunger", hunger_delta)
+	_apply_need_delta("energy", energy_delta)
+	_apply_need_delta("happiness", happiness_delta)
+	_apply_need_delta("curiosity", curiosity_delta)
+	_apply_need_delta("health", health_delta)
 	_update_mood()
 	state_changed.emit("stats", get_state_summary())
 
 func add_memory(type: String, text: String) -> void:
+	if type.is_empty() or text.is_empty():
+		return
 	if memories.any(func(item: Dictionary) -> bool: return item.get("type") == type and item.get("text") == text):
 		return
-	memories.append({
+	var memory := {
 		"type": type,
 		"text": text,
-		"timestamp": Time.get_unix_time_from_system(),
+		"timestamp": int(Time.get_unix_time_from_system()),
 		"day": days_played,
 		"level": level
-	})
+	}
+	memories.append(memory)
 	if memories.size() > 50:
 		memories.pop_front()
+	if has_node("/root/EventBus"):
+		get_node("/root/EventBus").memory_created.emit(memory.duplicate(true))
 
 func save_game_state() -> bool:
 	var json := JSON.stringify(get_save_data())
 	var temporary := FileAccess.open(TEMP_SAVE_PATH, FileAccess.WRITE)
 	if temporary == null:
-		push_error("[GameState] Could not open temporary save file")
+		_push_save_failure("Could not open temporary save file")
 		return false
 	temporary.store_string(json)
 	temporary.close()
 
 	if FileAccess.file_exists(SAVE_PATH):
 		_copy_file(SAVE_PATH, BACKUP_SAVE_PATH)
-	DirAccess.remove_absolute(SAVE_PATH)
+	if FileAccess.file_exists(SAVE_PATH):
+		var remove_error := DirAccess.remove_absolute(SAVE_PATH)
+		if remove_error != OK:
+			_push_save_failure("Could not replace existing save: %s" % remove_error)
+			return false
 	var rename_error := DirAccess.rename_absolute(TEMP_SAVE_PATH, SAVE_PATH)
 	if rename_error != OK:
-		push_error("[GameState] Atomic save replacement failed: %s" % rename_error)
+		_push_save_failure("Atomic save replacement failed: %s" % rename_error)
 		return false
+	if has_node("/root/EventBus"):
+		get_node("/root/EventBus").save_completed.emit(SAVE_PATH)
 	return true
 
 func load_game_state() -> bool:
@@ -176,8 +237,9 @@ func get_save_data() -> Dictionary:
 		"memories": memories,
 		"story_flags": story_flags,
 		"settings": settings,
-		"streak": StreakService.export_state() if has_node("/root/StreakService") else {},
-		"quests": QuestService.export_state() if has_node("/root/QuestService") else {},
+		"streak": get_node("/root/StreakService").export_state() if has_node("/root/StreakService") else {},
+		"quests": get_node("/root/QuestService").export_state() if has_node("/root/QuestService") else {},
+		"companion": get_node("/root/CompanionBrain").export_state() if has_node("/root/CompanionBrain") else {},
 		"last_saved_at": Time.get_datetime_string_from_system()
 	}
 
@@ -196,13 +258,18 @@ func apply_save_data(data: Dictionary) -> void:
 	curiosity = clampf(float(data.get("curiosity", 50.0)), 0.0, 100.0)
 	health = clampf(float(data.get("health", 100.0)), 0.0, 100.0)
 	skill_points = maxi(int(data.get("skill_points", 0)), 0)
-	memories.assign(data.get("memories", []))
-	story_flags = data.get("story_flags", {})
+	memories.clear()
+	for item in data.get("memories", []):
+		if item is Dictionary:
+			memories.append(item.duplicate(true))
+	story_flags = data.get("story_flags", {}).duplicate(true)
 	settings.merge(data.get("settings", {}), true)
 	if has_node("/root/StreakService"):
-		StreakService.import_state(data.get("streak", {}))
+		get_node("/root/StreakService").import_state(data.get("streak", {}))
 	if has_node("/root/QuestService"):
-		QuestService.import_state(data.get("quests", {}))
+		get_node("/root/QuestService").import_state(data.get("quests", {}))
+	if has_node("/root/CompanionBrain"):
+		get_node("/root/CompanionBrain").import_state(data.get("companion", {}))
 	_update_progression()
 	_update_mood()
 	state_changed.emit("loaded", true)
@@ -213,19 +280,53 @@ func has_save_file() -> bool:
 func get_state_summary() -> Dictionary:
 	return {
 		"level": level,
+		"xp": xp,
 		"phase": Phase.keys()[phase],
 		"era": Era.keys()[era],
 		"mood": Mood.keys()[mood],
 		"hunger": hunger,
 		"energy": energy,
-		"happiness": happiness
+		"happiness": happiness,
+		"curiosity": curiosity,
+		"health": health
 	}
 
 func _register_daily_activity() -> void:
 	if has_node("/root/StreakService"):
-		StreakService.register_activity()
+		get_node("/root/StreakService").register_activity()
 	if has_node("/root/QuestService"):
-		QuestService.ensure_daily_quests("local-profile")
+		get_node("/root/QuestService").ensure_daily_quests("local-profile")
+
+func _apply_need_delta(need_name: String, delta: float) -> void:
+	if is_zero_approx(delta):
+		return
+	var old_value := 0.0
+	var new_value := 0.0
+	match need_name:
+		"hunger":
+			old_value = hunger
+			hunger = clampf(hunger + delta, 0.0, 100.0)
+			new_value = hunger
+		"energy":
+			old_value = energy
+			energy = clampf(energy + delta, 0.0, 100.0)
+			new_value = energy
+		"happiness":
+			old_value = happiness
+			happiness = clampf(happiness + delta, 0.0, 100.0)
+			new_value = happiness
+		"curiosity":
+			old_value = curiosity
+			curiosity = clampf(curiosity + delta, 0.0, 100.0)
+			new_value = curiosity
+		"health":
+			old_value = health
+			health = clampf(health + delta, 0.0, 100.0)
+			new_value = health
+		_:
+			return
+	if has_node("/root/EventBus") and not is_equal_approx(old_value, new_value):
+		get_node("/root/EventBus").need_changed.emit(need_name, old_value, new_value)
 
 func _update_progression() -> void:
 	var new_phase: Phase = phase
@@ -247,14 +348,20 @@ func _update_progression() -> void:
 		era_changed.emit(era)
 
 func _update_mood() -> void:
-	var average := (hunger + energy + happiness) / 3.0
+	var average := (hunger + energy + happiness + health) / 4.0
 	var new_mood := Mood.DISTRESSED
-	if average >= 85.0: new_mood = Mood.ECSTATIC
-	elif average >= 70.0: new_mood = Mood.HAPPY
-	elif average >= 55.0: new_mood = Mood.CONTENT
-	elif average >= 40.0: new_mood = Mood.NEUTRAL
-	elif average >= 25.0: new_mood = Mood.TIRED
-	elif average >= 10.0: new_mood = Mood.SAD
+	if average >= 85.0:
+		new_mood = Mood.ECSTATIC
+	elif average >= 70.0:
+		new_mood = Mood.HAPPY
+	elif average >= 55.0:
+		new_mood = Mood.CONTENT
+	elif average >= 40.0:
+		new_mood = Mood.NEUTRAL
+	elif average >= 25.0:
+		new_mood = Mood.TIRED
+	elif average >= 10.0:
+		new_mood = Mood.SAD
 	if new_mood != mood:
 		mood = new_mood
 		mood_changed.emit(mood)
@@ -278,3 +385,8 @@ func _copy_file(source_path: String, destination_path: String) -> void:
 		destination.store_buffer(source.get_buffer(source.get_length()))
 		destination.close()
 	source.close()
+
+func _push_save_failure(reason: String) -> void:
+	push_error("[GameState] %s" % reason)
+	if has_node("/root/EventBus"):
+		get_node("/root/EventBus").save_failed.emit(reason)
