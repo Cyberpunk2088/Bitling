@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Static public-release audit for BITLING.
 
-The default CI mode fails only on deterministic code/configuration defects. Product,
-store and legal blockers are reported separately so the normal engineering pipeline
-can remain useful while release credentials and final assets are still pending.
+The default CI mode fails deterministic code/configuration defects. Product,
+store, legal and content blockers are reported without stopping engineering CI;
+`--strict-release` converts those blockers into a failing release gate.
 """
 
 from __future__ import annotations
@@ -25,11 +25,19 @@ SECRET_PATTERNS = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
 }
 
+XOGOT_FORBIDDEN_PATTERNS = {
+    "OS process execution": re.compile(r"\bOS\.(?:execute|create_process|create_instance)\s*\("),
+    "native extension manager": re.compile(r"\bGDExtensionManager\b"),
+    "Java reflection bridge": re.compile(r"\bJavaClassWrapper\b"),
+    "Objective-C bridge": re.compile(r"\b(?:ObjectiveC|ObjC)\w*\b"),
+}
+
 ALLOWED_COGNITIVE_INDEX_FILES = {
     Path("scripts/social/bitling_identity.gd"),  # schema migration only
 }
 
-TEXT_SUFFIXES = {".gd", ".tscn", ".tres", ".cfg", ".md", ".py", ".json", ".yml", ".yaml"}
+TEXT_SUFFIXES = {".gd", ".tscn", ".tres", ".cfg", ".md", ".py", ".json", ".yml", ".yaml", ".po", ".csv"}
+TRANSLATION_SUFFIXES = {".translation", ".po", ".mo"}
 
 
 @dataclass
@@ -88,7 +96,19 @@ def audit_project(findings: list[Finding]) -> dict[str, object]:
     if autoload_count > 20:
         add(findings, "AUTOLOAD_COUNT_HIGH", "warning", f"{autoload_count} autoloads increase startup coupling and memory pressure", PROJECT)
 
-    return {"version": version.group(1) if version else "", "autoload_count": autoload_count}
+    translation_assets = [
+        path.relative_to(ROOT) for path in ROOT.rglob("*")
+        if path.is_file() and path.suffix.lower() in TRANSLATION_SUFFIXES
+    ]
+    has_translation_config = "[internationalization]" in text and "locale/translations" in text
+    if not translation_assets and not has_translation_config:
+        add(findings, "LOCALIZATION_PIPELINE_MISSING", "blocker", "No Godot translation resources or internationalization configuration exist", PROJECT)
+
+    return {
+        "version": version.group(1) if version else "",
+        "autoload_count": autoload_count,
+        "translation_assets": [str(path) for path in translation_assets],
+    }
 
 
 def audit_export(findings: list[Finding]) -> dict[str, object]:
@@ -118,18 +138,23 @@ def audit_export(findings: list[Finding]) -> dict[str, object]:
                 add(findings, f"IOS_{label.upper()}_DISCLOSURE_MISSING", "error", f"iOS {label} usage description is required", EXPORT_PRESETS)
 
     preset_names = set(re.findall(r'^name="([^"]+)"', text, re.MULTILINE))
-    expected_public = {"Windows Desktop", "iOS Xogot"}
-    missing = sorted(expected_public - preset_names)
-    if missing:
-        add(findings, "EXPORT_PRESET_REQUIRED_MISSING", "error", f"Missing required export presets: {', '.join(missing)}", EXPORT_PRESETS)
+    expected_names = {"Windows Desktop", "iOS Xogot", "Android", "Web", "Linux", "macOS"}
+    missing_names = sorted(expected_names - preset_names)
+    if missing_names:
+        add(findings, "EXPORT_PRESET_REQUIRED_MISSING", "blocker", f"Missing public platform presets: {', '.join(missing_names)}", EXPORT_PRESETS)
 
-    optional_platforms = {"Android", "Web", "Linux", "macOS"}
+    expected_platforms = {"Windows Desktop", "iOS", "Android", "Web", "Linux/BSD", "macOS"}
     present_platforms = set(re.findall(r'^platform="([^"]+)"', text, re.MULTILINE))
-    absent_optional = sorted(optional_platforms - present_platforms)
-    if absent_optional:
-        add(findings, "CROSS_PLATFORM_PRESETS_INCOMPLETE", "blocker", f"Public cross-platform claim is not backed by presets for: {', '.join(absent_optional)}", EXPORT_PRESETS)
+    missing_platforms = sorted(expected_platforms - present_platforms)
+    if missing_platforms:
+        add(findings, "CROSS_PLATFORM_PRESETS_INCOMPLETE", "blocker", f"Public cross-platform claim is not backed by exporters for: {', '.join(missing_platforms)}", EXPORT_PRESETS)
 
-    return {"bundle_identifier": bundle_id, "team_id_present": bool(team_id), "presets": sorted(preset_names)}
+    return {
+        "bundle_identifier": bundle_id,
+        "team_id_present": bool(team_id),
+        "presets": sorted(preset_names),
+        "platforms": sorted(present_platforms),
+    }
 
 
 def audit_defaults(findings: list[Finding]) -> None:
@@ -148,7 +173,13 @@ def audit_defaults(findings: list[Finding]) -> None:
 
 
 def audit_content(findings: list[Finding]) -> dict[str, int]:
-    counters = {"text_files": 0, "gdscript_files": 0, "todo_markers": 0, "hardcoded_ui_strings": 0}
+    counters = {
+        "text_files": 0,
+        "gdscript_files": 0,
+        "todo_markers": 0,
+        "hardcoded_ui_strings": 0,
+        "xogot_forbidden_apis": 0,
+    }
     for path in iter_text_files():
         counters["text_files"] += 1
         if path.suffix == ".gd":
@@ -163,6 +194,11 @@ def audit_content(findings: list[Finding]) -> dict[str, int]:
                 add(findings, "SECRET_DETECTED", "error", f"Possible {label} committed to the repository", path)
 
         if runtime_source:
+            for label, pattern in XOGOT_FORBIDDEN_PATTERNS.items():
+                if pattern.search(text):
+                    counters["xogot_forbidden_apis"] += 1
+                    add(findings, "XOGOT_FORBIDDEN_API", "error", f"Runtime source uses unsupported or non-portable {label}", path)
+
             todo_count = len(re.findall(r"\b(?:TODO|FIXME|HACK|XXX)\b", text, re.IGNORECASE))
             if todo_count:
                 counters["todo_markers"] += todo_count
@@ -173,7 +209,11 @@ def audit_content(findings: list[Finding]) -> dict[str, int]:
 
             if path.suffix == ".gd":
                 quoted = re.findall(r'"([^"\n]{8,})"', text)
-                likely_ui = [value for value in quoted if re.search(r"[A-Za-zÄÖÜäöüß]", value) and not value.startswith(("res://", "user://", "/root/"))]
+                likely_ui = [
+                    value for value in quoted
+                    if re.search(r"[A-Za-zÄÖÜäöüß]", value)
+                    and not value.startswith(("res://", "user://", "/root/"))
+                ]
                 if len(likely_ui) > 15:
                     counters["hardcoded_ui_strings"] += len(likely_ui)
                     add(findings, "LOCALIZATION_DEBT", "warning", f"Approximately {len(likely_ui)} user-facing or semantic strings remain embedded in code", path)
@@ -215,7 +255,10 @@ def main() -> int:
     metadata["content"] = audit_content(findings)
     audit_release_assets(findings)
 
-    counts = {severity: sum(1 for finding in findings if finding.severity == severity) for severity in ["error", "blocker", "warning"]}
+    counts = {
+        severity: sum(1 for finding in findings if finding.severity == severity)
+        for severity in ["error", "blocker", "warning"]
+    }
     score = max(0, 100 - counts["error"] * 12 - counts["blocker"] * 7 - min(counts["warning"], 20) * 2)
     report = {
         "score": score,
