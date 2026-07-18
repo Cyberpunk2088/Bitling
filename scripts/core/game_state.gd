@@ -513,22 +513,40 @@ func _import_service(path: String, data: Variant) -> void:
 func _read_save(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
+
+	# Legacy .dat files may be Variant-encoded binary. Detect that format before
+	# any UTF-8 conversion so malformed or binary input never pollutes engine logs.
+	if path == LEGACY_SAVE_PATH and not _legacy_file_looks_like_json(path):
+		var legacy := FileAccess.open(path, FileAccess.READ)
+		if legacy == null:
+			return {}
+		var legacy_value: Variant = legacy.get_var(true)
+		legacy.close()
+		return legacy_value if legacy_value is Dictionary and _is_supported_save(legacy_value) else {}
+
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}
 	var text := file.get_as_text()
 	file.close()
-	var parsed: Variant = JSON.parse_string(text)
-	if parsed is Dictionary and _is_supported_save(parsed):
-		return parsed
-	if path != LEGACY_SAVE_PATH:
+	var parser := JSON.new()
+	if parser.parse(text) != OK:
 		return {}
-	var legacy := FileAccess.open(path, FileAccess.READ)
-	if legacy == null:
-		return {}
-	var legacy_value: Variant = legacy.get_var(true)
-	legacy.close()
-	return legacy_value if legacy_value is Dictionary and _is_supported_save(legacy_value) else {}
+	var parsed: Variant = parser.data
+	return parsed if parsed is Dictionary and _is_supported_save(parsed) else {}
+
+func _legacy_file_looks_like_json(path: String) -> bool:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return false
+	while file.get_position() < file.get_length():
+		var value := file.get_8()
+		if value in [9, 10, 13, 32]:
+			continue
+		file.close()
+		return value == 123 or value == 91
+	file.close()
+	return false
 
 func _is_supported_save(data: Dictionary) -> bool:
 	if data.is_empty():
