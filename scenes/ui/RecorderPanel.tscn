@@ -6,31 +6,36 @@
 anchor_right = 0.0
 anchor_bottom = 0.0
 rect_position = Vector2(8, 8)
-rect_size = Vector2(280, 180)
+rect_size = Vector2(360, 220)
 
 [node name="StartButton" type="Button" parent="."]
 text = "Start"
 rect_position = Vector2(8, 8)
-rect_size = Vector2(120, 28)
+rect_size = Vector2(160, 28)
 
 [node name="StopButton" type="Button" parent="."]
 text = "Stop"
-rect_position = Vector2(152, 8)
-rect_size = Vector2(120, 28)
+rect_position = Vector2(184, 8)
+rect_size = Vector2(160, 28)
+
+[node name="HQButton" type="Button" parent="."]
+text = "Start HQ"
+rect_position = Vector2(8, 48)
+rect_size = Vector2(110, 28)
 
 [node name="PackageButton" type="Button" parent="."]
 text = "Package ZIP"
-rect_position = Vector2(8, 48)
-rect_size = Vector2(120, 28)
+rect_position = Vector2(132, 48)
+rect_size = Vector2(110, 28)
 
 [node name="UploadButton" type="Button" parent="."]
 text = "Upload"
-rect_position = Vector2(152, 48)
-rect_size = Vector2(120, 28)
+rect_position = Vector2(256, 48)
+rect_size = Vector2(110, 28)
 
 [node name="StatusLabel" type="Label" parent="."]
 text = "Ready"
 rect_position = Vector2(8, 90)
-rect_size = Vector2(264, 64)
+rect_size = Vector2(344, 112)
 
 [node name="" instance=ExtResource( 1 )]
