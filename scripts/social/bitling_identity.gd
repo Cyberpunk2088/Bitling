@@ -6,7 +6,7 @@ extends Node
 signal identity_created(bitling_id: String)
 signal identity_updated(snapshot: Dictionary)
 
-const PASSPORT_VERSION := 1
+const PASSPORT_VERSION := 2
 const DEFAULT_NAME := "Bitling"
 
 var passport: Dictionary = {}
@@ -43,12 +43,20 @@ func set_portrait_reference(local_path: String) -> bool:
 	_emit_update()
 	return true
 
+func set_intelligence_quotient(value: int) -> void:
+	## Individual in-world IQ of this Bitling. It is not a score for the human player.
+	_ensure_identity_exists()
+	passport["intelligence_quotient"] = clampi(value, 40, 220)
+	passport.erase("cognitive_index")
+	passport["last_updated_at"] = int(Time.get_unix_time_from_system())
+	_emit_update()
+
 func refresh_development_metrics(
 	level: int,
 	phase_name: String,
 	form_id: String,
-	learning_rating: float,
-	curiosity: float
+	_learning_rating: float,
+	_curiosity: float
 ) -> Dictionary:
 	_ensure_identity_exists()
 	var phase_scale := {
@@ -67,17 +75,12 @@ func refresh_development_metrics(
 	passport["development_phase"] = phase_name
 	passport["form_id"] = form_id
 	passport["level"] = maxi(level, 1)
-	passport["cognitive_index"] = calculate_cognitive_index(learning_rating, curiosity, level)
+	if not passport.has("intelligence_quotient"):
+		passport["intelligence_quotient"] = _initial_iq(str(passport.get("bitling_id", "bitling")))
+	passport.erase("cognitive_index")
 	passport["last_updated_at"] = int(Time.get_unix_time_from_system())
 	_emit_update()
 	return _public_projection()
-
-func calculate_cognitive_index(learning_rating: float, curiosity: float, level: int) -> int:
-	## Fictional BITLING Cognitive Index (BCI), not a human IQ measurement.
-	var value := 40.0 + clampf(learning_rating, 0.0, 100.0) * 0.9
-	value += clampf(curiosity, 0.0, 100.0) * 0.35
-	value += clampf(float(level), 1.0, 100.0) * 0.25
-	return clampi(int(round(value)), 40, 200)
 
 func get_public_passport() -> Dictionary:
 	_ensure_identity_exists()
@@ -95,6 +98,9 @@ func import_state(data: Dictionary) -> void:
 	var loaded: Dictionary = data.get("passport", {})
 	passport = loaded.duplicate(true) if not loaded.is_empty() else _create_identity()
 	passport["passport_version"] = PASSPORT_VERSION
+	if not passport.has("intelligence_quotient"):
+		passport["intelligence_quotient"] = clampi(int(passport.get("cognitive_index", _initial_iq(str(passport.get("bitling_id", "bitling"))))), 40, 220)
+	passport.erase("cognitive_index")
 	_emit_update()
 
 func reset_state() -> void:
@@ -129,11 +135,16 @@ func _create_identity() -> Dictionary:
 		"level": 1,
 		"height_cm": 4.0,
 		"weight_g": 45,
-		"cognitive_index": 40,
+		"intelligence_quotient": _initial_iq(bitling_id),
 		"voice_seed": rng.randi(),
 		"portrait_reference": "",
 		"last_updated_at": int(Time.get_unix_time_from_system())
 	}
+
+func _initial_iq(bitling_id: String) -> int:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = abs(hash("iq:%s" % bitling_id))
+	return rng.randi_range(82, 128)
 
 func _new_identifier(prefix: String) -> String:
 	var rng := RandomNumberGenerator.new()
