@@ -232,7 +232,7 @@ func _test_social_save_roundtrip() -> void:
 	identity.set_display_name("Persisto")
 	emotions.apply_event("care", 1.0)
 	var saved_id := str(identity.get_public_passport().get("bitling_id", ""))
-	var saved_egg_count := lineage.eggs.size()
+	var saved_egg_count: int = lineage.eggs.size()
 	_assert(state.save_game_state(), "Social identity and lineage fixture saves")
 	identity.reset_state()
 	emotions.reset_state()
