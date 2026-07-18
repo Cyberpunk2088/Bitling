@@ -88,10 +88,12 @@ func get_public_passport() -> Dictionary:
 
 func get_private_passport() -> Dictionary:
 	_ensure_identity_exists()
+	_sync_iq_from_profile()
 	return passport.duplicate(true)
 
 func export_state() -> Dictionary:
 	_ensure_identity_exists()
+	_sync_iq_from_profile()
 	return {"passport": passport.duplicate(true)}
 
 func import_state(data: Dictionary) -> void:
@@ -112,7 +114,14 @@ func _ensure_identity_exists() -> void:
 		passport = _create_identity()
 		identity_created.emit(str(passport.get("bitling_id", "")))
 
+func _sync_iq_from_profile() -> void:
+	var profile: Node = get_node_or_null("/root/DevelopmentProfile")
+	if profile != null and profile.has_method("get_intelligence_quotient"):
+		passport["intelligence_quotient"] = clampi(int(profile.get_intelligence_quotient()), 40, 220)
+		passport.erase("cognitive_index")
+
 func _public_projection() -> Dictionary:
+	_sync_iq_from_profile()
 	var public_card := passport.duplicate(true)
 	public_card.erase("portrait_reference")
 	public_card.erase("private_notes")
