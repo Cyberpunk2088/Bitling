@@ -12,19 +12,17 @@ const DEFAULT_NAME := "Bitling"
 var passport: Dictionary = {}
 
 func _ready() -> void:
-	ensure_identity()
+	_ensure_identity_exists()
 
 func ensure_identity() -> Dictionary:
-	if passport.is_empty() or str(passport.get("bitling_id", "")).is_empty():
-		passport = _create_identity()
-		identity_created.emit(str(passport.get("bitling_id", "")))
-	return get_public_passport()
+	_ensure_identity_exists()
+	return _public_projection()
 
 func set_display_name(value: String) -> bool:
 	var cleaned := value.strip_edges().left(24)
 	if cleaned.is_empty():
 		return false
-	ensure_identity()
+	_ensure_identity_exists()
 	passport["display_name"] = cleaned
 	_emit_update()
 	return true
@@ -32,7 +30,7 @@ func set_display_name(value: String) -> bool:
 func set_optional_birth_label(value: String) -> void:
 	## User-entered coarse label only, for example "Berlin" or "Signalhafen".
 	## Never populate this field from GPS without a separate explicit consent flow.
-	ensure_identity()
+	_ensure_identity_exists()
 	passport["birth_label"] = value.strip_edges().left(40)
 	_emit_update()
 
@@ -40,7 +38,7 @@ func set_portrait_reference(local_path: String) -> bool:
 	## Stores only a local resource reference. It is excluded from public cards.
 	if not local_path.is_empty() and not local_path.begins_with("user://") and not local_path.begins_with("res://"):
 		return false
-	ensure_identity()
+	_ensure_identity_exists()
 	passport["portrait_reference"] = local_path
 	_emit_update()
 	return true
@@ -52,7 +50,7 @@ func refresh_development_metrics(
 	learning_rating: float,
 	curiosity: float
 ) -> Dictionary:
-	ensure_identity()
+	_ensure_identity_exists()
 	var phase_scale := {
 		"EGG": Vector2(4.0, 45.0),
 		"BABY": Vector2(14.0, 320.0),
@@ -72,7 +70,7 @@ func refresh_development_metrics(
 	passport["cognitive_index"] = calculate_cognitive_index(learning_rating, curiosity, level)
 	passport["last_updated_at"] = int(Time.get_unix_time_from_system())
 	_emit_update()
-	return get_public_passport()
+	return _public_projection()
 
 func calculate_cognitive_index(learning_rating: float, curiosity: float, level: int) -> int:
 	## Fictional BITLING Cognitive Index (BCI), not a human IQ measurement.
@@ -82,18 +80,15 @@ func calculate_cognitive_index(learning_rating: float, curiosity: float, level: 
 	return clampi(int(round(value)), 40, 200)
 
 func get_public_passport() -> Dictionary:
-	ensure_identity()
-	var public_card := passport.duplicate(true)
-	public_card.erase("portrait_reference")
-	public_card.erase("private_notes")
-	return public_card
+	_ensure_identity_exists()
+	return _public_projection()
 
 func get_private_passport() -> Dictionary:
-	ensure_identity()
+	_ensure_identity_exists()
 	return passport.duplicate(true)
 
 func export_state() -> Dictionary:
-	ensure_identity()
+	_ensure_identity_exists()
 	return {"passport": passport.duplicate(true)}
 
 func import_state(data: Dictionary) -> void:
@@ -105,6 +100,17 @@ func import_state(data: Dictionary) -> void:
 func reset_state() -> void:
 	passport = _create_identity()
 	identity_created.emit(str(passport.get("bitling_id", "")))
+
+func _ensure_identity_exists() -> void:
+	if passport.is_empty() or str(passport.get("bitling_id", "")).is_empty():
+		passport = _create_identity()
+		identity_created.emit(str(passport.get("bitling_id", "")))
+
+func _public_projection() -> Dictionary:
+	var public_card := passport.duplicate(true)
+	public_card.erase("portrait_reference")
+	public_card.erase("private_notes")
+	return public_card
 
 func _create_identity() -> Dictionary:
 	var bitling_id := _new_identifier("BTL")
@@ -131,7 +137,7 @@ func _create_identity() -> Dictionary:
 
 func _new_identifier(prefix: String) -> String:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = int(Time.get_unix_time_from_system()) ^ Time.get_ticks_usec() ^ hash(get_instance_id())
+	rng.seed = int(Time.get_unix_time_from_system()) ^ int(Time.get_ticks_usec()) ^ int(hash(get_instance_id()))
 	return "%s-%s-%s-%s" % [
 		prefix,
 		str(int(Time.get_unix_time_from_system())),
@@ -145,4 +151,4 @@ func _identity_variation() -> Vector2:
 	return Vector2(rng.randf_range(-2.0, 2.0), rng.randf_range(-120.0, 120.0))
 
 func _emit_update() -> void:
-	identity_updated.emit(get_public_passport())
+	identity_updated.emit(_public_projection())
