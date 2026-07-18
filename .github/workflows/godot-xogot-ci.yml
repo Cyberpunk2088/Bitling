@@ -22,9 +22,9 @@ env:
 
 jobs:
   validate:
-    name: Integrity, import, parse, boot and regression-test
+    name: Integrity, release audit, import, boot and regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 18
 
     steps:
       - name: Check out repository
@@ -34,7 +34,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/project_integrity.py
+          mkdir -p logs
+          python3 -m py_compile tools/*.py
+          python3 tools/project_integrity.py | tee logs/project-integrity.log
+
+      - name: Audit public release readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/release_readiness.py --output logs/release-readiness.json | tee logs/release-readiness.log
 
       - name: Install Godot 4.4.1
         shell: bash
@@ -47,7 +55,6 @@ jobs:
           chmod +x "${GODOT_BINARY}"
           mv "${GODOT_BINARY}" godot
           ./godot --version
-          mkdir -p logs
 
       - name: Import project resources
         shell: bash
@@ -66,6 +73,7 @@ jobs:
           timeout 60 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --check-only --log-file logs/parse-core.log
           timeout 60 ./godot --headless --path . --script res://tests/experience_systems_test.gd --check-only --log-file logs/parse-experience.log
           timeout 60 ./godot --headless --path . --script res://tests/development_profile_test.gd --check-only --log-file logs/parse-development.log
+          timeout 60 ./godot --headless --path . --script res://tests/release_readiness_test.gd --check-only --log-file logs/parse-release.log
           if grep -E "SCRIPT ERROR|^ERROR:" logs/parse-*.log; then
             cat logs/parse-*.log
             exit 1
@@ -85,7 +93,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 60 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --log-file logs/tests-core.log
+          timeout 90 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --log-file logs/tests-core.log
           if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-core.log; then
             cat logs/tests-core.log
             exit 1
@@ -96,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 60 ./godot --headless --path . --script res://tests/experience_systems_test.gd --log-file logs/tests-experience.log
+          timeout 90 ./godot --headless --path . --script res://tests/experience_systems_test.gd --log-file logs/tests-experience.log
           if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-experience.log; then
             cat logs/tests-experience.log
             exit 1
@@ -107,12 +115,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 60 ./godot --headless --path . --script res://tests/development_profile_test.gd --log-file logs/tests-development.log
+          timeout 90 ./godot --headless --path . --script res://tests/development_profile_test.gd --log-file logs/tests-development.log
           if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-development.log; then
             cat logs/tests-development.log
             exit 1
           fi
           grep -F "[CI-DEV] PASS" logs/tests-development.log
+
+      - name: Run release stress and migration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120 ./godot --headless --path . --script res://tests/release_readiness_test.gd --log-file logs/tests-release.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-release.log; then
+            cat logs/tests-release.log
+            exit 1
+          fi
+          grep -F "[CI-RELEASE] PASS" logs/tests-release.log
 
       - name: Upload diagnostics
         if: always()
