@@ -17,16 +17,18 @@ var active_challenge: Dictionary = {}
 var challenge_counter: int = 0
 
 func create_challenge(skill_id: String = "logic", seed_value: int = -1) -> Dictionary:
-	var profile := _ensure_skill(skill_id)
-	var difficulty := recommend_difficulty(skill_id)
+	var normalized_skill := skill_id.strip_edges().to_lower()
+	if normalized_skill.is_empty():
+		normalized_skill = "logic"
+	var profile := _ensure_skill(normalized_skill)
+	var difficulty := recommend_difficulty(normalized_skill)
 	var rng := RandomNumberGenerator.new()
 	var resolved_seed := seed_value
 	if resolved_seed < 0:
-		resolved_seed = hash("%s:%s:%d" % [skill_id, _date_key(), challenge_counter])
+		resolved_seed = hash("%s:%s:%d" % [normalized_skill, _date_key(), challenge_counter])
 	rng.seed = resolved_seed
 	challenge_counter += 1
-
-	var challenge := _build_sequence_challenge(skill_id, difficulty, rng)
+	var challenge := _build_sequence_challenge(normalized_skill, difficulty, rng)
 	challenge["seed"] = resolved_seed
 	challenge["started_at_msec"] = Time.get_ticks_msec()
 	challenge["rating_before"] = float(profile.get("rating", 20.0))
@@ -40,8 +42,10 @@ func submit_answer(answer_index: int, hints_used: int = 0) -> Dictionary:
 	var answers: Array = active_challenge.get("answers", [])
 	if answer_index < 0 or answer_index >= answers.size():
 		return {"accepted": false, "reason": "invalid_answer"}
-
 	var correct_index := int(active_challenge.get("correct_index", -1))
+	if correct_index < 0 or correct_index >= answers.size():
+		active_challenge.clear()
+		return {"accepted": false, "reason": "invalid_challenge"}
 	var success := answer_index == correct_index
 	var response_seconds := maxf(
 		float(Time.get_ticks_msec() - int(active_challenge.get("started_at_msec", Time.get_ticks_msec()))) / 1000.0,
@@ -60,7 +64,8 @@ func submit_answer(answer_index: int, hints_used: int = 0) -> Dictionary:
 		"difficulty": difficulty,
 		"response_seconds": response_seconds,
 		"rating": update.get("rating", 0.0),
-		"xp_reward": difficulty * (8 if success else 2)
+		"xp_reward": difficulty * (8 if success else 2),
+		"explanation": str(active_challenge.get("explanation", ""))
 	}
 	active_challenge.clear()
 	challenge_resolved.emit(result.duplicate(true))
@@ -82,14 +87,13 @@ func record_result(
 	var speed_factor := clampf(1.15 - maxf(response_seconds - 8.0, 0.0) * 0.015, 0.65, 1.15)
 	var delta := 12.0 * (score - expected) * hint_factor * speed_factor
 	var new_rating := clampf(old_rating + delta, MIN_RATING, MAX_RATING)
-
 	profile["rating"] = new_rating
 	profile["attempts"] = int(profile.get("attempts", 0)) + 1
 	profile["successes"] = int(profile.get("successes", 0)) + (1 if success else 0)
 	profile["current_streak"] = int(profile.get("current_streak", 0)) + 1 if success else 0
 	profile["best_streak"] = maxi(int(profile.get("best_streak", 0)), int(profile.get("current_streak", 0)))
 	profile["last_difficulty"] = difficulty
-	profile["last_response_seconds"] = response_seconds
+	profile["last_response_seconds"] = maxf(response_seconds, 0.0)
 	profile["last_played_at"] = int(Time.get_unix_time_from_system())
 	skills[skill_id] = profile
 	if not is_equal_approx(old_rating, new_rating):
@@ -157,7 +161,7 @@ func _build_sequence_challenge(skill_id: String, difficulty: int, rng: RandomNum
 		"id": "%s_sequence_%d" % [skill_id, challenge_counter],
 		"skill_id": skill_id,
 		"difficulty": difficulty,
-		"prompt": "Welche Zahl setzt die Folge fort?\n%s, ?" % ", ".join(sequence),
+		"prompt": "Welche Zahl setzt die Folge fort?\n%s, ?" % _join_ints(sequence),
 		"answers": answers,
 		"correct_index": answers.find(correct),
 		"explanation": "Die Folge wächst jedes Mal um %d." % step
@@ -169,6 +173,12 @@ func _shuffle_int_array(values: Array[int], rng: RandomNumberGenerator) -> void:
 		var temporary := values[index]
 		values[index] = values[swap_index]
 		values[swap_index] = temporary
+
+func _join_ints(values: Array[int]) -> String:
+	var parts: PackedStringArray = []
+	for value in values:
+		parts.append(str(value))
+	return ", ".join(parts)
 
 func _date_key() -> String:
 	var date := Time.get_date_dict_from_system()
