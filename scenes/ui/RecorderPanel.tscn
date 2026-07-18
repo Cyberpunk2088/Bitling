@@ -1,0 +1,36 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/recorder_panel.gd" id="1"]
+
+[node name="RecorderPanel" type="Control"]
+anchor_right = 0.0
+anchor_bottom = 0.0
+rect_position = Vector2(8, 8)
+rect_size = Vector2(280, 180)
+
+[node name="StartButton" type="Button" parent="."]
+text = "Start"
+rect_position = Vector2(8, 8)
+rect_size = Vector2(120, 28)
+
+[node name="StopButton" type="Button" parent="."]
+text = "Stop"
+rect_position = Vector2(152, 8)
+rect_size = Vector2(120, 28)
+
+[node name="PackageButton" type="Button" parent="."]
+text = "Package ZIP"
+rect_position = Vector2(8, 48)
+rect_size = Vector2(120, 28)
+
+[node name="UploadButton" type="Button" parent="."]
+text = "Upload"
+rect_position = Vector2(152, 48)
+rect_size = Vector2(120, 28)
+
+[node name="StatusLabel" type="Label" parent="."]
+text = "Ready"
+rect_position = Vector2(8, 90)
+rect_size = Vector2(264, 64)
+
+[node name="" instance=ExtResource( 1 )]
