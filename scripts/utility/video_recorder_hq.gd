@@ -1,7 +1,12 @@
 extends Node
 
+## Xogot-safe frame-sequence recorder.
+## Video encoding is deliberately external to the runtime: Xogot and mobile
+## sandboxes must not spawn ffmpeg or any other operating-system process.
+
 signal recording_started()
 signal recording_stopped(frame_count: int)
+signal encoding_requested(frame_directory: String, frames_per_second: int)
 
 @export var auto_detect_platform: bool = true
 @export var target_dir: String = "user://hq_frames"
@@ -12,8 +17,6 @@ signal recording_stopped(frame_count: int)
 @export var resize_width: int = 1920
 @export var resize_height: int = 1080
 @export var flip_y_on_save: bool = false
-@export var background_encode: bool = false
-@export var ffmpeg_path: String = "ffmpeg"
 
 var _frame_timer: float = 0.0
 var _current_frame: int = 0
@@ -43,13 +46,29 @@ func stop_recording() -> void:
 		return
 	_is_recording = false
 	recording_stopped.emit(_current_frame)
-	if background_encode and OS.get_name() in ["Windows", "Linux", "macOS"]:
-		_start_background_encode()
+
+func request_external_encoding() -> Dictionary:
+	## Returns a handoff descriptor for a trusted desktop build pipeline.
+	## The game itself never launches an executable or uploads the frames.
+	var files := gather_frame_files()
+	if files.is_empty():
+		return {"accepted": false, "reason": "no_frames"}
+	encoding_requested.emit(target_dir, frames_per_second)
+	return {
+		"accepted": true,
+		"frame_directory": target_dir,
+		"frames_per_second": frames_per_second,
+		"frame_count": _current_frame,
+		"runtime_encoding": false
+	}
+
+func supports_runtime_encoding() -> bool:
+	return false
 
 func _process(delta: float) -> void:
 	if not _is_recording:
 		return
-	_frame_timer += delta
+	_frame_timer += maxf(delta, 0.0)
 	var interval: float = 1.0 / float(maxi(frames_per_second, 1))
 	while _frame_timer >= interval and _is_recording:
 		_frame_timer -= interval
@@ -86,18 +105,6 @@ func _capture_frame() -> void:
 	if file != null:
 		file.store_string(JSON.stringify(metadata))
 		file.close()
-
-func _start_background_encode() -> void:
-	var extension := "png" if use_png else "jpg"
-	var sequence := ProjectSettings.globalize_path(target_dir.path_join("frame_%06d." + extension))
-	var output := ProjectSettings.globalize_path(target_dir.path_join("encoded_master.mov"))
-	var arguments := PackedStringArray([
-		"-y", "-framerate", str(frames_per_second), "-i", sequence,
-		"-c:v", "prores_ks", "-profile:v", "3", output
-	])
-	var process_id := OS.create_process(ffmpeg_path, arguments)
-	if process_id <= 0:
-		push_warning("[HQRecorder] Could not start ffmpeg process")
 
 func gather_frame_files() -> Array[String]:
 	var files: Array[String] = []
