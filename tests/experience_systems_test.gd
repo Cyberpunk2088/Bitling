@@ -86,7 +86,7 @@ func _test_exploration_choice_personality() -> void:
 	_assert(float(brain.personality.get(trait_name, 0.0)) > old_value, "Expedition choice shapes its declared trait")
 
 func _test_runtime_overlays() -> void:
-	for node_name in ["DialogueToast", "LearningOverlay", "ExplorationOverlay", "EvolutionOverlay"]:
+	for node_name in ["DialogueToast", "LearningOverlay", "ExplorationOverlay", "EvolutionOverlay", "ProfileOverlay"]:
 		_assert(root.has_node(node_name), "%s autoload exists" % node_name)
 
 func _test_bitling_identity() -> void:
@@ -104,7 +104,8 @@ func _test_bitling_identity() -> void:
 	var refreshed: Dictionary = identity.refresh_development_metrics(25, "CHILD", "prism", 55.0, 70.0)
 	_assert(float(refreshed.get("height_cm", 0.0)) > 0.0, "Passport tracks height")
 	_assert(int(refreshed.get("weight_g", 0)) > 0, "Passport tracks weight")
-	_assert(int(refreshed.get("cognitive_index", 0)) >= 40, "Passport exposes fictional cognitive index")
+	_assert(int(refreshed.get("intelligence_quotient", 0)) >= 40, "Passport exposes the Bitling's individual IQ")
+	_assert(not refreshed.has("cognitive_index"), "Legacy cognitive index is no longer exposed")
 
 func _test_emotion_model() -> void:
 	var emotions := root.get_node_or_null("EmotionModel")
@@ -116,9 +117,7 @@ func _test_emotion_model() -> void:
 	var after: Dictionary = emotions.apply_event("play", 1.0)
 	_assert(float(after.get("arousal", 0.0)) > float(before.get("arousal", 0.0)), "Play raises simulated arousal")
 	var perceived: Dictionary = emotions.perceive_peer_emotion({
-		"dominant_emotion": "joy",
-		"valence": 0.8,
-		"arousal": 0.7
+		"dominant_emotion": "joy", "valence": 0.8, "arousal": 0.7
 	}, 0.8)
 	_assert(not str(perceived.get("dominant_emotion", "")).is_empty(), "Peer emotion produces a bounded local response")
 	var exported: Dictionary = emotions.export_state()
@@ -157,8 +156,7 @@ func _test_social_consent_and_exchange() -> void:
 	social.set_local_consent("data", true)
 	social.receive_remote_consent("data", true)
 	var packet: Dictionary = social.create_social_packet("share_discovery", {
-		"topic": "patterns",
-		"summary": "Alternating signals repeat every two steps."
+		"topic": "patterns", "summary": "Alternating signals repeat every two steps."
 	})
 	_assert(not packet.is_empty(), "Mutual data consent enables social packet")
 	var decoded: Dictionary = social.receive_social_packet(packet)
@@ -183,13 +181,8 @@ func _test_lineage_and_eggs() -> void:
 	brain.trust = 80.0
 	identity.refresh_development_metrics(60, "ADULT", "weaver", 65.0, 70.0)
 	var remote_profile := {
-		"bitling_id": "BTL-REMOTE-001",
-		"display_name": "Lumo",
-		"generation": 2,
-		"phase": "ADULT",
-		"form_id": "guardian",
-		"relationship": 80.0,
-		"trust": 80.0,
+		"bitling_id": "BTL-REMOTE-001", "display_name": "Lumo", "generation": 2,
+		"phase": "ADULT", "form_id": "guardian", "relationship": 80.0, "trust": 80.0,
 		"personality": {
 			"curiosity": 65.0, "empathy": 70.0, "courage": 60.0,
 			"humor": 75.0, "order": 45.0, "creativity": 68.0, "independence": 52.0
