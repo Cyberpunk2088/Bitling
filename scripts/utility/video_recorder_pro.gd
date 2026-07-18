@@ -1,252 +1,205 @@
 extends Node
 
-# Advanced Recorder for Xogot - pro features
-# - Frame capture (inherits behavior from basic recorder)
-# - Choreography support (sequence of timed actions)
-# - Packaging frames into a TAR archive for easy download
-# - HTTP upload of resulting TAR (optional: set upload_url)
-# - Lightweight UI integration hooks
+## Optional capture utility for automated showcase recordings.
+## It is not part of the player-facing runtime and remains GDScript-only for Xogot.
 
-@export var base_recorder_path: String = "res://scripts/utility/video_recorder.gd"
-@export var target_dir: String = "user://video_frames/"
-@export var frames_per_second: float = 15.0
+@export var target_dir: String = "user://video_frames"
+@export_range(1.0, 60.0, 1.0) var frames_per_second: float = 15.0
 @export var max_frames: int = 450
 @export var use_jpg: bool = true
-@export var jpg_quality: int = 85
+@export_range(1, 100, 1) var jpg_quality: int = 85
 @export var resize_before_save: bool = false
 @export var resize_width: int = 1280
 @export var resize_height: int = 720
 @export var flip_y_on_save: bool = true
-
-# Choreography: array of dictionaries: {time: float, action: String, params: Dictionary}
-# Example: [{"time":0.0, "action":"wait", "params":{}}, {"time":0.5, "action":"touch", "params":{"pos":Vector2(200,300)}}]
-@export var choreography_steps: Array = []
-
-# Optional upload endpoint (if empty, upload is disabled)
+@export var choreography_steps: Array[Dictionary] = []
 @export var upload_url: String = ""
 
 var _is_recording: bool = false
 var _frame_timer: float = 0.0
 var _current_frame: int = 0
 
-func _ready():
-	# Ensure directory
-	DirAccess.make_dir_recursive(target_dir)
-	print("[RecorderPro] Ready. Target:", target_dir)
+func _ready() -> void:
+	_ensure_directory()
 
-func start_recording():
+func start_recording() -> void:
 	if _is_recording:
 		return
+	_ensure_directory()
 	_is_recording = true
 	_current_frame = 0
 	_frame_timer = 0.0
-	print("[RecorderPro] recording started")
 
-func stop_recording():
-	if not _is_recording:
-		return
+func stop_recording() -> void:
 	_is_recording = false
-	print("[RecorderPro] recording stopped. frames:", _current_frame)
 
 func _process(delta: float) -> void:
 	if not _is_recording:
 		return
 	_frame_timer += delta
-	var interval = 1.0 / max(0.0001, frames_per_second)
-	if _frame_timer >= interval:
+	var interval: float = 1.0 / maxf(frames_per_second, 1.0)
+	while _frame_timer >= interval and _is_recording:
 		_frame_timer -= interval
 		_capture_frame()
 		_current_frame += 1
 		if _current_frame >= max_frames:
 			stop_recording()
 
-func _capture_frame():
+func _capture_frame() -> void:
 	var viewport := get_viewport()
-	if viewport == null:
+	if viewport == null or viewport.get_texture() == null:
 		return
-	var tex := viewport.get_texture()
-	if tex == null:
-		return
-	var img := tex.get_image()
-	if img == null:
+	var image := viewport.get_texture().get_image()
+	if image == null or image.is_empty():
 		return
 	if flip_y_on_save:
-		img.flip_y()
-	if resize_before_save and resize_width>0 and resize_height>0:
-		img.resize(resize_width, resize_height, Image.INTERPOLATE_LANCZOS)
-	var save_dir := target_dir
-	if not save_dir.ends_with("/"):
-		save_dir += "/"
-	var filename := "frame_%06d" % _current_frame
-	var file_path := save_dir + filename
-	var err := OK
-	if use_jpg:
-		file_path += ".jpg"
-		err = img.save_jpg(file_path, jpg_quality)
-	else:
-		file_path += ".png"
-		err = img.save_png(file_path)
-	if err != OK:
-		push_error("[RecorderPro] save error %d" % err)
+		image.flip_y()
+	if resize_before_save and resize_width > 0 and resize_height > 0:
+		image.resize(resize_width, resize_height, Image.INTERPOLATE_LANCZOS)
+	var extension := ".jpg" if use_jpg else ".png"
+	var path := target_dir.path_join("frame_%06d%s" % [_current_frame, extension])
+	var error := image.save_jpg(path, clampf(float(jpg_quality) / 100.0, 0.01, 1.0)) if use_jpg else image.save_png(path)
+	if error != OK:
+		push_error("[RecorderPro] Could not save frame %d: %s" % [_current_frame, error])
 
-# Choreography runner
-func run_choreography():
-	if choreography_steps.empty():
-		print("[RecorderPro] no choreography steps")
+func run_choreography() -> void:
+	if choreography_steps.is_empty():
 		return
-	# Sort by time
-	choreography_steps.sort_custom(self, "_sort_by_time")
-	var start_time = OS.get_ticks_msec() / 1000.0
-	for step in choreography_steps:
-		var target_time = start_time + float(step.get("time", 0.0))
-		while OS.get_ticks_msec() / 1000.0 < target_time:
-			OS.delay_usec(10000) # 10ms wait
-			# yield(get_tree().create_timer(0.01), "timeout")
+	var steps: Array[Dictionary] = choreography_steps.duplicate(true)
+	steps.sort_custom(_sort_by_time)
+	var previous_time := 0.0
+	for step in steps:
+		var target_time := maxf(float(step.get("time", 0.0)), previous_time)
+		var wait_time := target_time - previous_time
+		if wait_time > 0.0:
+			await get_tree().create_timer(wait_time).timeout
 		_perform_action(step)
+		previous_time = target_time
 
-func _sort_by_time(a, b):
-	return int(sign(float(a.get("time",0)) - float(b.get("time",0))))
+func _sort_by_time(a: Dictionary, b: Dictionary) -> bool:
+	return float(a.get("time", 0.0)) < float(b.get("time", 0.0))
 
 func _perform_action(step: Dictionary) -> void:
-	var action = step.get("action", "")
-	var params = step.get("params", {})
+	var action := str(step.get("action", ""))
+	var parameters: Dictionary = step.get("params", {})
 	match action:
 		"touch":
-			var pos = params.get("pos", Vector2(0,0))
-			# simulate touch event
-			var ev = InputEventScreenTouch.new()
-			ev.pressed = true
-			ev.index = 0
-			ev.position = pos
-			get_tree().input_event(ev)
-			# release
-			ev.pressed = false
-			get_tree().input_event(ev)
-		"wait":
-			# do nothing (timing already handled)
-			pass
+			var position: Vector2 = parameters.get("pos", Vector2.ZERO)
+			var press := InputEventScreenTouch.new()
+			press.index = 0
+			press.position = position
+			press.pressed = true
+			Input.parse_input_event(press)
+			var release := press.duplicate() as InputEventScreenTouch
+			release.pressed = false
+			Input.parse_input_event(release)
 		"start_record":
 			start_recording()
 		"stop_record":
 			stop_recording()
+		"wait":
+			pass
 		_:
-			print("[RecorderPro] unknown action:", action)
+			push_warning("[RecorderPro] Unknown choreography action: %s" % action)
 
-# Pack frames into a TAR archive (uncompressed). Returns path or empty string on error.
+func gather_frame_files() -> Array[String]:
+	var files: Array[String] = []
+	var access := DirAccess.open(target_dir)
+	if access == null:
+		return files
+	access.list_dir_begin()
+	var entry := access.get_next()
+	while not entry.is_empty():
+		if not access.current_is_dir() and entry.begins_with("frame_"):
+			files.append(target_dir.path_join(entry))
+		entry = access.get_next()
+	access.list_dir_end()
+	files.sort()
+	return files
+
 func package_frames_to_tar(out_path: String) -> String:
-	var frames = _gather_frame_files()
-	if frames.empty():
-		push_warning("[RecorderPro] no frames to package")
+	var frames := gather_frame_files()
+	if frames.is_empty():
 		return ""
-	var file = FileAccess.open(out_path, FileAccess.WRITE)
-	if not file:
-		push_error("[RecorderPro] cannot open tar for writing: " + out_path)
+	var archive := FileAccess.open(out_path, FileAccess.WRITE)
+	if archive == null:
 		return ""
-	# write each file with ustar header
-	for f in frames:
-		var fh = FileAccess.open(f, FileAccess.READ)
-		if not fh:
-			push_warning("[RecorderPro] cannot open frame: " + f)
+	for frame_path in frames:
+		var source := FileAccess.open(frame_path, FileAccess.READ)
+		if source == null:
 			continue
-		var data = fh.get_buffer(fh.get_length())
-		fh.close()
-		_write_tar_entry(file, f.get_file(), data)
-	# two 512-byte zero blocks to mark end of archive
-	file.store_8_array(PackedByteArray(512))
-	file.store_8_array(PackedByteArray(512))
-	file.close()
-	print("[RecorderPro] tar written to:", out_path)
+		var data := source.get_buffer(source.get_length())
+		source.close()
+		_write_tar_entry(archive, frame_path.get_file(), data)
+	archive.store_buffer(PackedByteArray(Array([], TYPE_NIL, "", null)))
+	var trailer := PackedByteArray()
+	trailer.resize(1024)
+	trailer.fill(0)
+	archive.store_buffer(trailer)
+	archive.close()
 	return out_path
 
-func _gather_frame_files() -> Array:
-	var da = DirAccess.open(target_dir)
-	var list := []
-	if not da:
-		return list
-	da.list_dir_begin()
-	var name = da.get_next()
-	while name != "":
-		if not da.current_is_dir():
-			if name.begins_with("frame_"):
-				list.append(target_dir.rstrip("/") + "/" + name)
-		name = da.get_next()
-	da.list_dir_end()
-	list.sort() # ensure ordered
-	return list
-
-func _write_tar_entry(file: FileAccess, name: String, data: PackedByteArray) -> void:
-	# build 512-byte header
-	var header = PoolByteArray()
+func _write_tar_entry(archive: FileAccess, file_name: String, data: PackedByteArray) -> void:
+	var header := PackedByteArray()
 	header.resize(512)
-	var buf = header
-	# helper to write at offset
-	func _set_bytes(offset:int, src: PoolByteArray) -> void:
-		for i in range(src.size()):
-			buf[offset + i] = src[i]
-	# name (100)
-	var name_bytes = name.to_utf8()
-	if name_bytes.size() > 100:
-		name_bytes = name_bytes.subarray(0,100)
-	_set_bytes(0, name_bytes)
-	# mode (8)
-	_set_bytes(100, "0000777\0".to_utf8())
-	# uid (8)
-	_set_bytes(108, "0000000\0".to_utf8())
-	# gid (8)
-	_set_bytes(116, "0000000\0".to_utf8())
-	# size (12) octal
-	var size_oct = "%011o" % data.size()
-	_set_bytes(124, (size_oct + "\0").to_utf8())
-	# mtime (12)
-	var mtime_oct = "%011o" % OS.get_unix_time()
-	_set_bytes(136, (mtime_oct + "\0").to_utf8())
-	# chksum (8) - fill with spaces for checksum calc
-	_set_bytes(148, "        ".to_utf8())
-	# typeflag (1)
-	_set_bytes(156, "0".to_utf8())
-	# linkname (100) skipped
-	# magic (6) + version (2)
-	_set_bytes(257, "ustar\0".to_utf8())
-	_set_bytes(263, "00".to_utf8())
-	# uname (32)
-	_set_bytes(265, "godot\0".to_utf8())
-	# gname (32)
-	_set_bytes(297, "godot\0".to_utf8())
-	# prefix skipped
-	# compute checksum: sum of all bytes of header
-	var chksum = 0
-	for i in range(512):
-		chksum += int(buf[i])
-	# write checksum in header as octal with trailing NULL and space
-	var chksum_str = "%06o" % chksum + "\0 "
-	_set_bytes(148, chksum_str.to_utf8())
-	# write header
-	file.store_8_array(buf)
-	# write data
-	file.store_buffer(data)
-	# pad to 512-byte block
-	var rem = data.size() % 512
-	if rem != 0:
-		var pad = 512 - rem
-		file.store_8_array(PackedByteArray(pad))
+	header.fill(0)
+	_write_field(header, 0, 100, file_name)
+	_write_field(header, 100, 8, "0000644\0")
+	_write_field(header, 108, 8, "0000000\0")
+	_write_field(header, 116, 8, "0000000\0")
+	_write_field(header, 124, 12, _octal_field(data.size(), 12))
+	_write_field(header, 136, 12, _octal_field(int(Time.get_unix_time_from_system()), 12))
+	_write_field(header, 148, 8, "        ")
+	_write_field(header, 156, 1, "0")
+	_write_field(header, 257, 6, "ustar\0")
+	_write_field(header, 263, 2, "00")
+	var checksum := 0
+	for byte in header:
+		checksum += int(byte)
+	_write_field(header, 148, 8, String.num_int64(checksum, 8).pad_zeros(6) + "\0 ")
+	archive.store_buffer(header)
+	archive.store_buffer(data)
+	var remainder := data.size() % 512
+	if remainder != 0:
+		var padding := PackedByteArray()
+		padding.resize(512 - remainder)
+		padding.fill(0)
+		archive.store_buffer(padding)
 
-# Upload TAR via HTTPRequest (synchronous-ish using signals)
+func _write_field(buffer: PackedByteArray, offset: int, length: int, value: String) -> void:
+	var bytes := value.to_utf8_buffer()
+	var count := mini(bytes.size(), length)
+	for index in range(count):
+		buffer[offset + index] = bytes[index]
+
+func _octal_field(value: int, width: int) -> String:
+	return String.num_int64(value, 8).pad_zeros(width - 1) + "\0"
+
 func upload_file(file_path: String) -> void:
-	if upload_url == "":
-		push_warning("[RecorderPro] no upload_url set")
+	if upload_url.is_empty() or not FileAccess.file_exists(file_path):
 		return
-	var http = HTTPRequest.new()
-	add_child(http)
-	http.connect("request_completed", Callable(self, "_on_upload_completed"))
-	var f = FileAccess.open(file_path, FileAccess.READ)
-	if not f:
-		push_error("[RecorderPro] cannot open file for upload")
+	var file := FileAccess.open(file_path, FileAccess.READ)
+	if file == null:
 		return
-	var data = f.get_buffer(f.get_length())
-	f.close()
-	var headers = ["Content-Type: application/x-tar"]
-	http.request(upload_url, headers, false, HTTPClient.METHOD_POST, data)
+	var data := file.get_buffer(file.get_length())
+	file.close()
+	var request := HTTPRequest.new()
+	add_child(request)
+	request.request_completed.connect(_on_upload_completed.bind(request))
+	var headers := PackedStringArray(["Content-Type: application/x-tar"])
+	var error := request.request_raw(upload_url, headers, HTTPClient.METHOD_POST, data)
+	if error != OK:
+		request.queue_free()
+		push_warning("[RecorderPro] Upload request failed to start: %s" % error)
 
-func _on_upload_completed(result, response_code, headers, body):
-	print("[RecorderPro] upload result:", result, response_code)
+func _on_upload_completed(_result: int, response_code: int, _headers: PackedStringArray, _body: PackedByteArray, request: HTTPRequest) -> void:
+	print("[RecorderPro] Upload response: %d" % response_code)
+	request.queue_free()
 
+func get_target_directory() -> String:
+	return target_dir
+
+func _ensure_directory() -> void:
+	var error := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target_dir))
+	if error != OK and error != ERR_ALREADY_EXISTS:
+		push_error("[RecorderPro] Could not create directory: %s" % target_dir)
