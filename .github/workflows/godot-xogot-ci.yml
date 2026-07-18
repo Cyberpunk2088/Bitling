@@ -22,13 +22,19 @@ env:
 
 jobs:
   validate:
-    name: Import, parse, boot and regression-test
+    name: Integrity, import, parse, boot and regression-test
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Audit Xogot project integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/project_integrity.py
 
       - name: Install Godot 4.4.1
         shell: bash
