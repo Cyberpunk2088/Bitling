@@ -13,8 +13,10 @@ QuestService="*res://scripts/core/quest_service.gd"
 PlatformService="*res://scripts/core/platform_service.gd"
 CompanionBrain="*res://scripts/core/companion_brain.gd"
 BitlingIdentity="*res://scripts/social/bitling_identity.gd"
+DevelopmentProfile="*res://scripts/core/development_profile.gd"
 EmotionModel="*res://scripts/social/emotion_model.gd"
 BitlingLanguage="*res://scripts/social/bitling_language.gd"
+LanguageBridge="*res://scripts/social/language_bridge.gd"
 MediaCapabilityService="*res://scripts/social/media_capability_service.gd"
 SocialSessionService="*res://scripts/social/social_session_service.gd"
 LineageService="*res://scripts/social/lineage_service.gd"
@@ -30,6 +32,7 @@ DialogueToast="*res://scripts/ui/dialogue_toast.gd"
 LearningOverlay="*res://scripts/ui/learning_overlay.gd"
 ExplorationOverlay="*res://scripts/ui/exploration_overlay.gd"
 EvolutionOverlay="*res://scripts/ui/evolution_overlay.gd"
+ProfileOverlay="*res://scripts/ui/profile_overlay.gd"
 
 [audio]
 driver/enable_input=true
