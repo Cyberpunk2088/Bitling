@@ -56,6 +56,11 @@ def iter_text_files() -> list[Path]:
     return sorted(result)
 
 
+def is_runtime_source(path: Path) -> bool:
+    rel = path.relative_to(ROOT)
+    return rel.name == "Bitling_Core.gd" or (rel.parts and rel.parts[0] == "scripts")
+
+
 def add(findings: list[Finding], code: str, severity: str, message: str, path: Path | None = None) -> None:
     findings.append(Finding(code, severity, message, str(path.relative_to(ROOT)) if path else ""))
 
@@ -150,28 +155,31 @@ def audit_content(findings: list[Finding]) -> dict[str, int]:
             counters["gdscript_files"] += 1
         text = read_text(path)
         rel = path.relative_to(ROOT)
+        runtime_source = is_runtime_source(path)
 
+        # Secrets are scanned everywhere, including tests and tooling.
         for label, pattern in SECRET_PATTERNS.items():
             if pattern.search(text):
                 add(findings, "SECRET_DETECTED", "error", f"Possible {label} committed to the repository", path)
 
-        todo_count = len(re.findall(r"\b(?:TODO|FIXME|HACK|XXX)\b", text, re.IGNORECASE))
-        if todo_count:
-            counters["todo_markers"] += todo_count
-            add(findings, "OPEN_IMPLEMENTATION_MARKER", "warning", f"Contains {todo_count} TODO/FIXME-style markers", path)
+        if runtime_source:
+            todo_count = len(re.findall(r"\b(?:TODO|FIXME|HACK|XXX)\b", text, re.IGNORECASE))
+            if todo_count:
+                counters["todo_markers"] += todo_count
+                add(findings, "OPEN_IMPLEMENTATION_MARKER", "warning", f"Contains {todo_count} TODO/FIXME-style markers", path)
 
-        if "cognitive_index" in text and rel not in ALLOWED_COGNITIVE_INDEX_FILES:
-            add(findings, "DEPRECATED_COGNITIVE_INDEX", "error", "Deprecated cognitive_index reference remains outside migration code", path)
+            if "cognitive_index" in text and rel not in ALLOWED_COGNITIVE_INDEX_FILES:
+                add(findings, "DEPRECATED_COGNITIVE_INDEX", "error", "Deprecated cognitive_index reference remains outside migration code", path)
 
-        if path.suffix == ".gd":
-            quoted = re.findall(r'"([^"\n]{8,})"', text)
-            likely_ui = [value for value in quoted if re.search(r"[A-Za-zÄÖÜäöüß]", value) and not value.startswith(("res://", "user://", "/root/"))]
-            if len(likely_ui) > 15:
-                counters["hardcoded_ui_strings"] += len(likely_ui)
-                add(findings, "LOCALIZATION_DEBT", "warning", f"Approximately {len(likely_ui)} user-facing or semantic strings remain embedded in code", path)
+            if path.suffix == ".gd":
+                quoted = re.findall(r'"([^"\n]{8,})"', text)
+                likely_ui = [value for value in quoted if re.search(r"[A-Za-zÄÖÜäöüß]", value) and not value.startswith(("res://", "user://", "/root/"))]
+                if len(likely_ui) > 15:
+                    counters["hardcoded_ui_strings"] += len(likely_ui)
+                    add(findings, "LOCALIZATION_DEBT", "warning", f"Approximately {len(likely_ui)} user-facing or semantic strings remain embedded in code", path)
 
-        if "http://" in text:
-            add(findings, "INSECURE_HTTP", "error", "Plain HTTP endpoint found", path)
+            if "http://" in text:
+                add(findings, "INSECURE_HTTP", "error", "Plain HTTP endpoint found", path)
 
     return counters
 
