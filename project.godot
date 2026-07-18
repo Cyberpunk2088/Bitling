@@ -15,8 +15,11 @@ CompanionBrain="*res://scripts/core/companion_brain.gd"
 WellbeingGuard="*res://scripts/core/wellbeing_guard.gd"
 AdaptiveLearning="*res://scripts/core/adaptive_learning.gd"
 EvolutionService="*res://scripts/core/evolution_service.gd"
+VitalityService="*res://scripts/core/vitality_service.gd"
+ExplorationService="*res://scripts/core/exploration_service.gd"
 GameState="*res://scripts/core/game_state.gd"
 LearningOverlay="*res://scripts/ui/learning_overlay.gd"
+ExplorationOverlay="*res://scripts/ui/exploration_overlay.gd"
 EvolutionOverlay="*res://scripts/ui/evolution_overlay.gd"
 
 [display]
