@@ -111,11 +111,12 @@ func _test_game_state_progression_and_interactions() -> void:
 	_assert(int(state.xp) == 50, "XP remainder is preserved")
 	var old_hunger: float = float(state.hunger)
 	var old_happiness: float = float(state.happiness)
+	var tags: Array[String] = ["care"]
 	state.perform_interaction(
 		"care",
 		{"hunger": 10.0, "happiness": 5.0, "quest_event": "care_action_completed"},
 		15,
-		["care"]
+		tags
 	)
 	_assert(float(state.hunger) > old_hunger, "Care interaction updates saturation")
 	_assert(float(state.happiness) > old_happiness, "Care interaction updates happiness")
