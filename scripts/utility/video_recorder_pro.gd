@@ -1,7 +1,6 @@
 extends Node
 
-## Optional capture utility for automated showcase recordings.
-## It is not part of the player-facing runtime and remains GDScript-only for Xogot.
+## Optional GDScript-only utility for automated showcase recordings.
 
 @export var target_dir: String = "user://video_frames"
 @export_range(1.0, 60.0, 1.0) var frames_per_second: float = 15.0
@@ -131,7 +130,6 @@ func package_frames_to_tar(out_path: String) -> String:
 		var data := source.get_buffer(source.get_length())
 		source.close()
 		_write_tar_entry(archive, frame_path.get_file(), data)
-	archive.store_buffer(PackedByteArray(Array([], TYPE_NIL, "", null)))
 	var trailer := PackedByteArray()
 	trailer.resize(1024)
 	trailer.fill(0)
@@ -144,19 +142,21 @@ func _write_tar_entry(archive: FileAccess, file_name: String, data: PackedByteAr
 	header.resize(512)
 	header.fill(0)
 	_write_field(header, 0, 100, file_name)
-	_write_field(header, 100, 8, "0000644\0")
-	_write_field(header, 108, 8, "0000000\0")
-	_write_field(header, 116, 8, "0000000\0")
+	_write_field(header, 100, 8, "0000644")
+	_write_field(header, 108, 8, "0000000")
+	_write_field(header, 116, 8, "0000000")
 	_write_field(header, 124, 12, _octal_field(data.size(), 12))
 	_write_field(header, 136, 12, _octal_field(int(Time.get_unix_time_from_system()), 12))
 	_write_field(header, 148, 8, "        ")
 	_write_field(header, 156, 1, "0")
-	_write_field(header, 257, 6, "ustar\0")
+	_write_field(header, 257, 6, "ustar")
 	_write_field(header, 263, 2, "00")
 	var checksum := 0
 	for byte in header:
 		checksum += int(byte)
-	_write_field(header, 148, 8, String.num_int64(checksum, 8).pad_zeros(6) + "\0 ")
+	_write_field(header, 148, 6, String.num_int64(checksum, 8).pad_zeros(6))
+	header[154] = 0
+	header[155] = 32
 	archive.store_buffer(header)
 	archive.store_buffer(data)
 	var remainder := data.size() % 512
@@ -173,7 +173,7 @@ func _write_field(buffer: PackedByteArray, offset: int, length: int, value: Stri
 		buffer[offset + index] = bytes[index]
 
 func _octal_field(value: int, width: int) -> String:
-	return String.num_int64(value, 8).pad_zeros(width - 1) + "\0"
+	return String.num_int64(value, 8).pad_zeros(width - 1)
 
 func upload_file(file_path: String) -> void:
 	if upload_url.is_empty() or not FileAccess.file_exists(file_path):
