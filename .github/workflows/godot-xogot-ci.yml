@@ -20,9 +20,9 @@ env:
 
 jobs:
   validate:
-    name: Integrity, release audit, import, boot and regressions
+    name: Integrity, release audit, import, exports, boot and regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 22
 
     steps:
       - name: Check out repository
@@ -86,6 +86,30 @@ jobs:
             cat logs/boot.log
             exit 1
           fi
+
+      - name: Validate cross-platform export packs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p builds/ci
+          declare -A presets=(
+            [windows]="Windows Desktop"
+            [ios]="iOS Xogot"
+            [android]="Android"
+            [web]="Web"
+            [linux]="Linux"
+            [macos]="macOS"
+          )
+          for slug in windows ios android web linux macos; do
+            preset="${presets[$slug]}"
+            log="logs/export-${slug}.log"
+            timeout 120 ./godot --headless --path . --export-pack "$preset" "builds/ci/${slug}.pck" --log-file "$log"
+            test -s "builds/ci/${slug}.pck"
+            if grep -E "SCRIPT ERROR|^ERROR:" "$log"; then
+              cat "$log"
+              exit 1
+            fi
+          done
 
       - name: Run core regression tests
         shell: bash
