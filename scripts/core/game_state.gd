@@ -7,7 +7,7 @@ enum Phase { EGG, BABY, CHILD, TEEN, ADULT, SENIOR, LEGENDARY }
 enum Era { TERMINAL, PIXEL, VECTOR, FLAT, FLUID }
 enum Mood { ECSTATIC, HAPPY, CONTENT, NEUTRAL, TIRED, SAD, DISTRESSED }
 
-const SAVE_SCHEMA_VERSION := 4
+const SAVE_SCHEMA_VERSION := 5
 const MAX_LEVEL := 100
 const XP_PER_LEVEL := 100
 const SAVE_PATH := "user://bitling_save.json"
@@ -63,6 +63,7 @@ func _ready() -> void:
 	if not loaded:
 		initialize_new_game()
 	_register_daily_activity()
+	_evaluate_evolution()
 
 func _process(delta: float) -> void:
 	play_time_seconds += delta
@@ -91,6 +92,10 @@ func initialize_new_game() -> void:
 	story_flags = {"hatched": false, "tutorial_complete": false}
 	if has_node("/root/CompanionBrain"):
 		get_node("/root/CompanionBrain").reset_state()
+	if has_node("/root/AdaptiveLearning"):
+		get_node("/root/AdaptiveLearning").reset_state()
+	if has_node("/root/EvolutionService"):
+		get_node("/root/EvolutionService").reset_state()
 	add_memory("awakening", "A faint signal appeared in the dark.")
 	save_game_state()
 	state_changed.emit("new_game", true)
@@ -104,6 +109,7 @@ func hatch() -> void:
 	add_memory("birth", "The screen flickered, and there I was.")
 	phase_changed.emit(phase)
 	state_changed.emit("hatched", true)
+	_evaluate_evolution()
 	save_game_state()
 
 func gain_xp(amount: int, source: String = "unknown") -> void:
@@ -126,11 +132,11 @@ func gain_xp(amount: int, source: String = "unknown") -> void:
 		event_bus.xp_gained.emit(float(amount), source)
 		if old_level != level:
 			event_bus.level_changed.emit(old_level, level)
+	_evaluate_evolution()
 
 func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward: int, tags: Array[String] = []) -> Dictionary:
 	if interaction_id.is_empty():
 		return get_state_summary()
-
 	_apply_need_delta("hunger", float(effects.get("hunger", 0.0)))
 	_apply_need_delta("energy", float(effects.get("energy", 0.0)))
 	_apply_need_delta("happiness", float(effects.get("happiness", 0.0)))
@@ -138,7 +144,6 @@ func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward:
 	_apply_need_delta("health", float(effects.get("health", 0.0)))
 	_update_mood()
 	gain_xp(xp_reward, interaction_id)
-
 	if has_node("/root/CompanionBrain"):
 		get_node("/root/CompanionBrain").observe_interaction(interaction_id, 1.0, {"tags": tags})
 	if has_node("/root/QuestService"):
@@ -147,10 +152,24 @@ func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward:
 			get_node("/root/QuestService").record_event(event_name)
 	if has_node("/root/EventBus"):
 		get_node("/root/EventBus").interaction_completed.emit(interaction_id, tags)
-
+	_evaluate_evolution()
 	var summary := get_state_summary()
 	state_changed.emit("interaction", {"id": interaction_id, "state": summary})
 	return summary
+
+func apply_learning_result(result: Dictionary) -> Dictionary:
+	if not bool(result.get("accepted", false)):
+		return get_state_summary()
+	var success := bool(result.get("success", false))
+	var reward := maxi(int(result.get("xp_reward", 0)), 0)
+	var tags: Array[String] = ["learn", "growth"]
+	var effects := {
+		"energy": -4.0,
+		"happiness": 5.0 if success else 2.0,
+		"curiosity": 12.0 if success else 5.0,
+		"quest_event": "discovery_completed"
+	}
+	return perform_interaction("learn", effects, reward, tags)
 
 func update_stats(
 	hunger_delta: float = 0.0,
@@ -193,7 +212,6 @@ func save_game_state() -> bool:
 		return false
 	temporary.store_string(json)
 	temporary.close()
-
 	if FileAccess.file_exists(SAVE_PATH):
 		_copy_file(SAVE_PATH, BACKUP_SAVE_PATH)
 	if FileAccess.file_exists(SAVE_PATH):
@@ -240,6 +258,8 @@ func get_save_data() -> Dictionary:
 		"streak": get_node("/root/StreakService").export_state() if has_node("/root/StreakService") else {},
 		"quests": get_node("/root/QuestService").export_state() if has_node("/root/QuestService") else {},
 		"companion": get_node("/root/CompanionBrain").export_state() if has_node("/root/CompanionBrain") else {},
+		"learning": get_node("/root/AdaptiveLearning").export_state() if has_node("/root/AdaptiveLearning") else {},
+		"evolution": get_node("/root/EvolutionService").export_state() if has_node("/root/EvolutionService") else {},
 		"last_saved_at": Time.get_datetime_string_from_system()
 	}
 
@@ -270,20 +290,29 @@ func apply_save_data(data: Dictionary) -> void:
 		get_node("/root/QuestService").import_state(data.get("quests", {}))
 	if has_node("/root/CompanionBrain"):
 		get_node("/root/CompanionBrain").import_state(data.get("companion", {}))
+	if has_node("/root/AdaptiveLearning"):
+		get_node("/root/AdaptiveLearning").import_state(data.get("learning", {}))
+	if has_node("/root/EvolutionService"):
+		get_node("/root/EvolutionService").import_state(data.get("evolution", {}))
 	_update_progression()
 	_update_mood()
+	_evaluate_evolution()
 	state_changed.emit("loaded", true)
 
 func has_save_file() -> bool:
 	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(LEGACY_SAVE_PATH)
 
 func get_state_summary() -> Dictionary:
+	var form_id := "signal"
+	if has_node("/root/EvolutionService"):
+		form_id = str(get_node("/root/EvolutionService").current_form)
 	return {
 		"level": level,
 		"xp": xp,
 		"phase": Phase.keys()[phase],
 		"era": Era.keys()[era],
 		"mood": Mood.keys()[mood],
+		"form": form_id,
 		"hunger": hunger,
 		"energy": energy,
 		"happiness": happiness,
@@ -337,7 +366,6 @@ func _update_progression() -> void:
 	if new_phase != phase:
 		phase = new_phase
 		phase_changed.emit(phase)
-
 	var new_era: Era = era
 	for index in range(ERA_THRESHOLDS.size() - 1, -1, -1):
 		if level >= ERA_THRESHOLDS[index]:
@@ -365,6 +393,10 @@ func _update_mood() -> void:
 	if new_mood != mood:
 		mood = new_mood
 		mood_changed.emit(mood)
+
+func _evaluate_evolution() -> void:
+	if has_node("/root/EvolutionService"):
+		get_node("/root/EvolutionService").evaluate_runtime()
 
 func _read_save(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
