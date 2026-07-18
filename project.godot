@@ -4,3 +4,23 @@ config_version=5
 config/name="Bitling Core"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.0", "Forward Plus")
+
+[autoload]
+EventBus="*res://scripts/core/event_bus.gd"
+StreakService="*res://scripts/core/streak_service.gd"
+QuestService="*res://scripts/core/quest_service.gd"
+PlatformService="*res://scripts/core/platform_service.gd"
+GameState="*res://scripts/core/game_state.gd"
+
+[display]
+window/stretch/mode="canvas_items"
+
+[input]
+primary_action={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":32,"unicode":32), Object(InputEventJoypadButton,"button_index":0), Object(InputEventMouseButton,"button_index":1)]
+}
+back_action={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":4194305), Object(InputEventJoypadButton,"button_index":1)]
+}
