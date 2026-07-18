@@ -1,16 +1,13 @@
 extends Node
 
-## Lightweight, deterministic behavior model for BITLING.
-## It creates continuity through personality, relationship and meaningful memories
-## without requiring a network service or generative model.
+## Deterministic local behavior model for BITLING.
+## Relationship and personality create continuity without a network dependency.
 
 signal relationship_changed(old_value: float, new_value: float)
-signal personality_changed(trait: String, old_value: float, new_value: float)
+signal personality_changed(trait_name: String, old_value: float, new_value: float)
 signal intention_changed(intention: String)
 
 const MAX_RECENT_INTERACTIONS := 20
-const TRAIT_MIN := 0.0
-const TRAIT_MAX := 100.0
 
 var relationship_score: float = 10.0
 var trust: float = 10.0
@@ -36,46 +33,43 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
-	set_process(true)
 
 func _process(delta: float) -> void:
 	_autonomy_elapsed += delta
-	if _autonomy_elapsed < _autonomy_interval:
-		return
-	_autonomy_elapsed = 0.0
-	_autonomy_interval = _rng.randf_range(14.0, 28.0)
-	choose_idle_intention()
+	if _autonomy_elapsed >= _autonomy_interval:
+		_autonomy_elapsed = 0.0
+		_autonomy_interval = _rng.randf_range(14.0, 28.0)
+		choose_idle_intention()
 
 func observe_interaction(action: String, strength: float = 1.0, context: Dictionary = {}) -> Dictionary:
 	if action.is_empty():
 		return get_snapshot()
-
-	var normalized_strength := clampf(strength, 0.1, 3.0)
+	var amount := clampf(strength, 0.1, 3.0)
 	var old_relationship := relationship_score
 	last_interaction = action
 	last_interaction_timestamp = int(Time.get_unix_time_from_system())
 	interaction_counts[action] = int(interaction_counts.get(action, 0)) + 1
-	familiarity = clampf(familiarity + normalized_strength * 0.45, 0.0, 100.0)
+	familiarity = clampf(familiarity + amount * 0.45, 0.0, 100.0)
 
 	match action:
 		"care":
-			relationship_score += 1.8 * normalized_strength
-			trust += 1.4 * normalized_strength
-			_shift_trait("empathy", 0.45 * normalized_strength)
+			relationship_score += 1.8 * amount
+			trust += 1.4 * amount
+			_shift_trait("empathy", 0.45 * amount)
 		"play":
-			relationship_score += 1.4 * normalized_strength
-			_shift_trait("humor", 0.35 * normalized_strength)
-			_shift_trait("courage", 0.20 * normalized_strength)
+			relationship_score += 1.4 * amount
+			_shift_trait("humor", 0.35 * amount)
+			_shift_trait("courage", 0.20 * amount)
 		"learn":
-			relationship_score += 1.2 * normalized_strength
-			_shift_trait("curiosity", 0.50 * normalized_strength)
-			_shift_trait("order", 0.15 * normalized_strength)
+			relationship_score += 1.2 * amount
+			_shift_trait("curiosity", 0.50 * amount)
+			_shift_trait("order", 0.15 * amount)
 		"explore":
-			relationship_score += 1.0 * normalized_strength
-			_shift_trait("creativity", 0.45 * normalized_strength)
-			_shift_trait("independence", 0.25 * normalized_strength)
+			relationship_score += 1.0 * amount
+			_shift_trait("creativity", 0.45 * amount)
+			_shift_trait("independence", 0.25 * amount)
 		_:
-			relationship_score += 0.5 * normalized_strength
+			relationship_score += 0.5 * amount
 
 	relationship_score = clampf(relationship_score, 0.0, 100.0)
 	trust = clampf(trust, 0.0, 100.0)
@@ -85,24 +79,25 @@ func observe_interaction(action: String, strength: float = 1.0, context: Diction
 	return get_snapshot()
 
 func choose_idle_intention() -> String:
-	var weighted: Array[Dictionary] = [
-		{"id": "observe", "weight": 15.0},
-		{"id": "play", "weight": 8.0 + float(personality.get("humor", 50.0)) * 0.12},
-		{"id": "discover", "weight": 8.0 + float(personality.get("curiosity", 50.0)) * 0.15},
-		{"id": "organize", "weight": 5.0 + float(personality.get("order", 50.0)) * 0.10},
-		{"id": "create", "weight": 5.0 + float(personality.get("creativity", 50.0)) * 0.12},
-		{"id": "rest", "weight": 9.0}
+	var choices: Array[String] = ["observe", "play", "discover", "organize", "create", "rest"]
+	var weights: Array[float] = [
+		15.0,
+		8.0 + float(personality.get("humor", 50.0)) * 0.12,
+		8.0 + float(personality.get("curiosity", 50.0)) * 0.15,
+		5.0 + float(personality.get("order", 50.0)) * 0.10,
+		5.0 + float(personality.get("creativity", 50.0)) * 0.12,
+		9.0
 	]
 	var total := 0.0
-	for entry in weighted:
-		total += float(entry.weight)
+	for weight in weights:
+		total += weight
 	var roll := _rng.randf_range(0.0, total)
 	var running := 0.0
-	var selected := "observe"
-	for entry in weighted:
-		running += float(entry.weight)
+	var selected := choices[0]
+	for index in range(choices.size()):
+		running += weights[index]
 		if roll <= running:
-			selected = str(entry.id)
+			selected = choices[index]
 			break
 	if selected != current_intention:
 		current_intention = selected
@@ -111,27 +106,24 @@ func choose_idle_intention() -> String:
 
 func get_greeting() -> String:
 	var hour := int(Time.get_time_dict_from_system().get("hour", 12))
-	var period := "Hallo"
+	var opening := "Hallo"
 	if hour < 6:
-		period = "Du bist noch wach"
+		opening = "Du bist noch wach"
 	elif hour < 11:
-		period = "Guten Morgen"
+		opening = "Guten Morgen"
 	elif hour < 18:
-		period = "Schön, dass du da bist"
+		opening = "Schön, dass du da bist"
 	elif hour < 23:
-		period = "Guten Abend"
+		opening = "Guten Abend"
 	else:
-		period = "Ganz schön spät"
-
+		opening = "Ganz schön spät"
 	if familiarity < 5.0:
-		return "%s. Ich lerne dich noch kennen." % period
+		return "%s. Ich lerne dich noch kennen." % opening
 	if relationship_score >= 75.0:
-		return "%s. Ich habe schon auf unseren nächsten Moment gehofft." % period
+		return "%s. Ich freue mich auf unseren nächsten Moment." % opening
 	if last_interaction == "learn":
-		return "%s. Mir ist seit unserem letzten Lernen eine neue Frage eingefallen." % period
-	if last_interaction == "play":
-		return "%s. Bereit für eine neue Runde?" % period
-	return "%s. Was entdecken wir heute?" % period
+		return "%s. Mir ist seit unserem letzten Lernen eine neue Frage eingefallen." % opening
+	return "%s. Was entdecken wir heute?" % opening
 
 func get_snapshot() -> Dictionary:
 	return {
@@ -163,8 +155,8 @@ func import_state(data: Dictionary) -> void:
 		if item is Dictionary:
 			recent_interactions.append(item.duplicate(true))
 	var loaded_personality: Dictionary = data.get("personality", {})
-	for trait in personality.keys():
-		personality[trait] = clampf(float(loaded_personality.get(trait, personality[trait])), TRAIT_MIN, TRAIT_MAX)
+	for trait_name in personality.keys():
+		personality[trait_name] = clampf(float(loaded_personality.get(trait_name, personality[trait_name])), 0.0, 100.0)
 
 func reset_state() -> void:
 	relationship_score = 10.0
@@ -176,23 +168,18 @@ func reset_state() -> void:
 	interaction_counts.clear()
 	recent_interactions.clear()
 	personality = {
-		"curiosity": 55.0,
-		"empathy": 50.0,
-		"courage": 45.0,
-		"humor": 50.0,
-		"order": 50.0,
-		"creativity": 55.0,
-		"independence": 45.0
+		"curiosity": 55.0, "empathy": 50.0, "courage": 45.0,
+		"humor": 50.0, "order": 50.0, "creativity": 55.0, "independence": 45.0
 	}
 
-func _shift_trait(trait: String, delta: float) -> void:
-	if not personality.has(trait):
+func _shift_trait(trait_name: String, delta: float) -> void:
+	if not personality.has(trait_name):
 		return
-	var old_value := float(personality[trait])
-	var new_value := clampf(old_value + delta, TRAIT_MIN, TRAIT_MAX)
-	personality[trait] = new_value
+	var old_value := float(personality[trait_name])
+	var new_value := clampf(old_value + delta, 0.0, 100.0)
+	personality[trait_name] = new_value
 	if not is_equal_approx(old_value, new_value):
-		personality_changed.emit(trait, old_value, new_value)
+		personality_changed.emit(trait_name, old_value, new_value)
 
 func _remember_recent(action: String, context: Dictionary) -> void:
 	recent_interactions.append({
