@@ -98,6 +98,7 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     dialogue = read_text("scripts/core/dialogue_director.gd")
     evolution = read_text("scripts/core/evolution_matrix_service.gd")
     partner = read_text("scripts/core/partner_world_service.gd")
+    settlement = read_text("scripts/core/signal_settlement_service.gd")
     living_home = read_text("scripts/core/living_home_service.gd")
     audio = read_text("scripts/audio/omni_audio_director.gd")
     assets = read_text("scripts/visual/production_asset_catalog.gd")
@@ -111,7 +112,6 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
 
     bus_block = extract_block(audio, "BUS_LEVELS", "}")
     audio_bus_count = len(re.findall(r'^\s*"[^"]+"\s*:', bus_block, flags=re.MULTILINE))
-
     primary_actions = sum(1 for action in ("feed", "play", "learn", "care", "rest") if f'"{action}":' in audio)
 
     animation_block = extract_block(assets, "REQUIRED_CHARACTER_ANIMATIONS", "]")
@@ -130,8 +130,21 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     living_home_decoration_count = len(
         re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"comfort":', living_home, flags=re.MULTILINE)
     )
-    test_count = count_files(ROOT / "tests", (".gd",))
 
+    settlement_district_count = len(
+        re.findall(r'^\s*"[^"]+":\s*\{\n\s*"label":\s*"[^"]+",\n\s*"position":', settlement, flags=re.MULTILINE)
+    )
+    settlement_citizen_count = len(
+        re.findall(r'^\s*"[^"]+":\s*\{"name":\s*"[^"]+",\s*"role":', settlement, flags=re.MULTILINE)
+    )
+    settlement_secret_count = len(
+        re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"district":\s*"[^"]+",\s*"stages":', settlement, flags=re.MULTILINE)
+    )
+    settlement_expedition_count = len(
+        re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"rank":\s*\d+,\s*"steps":\s*\d+,\s*"technique":', settlement, flags=re.MULTILINE)
+    )
+
+    test_count = count_files(ROOT / "tests", (".gd",))
     values = {
         "gdscript_test_files": test_count,
         "responsive_capture_count": capture_count,
@@ -143,6 +156,10 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
         "required_character_animation_contract": animation_count,
         "living_home_object_count": living_home_object_count,
         "living_home_decoration_count": living_home_decoration_count,
+        "signal_settlement_district_count": settlement_district_count,
+        "signal_settlement_citizen_count": settlement_citizen_count,
+        "signal_settlement_secret_count": settlement_secret_count,
+        "signal_settlement_expedition_count": settlement_expedition_count,
     }
     for metric, actual in values.items():
         target = int(floors.get(f"{metric}_min", 0))
