@@ -20,9 +20,9 @@ env:
 
 jobs:
   vertical-slice:
-    name: Story, activities, persistence and Xogot boot
+    name: Story, visual production, activities, persistence and Xogot boot
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 22
 
     steps:
       - name: Check out exact candidate
@@ -38,13 +38,19 @@ jobs:
           test -s scripts/core/legendary_slice_director_v2.gd
           test -s scripts/core/legendary_slice_event_bridge.gd
           test -s scripts/ui/legendary_activity_overlay.gd
+          test -s scripts/ui/legendary_activity_overlay_v2.gd
+          test -s scripts/ui/legendary_activity_backdrop.gd
           test -s scripts/ui/legendary_onboarding_overlay.gd
           test -s scripts/ui/legendary_promise_overlay.gd
+          test -s scripts/ui/legendary_story_hud.gd
+          test -s scripts/ui/production_bitling_stage_3d_v6.gd
+          test -s scripts/ui/metafinal_visual_director_v7.gd
           test -s tests/legendary_vertical_slice_test.gd
+          test -s tests/wave1_visual_production_test.gd
           grep -F 'LegendarySlice="*res://scripts/core/legendary_slice_director_v2.gd"' project.godot
-          grep -F 'LegendaryActivities="*res://scripts/ui/legendary_activity_overlay.gd"' project.godot
-          grep -F 'LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"' project.godot
-          grep -F 'LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"' project.godot
+          grep -F 'LegendaryActivities="*res://scripts/ui/legendary_activity_overlay_v2.gd"' project.godot
+          grep -F 'LegendaryStoryHUD="*res://scripts/ui/legendary_story_hud.gd"' project.godot
+          grep -F 'res://scripts/ui/metafinal_visual_director_v7.gd' main.tscn
 
       - name: Install Godot 4.6.3
         shell: bash
@@ -63,7 +69,9 @@ jobs:
         run: |
           set -euo pipefail
           timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave1-import.log
-          timeout 90 ./godot --headless --path . --script res://tests/legendary_vertical_slice_test.gd --check-only --log-file logs/wave1-parse.log
+          for script in legendary_vertical_slice_test wave1_visual_production_test; do
+            timeout 90 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/wave1-parse-${script}.log"
+          done
           if grep -E "SCRIPT ERROR|^ERROR:" logs/wave1-*.log; then
             cat logs/wave1-*.log
             exit 1
@@ -87,6 +95,17 @@ jobs:
           grep -F "[CI-SLICE] PASS" logs/wave1-tests.log
           if grep -E "SCRIPT ERROR|^ERROR:" logs/wave1-tests.log; then
             cat logs/wave1-tests.log
+            exit 1
+          fi
+
+      - name: Run Wave 1 visual-production regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --script res://tests/wave1_visual_production_test.gd --log-file logs/wave1-visual-tests.log
+          grep -F "[CI-WAVE1-VISUAL] PASS" logs/wave1-visual-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave1-visual-tests.log; then
+            cat logs/wave1-visual-tests.log
             exit 1
           fi
 
