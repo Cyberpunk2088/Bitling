@@ -1,8 +1,7 @@
 extends Node
 
-## Wave 4 authoritative settlement exploration. It adds a navigable district graph,
-## residents, mentors, secrets, expeditions and generation-dependent world effects
-## without duplicating the existing PartnerWorld care/evolution state.
+## Wave 4 authoritative settlement exploration. The service owns navigation,
+## residents, mentors, secrets, expeditions and permanent world consequences.
 
 signal settlement_changed(snapshot: Dictionary)
 signal district_changed(previous_id: String, current_id: String, route: Array[String])
@@ -104,7 +103,7 @@ const EXPEDITIONS: Dictionary = {
 	"quiet_orbit": {"label": "Stiller Orbit", "rank": 3, "steps": 6, "technique": "mentor_chorus", "discovery": "echo_archive", "xp": 180, "risk": "legendär"}
 }
 
-var current_district := "signal_plaza"
+var current_district: String = "signal_plaza"
 var district_visits: Dictionary = {"signal_plaza": 1}
 var district_mastery: Dictionary = {}
 var mentor_bonds: Dictionary = {}
@@ -123,7 +122,8 @@ func _ready() -> void:
 	call_deferred("_refresh_world_consequences")
 
 func get_snapshot() -> Dictionary:
-	var partner := _partner_snapshot()
+	var partner: Dictionary = _partner_snapshot()
+	var visible_citizens: Array[Dictionary] = get_visible_citizens()
 	return {
 		"current_district": current_district,
 		"current_district_data": get_district_data(current_district),
@@ -131,7 +131,7 @@ func get_snapshot() -> Dictionary:
 		"district_visits": district_visits.duplicate(true),
 		"district_mastery": district_mastery.duplicate(true),
 		"mentor_bonds": mentor_bonds.duplicate(true),
-		"visible_citizens": get_visible_citizens(),
+		"visible_citizens": visible_citizens,
 		"secret_progress": secret_progress.duplicate(true),
 		"completed_secrets": completed_secrets.duplicate(),
 		"expeditions": get_expedition_catalog(),
@@ -142,14 +142,14 @@ func get_snapshot() -> Dictionary:
 		"settlement_rank": int(partner.get("settlement_rank", 0)),
 		"settlement_rank_name": str(partner.get("settlement_rank_name", "SIGNALPOSTEN")),
 		"generation": int(partner.get("generation", 1)),
-		"citizen_count": get_visible_citizens().size()
+		"citizen_count": visible_citizens.size()
 	}
 
 func get_map_districts() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var rank := _settlement_rank()
-	for district_id_variant in DISTRICTS.keys():
-		var district_id := str(district_id_variant)
+	var rank: int = _settlement_rank()
+	for district_id_variant: Variant in DISTRICTS.keys():
+		var district_id: String = str(district_id_variant)
 		var data: Dictionary = DISTRICTS[district_id]
 		var position: Vector2 = data.get("position", Vector2.ZERO)
 		result.append({
@@ -182,19 +182,20 @@ func travel_to(district_id: String) -> Dictionary:
 	if not DISTRICTS.has(district_id):
 		return {"accepted": false, "reason": "unknown_district"}
 	var target: Dictionary = DISTRICTS[district_id]
-	if _settlement_rank() < int(target.get("rank", 0)):
-		return {"accepted": false, "reason": "district_locked", "required_rank": int(target.get("rank", 0))}
-	var route := _find_route(current_district, district_id)
+	var required_rank: int = int(target.get("rank", 0))
+	if _settlement_rank() < required_rank:
+		return {"accepted": false, "reason": "district_locked", "required_rank": required_rank}
+	var route: Array[String] = _find_route(current_district, district_id)
 	if route.is_empty():
 		return {"accepted": false, "reason": "no_route"}
-	var previous := current_district
+	var previous: String = current_district
 	current_district = district_id
 	district_visits[district_id] = int(district_visits.get(district_id, 0)) + 1
 	district_mastery[district_id] = clampf(float(district_mastery.get(district_id, 0.0)) + 3.0, 0.0, 100.0)
 	if int(district_visits[district_id]) == 1:
 		_award_settlement_xp(10)
 	last_encounter = _generate_arrival_encounter(district_id)
-	_remember("travel", {"from": previous, "to": district_id, "route": route, "encounter": last_encounter})
+	_remember("travel", {"from": previous, "to": district_id, "route": route.duplicate(), "encounter": last_encounter.duplicate(true)})
 	district_changed.emit(previous, current_district, route)
 	if not last_encounter.is_empty():
 		encounter_resolved.emit(last_encounter.duplicate(true))
@@ -204,32 +205,31 @@ func travel_to(district_id: String) -> Dictionary:
 	return {"accepted": true, "from": previous, "to": district_id, "route": route, "encounter": last_encounter.duplicate(true)}
 
 func investigate_current_district() -> Dictionary:
-	var secret_id := _secret_for_district(current_district)
+	var secret_id: String = _secret_for_district(current_district)
 	if secret_id.is_empty():
-		var result := {"accepted": true, "completed": false, "message": "Keine verborgene Signatur reagiert an diesem Ort."}
-		last_encounter = result
-		encounter_resolved.emit(result.duplicate(true))
-		return result
-	var secret: Dictionary = SECRETS[secret_id]
-	var current := int(secret_progress.get(secret_id, 0))
-	var required := int(secret.get("stages", 3))
+		var empty_result: Dictionary = {"accepted": true, "completed": false, "message": "Keine verborgene Signatur reagiert an diesem Ort."}
+		last_encounter = empty_result.duplicate(true)
+		encounter_resolved.emit(empty_result.duplicate(true))
+		return empty_result
 	if completed_secrets.has(secret_id):
 		return {"accepted": false, "reason": "secret_complete", "secret": secret_id}
-	current += 1
-	secret_progress[secret_id] = current
-	var completed := current >= required
+	var secret: Dictionary = SECRETS[secret_id]
+	var current_stage: int = int(secret_progress.get(secret_id, 0)) + 1
+	var required_stages: int = int(secret.get("stages", 3))
+	secret_progress[secret_id] = current_stage
+	var completed: bool = current_stage >= required_stages
 	if completed:
 		completed_secrets.append(secret_id)
 		_award_settlement_xp(int(secret.get("reward_xp", 60)))
-		var partner := get_node_or_null("/root/PartnerWorld")
+		var partner: Node = get_node_or_null("/root/PartnerWorld")
 		if partner != null and partner.has_method("award_legacy_points"):
 			partner.call("award_legacy_points", float(secret.get("reward_legacy", 6.0)), "settlement_secret")
-	var result := {
+	var result: Dictionary = {
 		"accepted": true,
 		"secret": secret_id,
 		"label": str(secret.get("label", secret_id)),
-		"stage": current,
-		"stages": required,
+		"stage": current_stage,
+		"stages": required_stages,
 		"completed": completed
 	}
 	last_encounter = result.duplicate(true)
@@ -248,17 +248,17 @@ func train_with_mentor(citizen_id: String) -> Dictionary:
 		return {"accepted": false, "reason": "mentor_elsewhere"}
 	if not _citizen_is_visible(citizen_id, citizen):
 		return {"accepted": false, "reason": "mentor_unavailable"}
-	var technique := str(citizen.get("technique", "pattern_focus"))
-	var bond := float(mentor_bonds.get(citizen_id, 0.0))
-	var quality := 0.75 + minf(bond * 0.025, 1.35)
-	var partner := get_node_or_null("/root/PartnerWorld")
+	var technique: String = str(citizen.get("technique", "pattern_focus"))
+	var bond: float = float(mentor_bonds.get(citizen_id, 0.0))
+	var quality: float = 0.75 + minf(bond * 0.025, 1.35)
 	var technique_result: Dictionary = {}
+	var partner: Node = get_node_or_null("/root/PartnerWorld")
 	if partner != null and partner.has_method("observe_technique"):
-		technique_result = partner.call("observe_technique", technique, quality)
+		technique_result = partner.call("observe_technique", technique, quality) as Dictionary
 	bond = clampf(bond + 8.0, 0.0, 100.0)
 	mentor_bonds[citizen_id] = bond
 	district_mastery[current_district] = clampf(float(district_mastery.get(current_district, 0.0)) + 5.0, 0.0, 100.0)
-	var result := {
+	var result: Dictionary = {
 		"accepted": true,
 		"mentor": citizen_id,
 		"mentor_name": str(citizen.get("name", citizen_id)),
@@ -280,8 +280,9 @@ func start_expedition(region_id: String) -> Dictionary:
 	if current_district != "expedition_gate":
 		return {"accepted": false, "reason": "travel_to_gate"}
 	var data: Dictionary = EXPEDITIONS[region_id]
-	if _settlement_rank() < int(data.get("rank", 0)):
-		return {"accepted": false, "reason": "region_locked", "required_rank": int(data.get("rank", 0))}
+	var required_rank: int = int(data.get("rank", 0))
+	if _settlement_rank() < required_rank:
+		return {"accepted": false, "reason": "region_locked", "required_rank": required_rank}
 	active_expedition = {
 		"id": region_id,
 		"label": str(data.get("label", region_id.capitalize())),
@@ -301,23 +302,23 @@ func start_expedition(region_id: String) -> Dictionary:
 func advance_expedition(choice: String) -> Dictionary:
 	if active_expedition.is_empty():
 		return {"accepted": false, "reason": "no_active_expedition"}
-	var normalized := choice.strip_edges().to_lower()
+	var normalized: String = choice.strip_edges().to_lower()
 	if normalized not in ["observe", "assist", "experiment", "rest"]:
 		return {"accepted": false, "reason": "invalid_choice"}
-	var region_id := str(active_expedition.get("id", ""))
-	var data: Dictionary = EXPEDITIONS.get(region_id, {})
-	var recommended := str(data.get("technique", ""))
-	var technique_bonus := 0.0
-	var partner_snapshot := _partner_snapshot()
-	if (partner_snapshot.get("learned_techniques", []) as Array).has(recommended):
-		technique_bonus = 0.30
-	var choice_quality := {"observe": 0.82, "assist": 0.88, "experiment": 0.92, "rest": 0.68}.get(normalized, 0.70)
-	var step_score := clampf(float(choice_quality) + technique_bonus, 0.0, 1.25)
+	var region_id: String = str(active_expedition.get("id", ""))
+	var data: Dictionary = EXPEDITIONS.get(region_id, {}) as Dictionary
+	var recommended: String = str(data.get("technique", ""))
+	var partner_snapshot: Dictionary = _partner_snapshot()
+	var technique_bonus: float = 0.30 if (partner_snapshot.get("learned_techniques", []) as Array).has(recommended) else 0.0
+	var choice_quality: float = float(({"observe": 0.82, "assist": 0.88, "experiment": 0.92, "rest": 0.68} as Dictionary).get(normalized, 0.70))
+	var step_score: float = clampf(choice_quality + technique_bonus, 0.0, 1.25)
 	active_expedition["progress"] = int(active_expedition.get("progress", 0)) + 1
 	active_expedition["score"] = float(active_expedition.get("score", 0.0)) + step_score
-	(active_expedition.get("choices", []) as Array).append(normalized)
-	var completed := int(active_expedition.get("progress", 0)) >= int(active_expedition.get("steps", 1))
-	var result := {
+	var choices: Array = active_expedition.get("choices", []) as Array
+	choices.append(normalized)
+	active_expedition["choices"] = choices
+	var completed: bool = int(active_expedition.get("progress", 0)) >= int(active_expedition.get("steps", 1))
+	var result: Dictionary = {
 		"accepted": true,
 		"region": region_id,
 		"choice": normalized,
@@ -327,16 +328,16 @@ func advance_expedition(choice: String) -> Dictionary:
 		"completed": completed
 	}
 	if completed:
-		var final_score := float(active_expedition.get("score", 0.0)) / maxf(float(active_expedition.get("steps", 1)), 1.0)
-		var record := {
+		var final_score: float = float(active_expedition.get("score", 0.0)) / maxf(float(active_expedition.get("steps", 1)), 1.0)
+		var record: Dictionary = {
 			"completed": true,
 			"score": final_score,
 			"completed_at": int(Time.get_unix_time_from_system()),
-			"choices": (active_expedition.get("choices", []) as Array).duplicate()
+			"choices": choices.duplicate()
 		}
 		expedition_records[region_id] = record
 		_award_settlement_xp(int(data.get("xp", 60)))
-		var partner := get_node_or_null("/root/PartnerWorld")
+		var partner: Node = get_node_or_null("/root/PartnerWorld")
 		if partner != null and partner.has_method("register_world_discovery"):
 			result["discovery"] = partner.call("register_world_discovery", str(data.get("discovery", "")))
 		result["final_score"] = final_score
@@ -350,12 +351,12 @@ func advance_expedition(choice: String) -> Dictionary:
 
 func get_visible_citizens() -> Array[Dictionary]:
 	var citizens: Array[Dictionary] = []
-	for citizen_id_variant in CITIZENS.keys():
-		var citizen_id := str(citizen_id_variant)
+	for citizen_id_variant: Variant in CITIZENS.keys():
+		var citizen_id: String = str(citizen_id_variant)
 		var data: Dictionary = CITIZENS[citizen_id]
 		if not _citizen_is_visible(citizen_id, data):
 			continue
-		var entry := data.duplicate(true)
+		var entry: Dictionary = data.duplicate(true)
 		entry["id"] = citizen_id
 		entry["bond"] = float(mentor_bonds.get(citizen_id, 0.0))
 		citizens.append(entry)
@@ -363,16 +364,16 @@ func get_visible_citizens() -> Array[Dictionary]:
 
 func get_citizens_in_district(district_id: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for citizen in get_visible_citizens():
+	for citizen: Dictionary in get_visible_citizens():
 		if str(citizen.get("district", "")) == district_id:
 			result.append(citizen)
 	return result
 
 func get_expedition_catalog() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var rank := _settlement_rank()
-	for region_id_variant in EXPEDITIONS.keys():
-		var region_id := str(region_id_variant)
+	var rank: int = _settlement_rank()
+	for region_id_variant: Variant in EXPEDITIONS.keys():
+		var region_id: String = str(region_id_variant)
 		var data: Dictionary = (EXPEDITIONS[region_id] as Dictionary).duplicate(true)
 		data["id"] = region_id
 		data["unlocked"] = rank >= int(data.get("rank", 0))
@@ -428,16 +429,16 @@ func reset_state() -> void:
 	world_flags.clear()
 	history.clear()
 	last_encounter.clear()
-	for path in [SAVE_PATH, TEMP_PATH, BACKUP_PATH]:
+	for path: String in [SAVE_PATH, TEMP_PATH, BACKUP_PATH]:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
 	_refresh_world_consequences()
 	_emit_changed()
 
 func save_state() -> bool:
-	var payload := export_state()
+	var payload: Dictionary = export_state()
 	payload["saved_at"] = int(Time.get_unix_time_from_system())
-	var file := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
+	var file: FileAccess = FileAccess.open(TEMP_PATH, FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(JSON.stringify(payload))
@@ -445,10 +446,10 @@ func save_state() -> bool:
 	if FileAccess.file_exists(SAVE_PATH) and not _read_payload(SAVE_PATH).is_empty():
 		_copy_file(SAVE_PATH, BACKUP_PATH)
 	if FileAccess.file_exists(SAVE_PATH):
-		var remove_error := DirAccess.remove_absolute(SAVE_PATH)
+		var remove_error: Error = DirAccess.remove_absolute(SAVE_PATH)
 		if remove_error != OK:
 			return false
-	var rename_error := DirAccess.rename_absolute(TEMP_PATH, SAVE_PATH)
+	var rename_error: Error = DirAccess.rename_absolute(TEMP_PATH, SAVE_PATH)
 	if rename_error != OK:
 		if FileAccess.file_exists(BACKUP_PATH):
 			_copy_file(BACKUP_PATH, SAVE_PATH)
@@ -456,8 +457,8 @@ func save_state() -> bool:
 	return true
 
 func load_state() -> bool:
-	for path in [SAVE_PATH, BACKUP_PATH]:
-		var payload := _read_payload(path)
+	for path: String in [SAVE_PATH, BACKUP_PATH]:
+		var payload: Dictionary = _read_payload(path)
 		if payload.is_empty():
 			continue
 		import_state(payload)
@@ -465,14 +466,15 @@ func load_state() -> bool:
 	return false
 
 func _connect_partner_world() -> void:
-	var partner := get_node_or_null("/root/PartnerWorld")
+	var partner: Node = get_node_or_null("/root/PartnerWorld")
 	if partner == null:
 		return
-	for signal_name in ["citizen_recruited", "settlement_rank_changed", "legacy_seed_created"]:
-		if partner.has_signal(signal_name):
-			var callback := Callable(self, "_on_partner_world_changed")
-			if not partner.is_connected(signal_name, callback):
-				partner.connect(signal_name, callback)
+	for signal_name: String in ["citizen_recruited", "settlement_rank_changed", "legacy_seed_created"]:
+		if not partner.has_signal(signal_name):
+			continue
+		var callback: Callable = Callable(self, "_on_partner_world_changed")
+		if not partner.is_connected(signal_name, callback):
+			partner.connect(signal_name, callback)
 
 func _on_partner_world_changed(_a: Variant = null, _b: Variant = null) -> void:
 	_refresh_world_consequences()
@@ -485,18 +487,20 @@ func _find_route(from_id: String, to_id: String) -> Array[String]:
 	var queue: Array[String] = [from_id]
 	var previous: Dictionary = {from_id: ""}
 	while not queue.is_empty():
-		var current := queue.pop_front()
-		var neighbors: Array = (DISTRICTS.get(current, {}) as Dictionary).get("neighbors", [])
-		for neighbor_variant in neighbors:
-			var neighbor := str(neighbor_variant)
+		var current: String = queue.pop_front()
+		var district: Dictionary = DISTRICTS.get(current, {}) as Dictionary
+		var neighbors: Array = district.get("neighbors", []) as Array
+		for neighbor_variant: Variant in neighbors:
+			var neighbor: String = str(neighbor_variant)
 			if previous.has(neighbor):
 				continue
-			if _settlement_rank() < int((DISTRICTS.get(neighbor, {}) as Dictionary).get("rank", 0)):
+			var neighbor_data: Dictionary = DISTRICTS.get(neighbor, {}) as Dictionary
+			if _settlement_rank() < int(neighbor_data.get("rank", 0)):
 				continue
 			previous[neighbor] = current
 			if neighbor == to_id:
 				var route: Array[String] = [to_id]
-				var cursor := current
+				var cursor: String = current
 				while not cursor.is_empty():
 					route.push_front(cursor)
 					cursor = str(previous.get(cursor, ""))
@@ -505,20 +509,22 @@ func _find_route(from_id: String, to_id: String) -> Array[String]:
 	return []
 
 func _generate_arrival_encounter(district_id: String) -> Dictionary:
-	var visit := int(district_visits.get(district_id, 1))
-	var citizens := get_citizens_in_district(district_id)
+	var visit: int = int(district_visits.get(district_id, 1))
+	var citizens: Array[Dictionary] = get_citizens_in_district(district_id)
 	if not citizens.is_empty() and visit % 3 == 0:
-		var citizen: Dictionary = citizens[(visit / 3) % citizens.size()]
+		var citizen_index: int = int(visit / 3) % citizens.size()
+		var citizen: Dictionary = citizens[citizen_index]
 		return {"type": "citizen", "citizen": str(citizen.get("id", "")), "name": str(citizen.get("name", "")), "message": "%s wartet mit einer neuen Beobachtung." % str(citizen.get("name", "Jemand"))}
-	var secret_id := _secret_for_district(district_id)
+	var secret_id: String = _secret_for_district(district_id)
 	if not secret_id.is_empty() and not completed_secrets.has(secret_id) and visit % 2 == 0:
 		return {"type": "secret", "secret": secret_id, "message": "Eine verborgene Resonanz reagiert auf euren Besuch."}
 	return {"type": "world", "message": "Der Bezirk verändert sich durch eure Anwesenheit.", "mastery": float(district_mastery.get(district_id, 0.0))}
 
 func _secret_for_district(district_id: String) -> String:
-	for secret_id_variant in SECRETS.keys():
-		var secret_id := str(secret_id_variant)
-		if str((SECRETS[secret_id] as Dictionary).get("district", "")) == district_id:
+	for secret_id_variant: Variant in SECRETS.keys():
+		var secret_id: String = str(secret_id_variant)
+		var secret: Dictionary = SECRETS[secret_id]
+		if str(secret.get("district", "")) == district_id:
 			return secret_id
 	return ""
 
@@ -530,10 +536,10 @@ func _citizen_is_visible(citizen_id: String, data: Dictionary) -> bool:
 	return (_partner_snapshot().get("citizens", []) as Array).has(citizen_id)
 
 func _refresh_world_consequences() -> void:
-	var partner := _partner_snapshot()
-	var rank := int(partner.get("settlement_rank", 0))
-	var generation := int(partner.get("generation", 1))
-	var next_flags := {
+	var partner: Dictionary = _partner_snapshot()
+	var rank: int = int(partner.get("settlement_rank", 0))
+	var generation: int = int(partner.get("generation", 1))
+	var next_flags: Dictionary = {
 		"sky_lanes": rank >= 2,
 		"mentor_network": rank >= 2 and mentor_bonds.size() >= 3,
 		"legacy_statues": generation >= 2,
@@ -546,7 +552,7 @@ func _refresh_world_consequences() -> void:
 		world_consequences_changed.emit(world_flags.duplicate(true))
 
 func _partner_snapshot() -> Dictionary:
-	var partner := get_node_or_null("/root/PartnerWorld")
+	var partner: Node = get_node_or_null("/root/PartnerWorld")
 	if partner != null and partner.has_method("get_snapshot"):
 		return partner.call("get_snapshot") as Dictionary
 	return {}
@@ -555,7 +561,7 @@ func _settlement_rank() -> int:
 	return int(_partner_snapshot().get("settlement_rank", 0))
 
 func _award_settlement_xp(amount: int) -> void:
-	var partner := get_node_or_null("/root/PartnerWorld")
+	var partner: Node = get_node_or_null("/root/PartnerWorld")
 	if partner != null and partner.has_method("add_settlement_xp"):
 		partner.call("add_settlement_xp", amount)
 
@@ -570,23 +576,24 @@ func _emit_changed() -> void:
 func _read_payload(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
-	var file := FileAccess.open(path, FileAccess.READ)
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var text: String = file.get_as_text()
 	file.close()
+	var parsed: Variant = JSON.parse_string(text)
 	if not parsed is Dictionary:
 		return {}
-	var payload := parsed as Dictionary
+	var payload: Dictionary = parsed as Dictionary
 	return payload if int(payload.get("version", 0)) > 0 else {}
 
 func _copy_file(source: String, target: String) -> bool:
-	var source_file := FileAccess.open(source, FileAccess.READ)
+	var source_file: FileAccess = FileAccess.open(source, FileAccess.READ)
 	if source_file == null:
 		return false
-	var bytes := source_file.get_buffer(source_file.get_length())
+	var bytes: PackedByteArray = source_file.get_buffer(source_file.get_length())
 	source_file.close()
-	var target_file := FileAccess.open(target, FileAccess.WRITE)
+	var target_file: FileAccess = FileAccess.open(target, FileAccess.WRITE)
 	if target_file == null:
 		return false
 	target_file.store_buffer(bytes)
@@ -596,14 +603,14 @@ func _copy_file(source: String, target: String) -> bool:
 func _string_array(value: Variant) -> Array[String]:
 	var result: Array[String] = []
 	if value is Array:
-		for entry in value:
+		for entry: Variant in value:
 			result.append(str(entry))
 	return result
 
 func _dictionary_array(value: Variant, limit: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if value is Array:
-		for entry in value:
+		for entry: Variant in value:
 			if entry is Dictionary:
 				result.append((entry as Dictionary).duplicate(true))
 	while result.size() > limit:
