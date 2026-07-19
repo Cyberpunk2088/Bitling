@@ -38,6 +38,7 @@ jobs:
           test -s scripts/ui/production_bitling_stage_3d_v8.gd
           test -s scripts/ui/production_bitling_stage_3d_v9.gd
           test -s scripts/ui/production_bitling_stage_3d_v10.gd
+          test -s scripts/ui/production_bitling_stage_3d_v11.gd
           test -s scripts/ui/metafinal_visual_director_v8.gd
           test -s scripts/ui/metafinal_visual_director_v9.gd
           test -s tests/wave2_character_performance_test.gd
@@ -45,7 +46,7 @@ jobs:
           grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v2.gd"' project.godot
           grep -F 'CharacterPerformance="*res://scripts/core/character_performance_director.gd"' project.godot
           grep -F 'metafinal_visual_director_v9.gd' main.tscn
-          grep -F 'ProductionStage3DV10' scripts/ui/metafinal_visual_director_v9.gd
+          grep -F 'ProductionStage3DV11' scripts/ui/metafinal_visual_director_v9.gd
 
       - name: Install Godot 4.6.3
         shell: bash
