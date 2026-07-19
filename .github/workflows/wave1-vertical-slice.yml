@@ -35,12 +35,13 @@ jobs:
           mkdir -p logs
           test -s docs/WAVE_1_EXECUTION_PLAN.md
           test -s scripts/core/legendary_slice_director.gd
+          test -s scripts/core/legendary_slice_director_v2.gd
           test -s scripts/core/legendary_slice_event_bridge.gd
           test -s scripts/ui/legendary_activity_overlay.gd
           test -s scripts/ui/legendary_onboarding_overlay.gd
           test -s scripts/ui/legendary_promise_overlay.gd
           test -s tests/legendary_vertical_slice_test.gd
-          grep -F 'LegendarySlice="*res://scripts/core/legendary_slice_director.gd"' project.godot
+          grep -F 'LegendarySlice="*res://scripts/core/legendary_slice_director_v2.gd"' project.godot
           grep -F 'LegendaryActivities="*res://scripts/ui/legendary_activity_overlay.gd"' project.godot
           grep -F 'LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"' project.godot
           grep -F 'LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"' project.godot
