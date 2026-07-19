@@ -72,7 +72,7 @@ func _test_story_hud_contract() -> void:
 	_assert(bool(first_snapshot.get("compact", false)), "390px physical width selects the compact story HUD")
 	var panel_size: Vector2 = first_snapshot.get("panel_size", Vector2.ZERO) as Vector2
 	var panel_position: Vector2 = first_snapshot.get("panel_position", Vector2.ZERO) as Vector2
-	var design_width := get_viewport().get_visible_rect().size.x
+	var design_width: float = float(root.get_visible_rect().size.x)
 	_assert(panel_size.y <= 170.0, "Compact story HUD is height-capped and cannot cover the phone game view")
 	_assert(panel_position.x >= 0.0 and panel_position.x + panel_size.x <= design_width + 1.0, "Compact story HUD remains inside the Godot design viewport")
 	_assert(int(first_snapshot.get("canvas_layer", 999)) < int(first_snapshot.get("modal_layer_ceiling", 0)), "Story HUD renders below Partner World and modal activities")
