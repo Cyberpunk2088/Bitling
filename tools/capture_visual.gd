@@ -34,6 +34,10 @@ func _run() -> void:
 			quit(1)
 			return
 
+		if not await _capture_character_performances(output_directory, str(capture.name)):
+			quit(1)
+			return
+
 		var overlay := root.get_node_or_null("PartnerWorldOverlay")
 		if overlay == null or not overlay.has_method("open_partner_world"):
 			push_error("[VISUAL-CAPTURE] PartnerWorldOverlay is unavailable")
@@ -74,6 +78,32 @@ func _run() -> void:
 	print("[VISUAL-CAPTURE] PASS")
 	quit(0)
 
+func _capture_character_performances(output_directory: String, viewport_name: String) -> bool:
+	var performance := root.get_node_or_null("CharacterPerformance")
+	if performance == null:
+		push_error("[VISUAL-CAPTURE] CharacterPerformance is unavailable")
+		return false
+
+	performance.call("request_action", "play", 1.0)
+	await _settle_frames(8, 0.22)
+	if not _save_capture(output_directory, "bitling-%s-play.png" % viewport_name, "%s play expression" % viewport_name):
+		return false
+
+	performance.call("request_touch", "head", Vector2(0.0, -0.45))
+	await _settle_frames(8, 0.22)
+	if not _save_capture(output_directory, "bitling-%s-touch.png" % viewport_name, "%s head touch" % viewport_name):
+		return false
+
+	var dialogue := root.get_node_or_null("DialogueDirector")
+	if dialogue != null and dialogue.has_method("emit_line"):
+		dialogue.call("emit_line", "learn", {"capture": true})
+	else:
+		performance.call("request_dialogue", "Ich habe ein neues Muster entdeckt.", "learn")
+	await _settle_frames(8, 0.22)
+	if not _save_capture(output_directory, "bitling-%s-dialogue.png" % viewport_name, "%s dialogue performance" % viewport_name):
+		return false
+	return true
+
 func _prepare_deterministic_story_state() -> void:
 	var onboarding := root.get_node_or_null("LegendaryOnboarding")
 	if onboarding != null and onboarding.has_method("_close"):
@@ -88,6 +118,9 @@ func _prepare_deterministic_story_state() -> void:
 	var hud := root.get_node_or_null("LegendaryStoryHUD")
 	if hud != null and hud.has_method("_refresh"):
 		hud.call("_refresh")
+	var performance := root.get_node_or_null("CharacterPerformance")
+	if performance != null and performance.has_method("sync_state"):
+		performance.call("sync_state")
 
 func _prepare_rooftop_story_beat() -> void:
 	var director := root.get_node_or_null("LegendarySlice")
@@ -101,9 +134,12 @@ func _prepare_rooftop_story_beat() -> void:
 	var hud := root.get_node_or_null("LegendaryStoryHUD")
 	if hud != null and hud.has_method("_refresh"):
 		hud.call("_refresh")
-	var stage := root.find_child("LegendaryWave1Stage3D", true, false)
+	var stage := root.find_child("LegendaryWave2CharacterStage3D", true, false)
 	if stage != null and stage.has_method("set_story_beat"):
 		stage.call("set_story_beat", "prismatic_rooftops")
+	var audio := root.get_node_or_null("OmniAudio")
+	if audio != null and audio.has_method("set_environment"):
+		audio.call("set_environment", "ROOFTOPS")
 
 func _settle_frames(frame_count: int, delay: float) -> void:
 	for _frame in range(frame_count):
