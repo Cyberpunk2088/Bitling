@@ -43,17 +43,18 @@ jobs:
           test -s scripts/ui/legendary_onboarding_overlay.gd
           test -s scripts/ui/legendary_promise_overlay.gd
           test -s scripts/ui/legendary_story_hud.gd
-          test -s scripts/ui/production_bitling_stage_3d_v6.gd
-          test -s scripts/ui/production_bitling_stage_3d_v7.gd
-          test -s scripts/ui/production_bitling_stage_3d_v8.gd
+          for version in 6 7 8 9 10; do
+            test -s "scripts/ui/production_bitling_stage_3d_v${version}.gd"
+          done
           test -s scripts/ui/metafinal_visual_director_v7.gd
           test -s scripts/ui/metafinal_visual_director_v8.gd
+          test -s scripts/ui/metafinal_visual_director_v9.gd
           test -s tests/legendary_vertical_slice_test.gd
           test -s tests/wave1_visual_production_test.gd
           grep -F 'LegendarySlice="*res://scripts/core/legendary_slice_director_v2.gd"' project.godot
           grep -F 'LegendaryActivities="*res://scripts/ui/legendary_activity_overlay_v2.gd"' project.godot
           grep -F 'LegendaryStoryHUD="*res://scripts/ui/legendary_story_hud.gd"' project.godot
-          grep -F 'res://scripts/ui/metafinal_visual_director_v8.gd' main.tscn
+          grep -F 'res://scripts/ui/metafinal_visual_director_v9.gd' main.tscn
 
       - name: Install Godot 4.6.3
         shell: bash
