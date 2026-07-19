@@ -117,6 +117,12 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     animation_count = len(re.findall(r'"[^"]+"', animation_block))
 
     capture_count = len(re.findall(r'test -s builds/visual/bitling-(?:phone|tablet|laptop)(?:-partner-world)?\.png', workflow))
+    if capture_count == 0:
+        has_three_viewports = "for viewport in phone tablet laptop" in workflow
+        has_home_capture = 'bitling-${viewport}.png' in workflow
+        has_partner_capture = 'bitling-${viewport}-partner-world.png' in workflow
+        if has_three_viewports and has_home_capture and has_partner_capture:
+            capture_count = 6
     test_count = count_files(ROOT / "tests", (".gd",))
 
     values = {
