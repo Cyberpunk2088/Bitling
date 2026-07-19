@@ -1,28 +1,44 @@
 # BITLING OMNI
 
-BITLING OMNI is an original living-companion game for Xogot and Godot 4.6. Version `0.3.0` establishes the METAFINAL 3D production baseline: a real-time 3D companion stage, cyberpunk living space, production HUD, responsive phone/tablet/desktop layouts, relationship development, adaptive learning, exploration, evolution, social foundations and local-first persistence.
+BITLING OMNI is an original living-companion game for Xogot and Godot 4.6. The current `0.5.0` foundation combines expressive 3D companionship, individual development, recoverable care, adaptive learning, exploration, explainable evolution, settlement growth, legacy systems, local-first persistence and consent-first social architecture.
 
-## Visual production baseline
+## Product constitution
 
-The previous canvas placeholder has been replaced by a `SubViewport`-based 3D presentation using standard Godot/Xogot nodes:
+The complete production direction is defined by four binding documents:
 
-- modeled Bitling body, head, ears, eyes, paws, horns, tail and silhouette tufts;
-- hero camera, blinking, eye tracking, idle motion, touch reactions and mood changes;
-- rarity-driven lighting and shimmer;
-- neon apartment with skyline, furniture, plants, holograms, floor grid and signal platform;
-- filmic tonemapping, mobile-compatible glow and colored lighting;
-- holographic passport with ID, phase, rarity, IQ, height and weight;
-- vector neon action glyphs, radial trust meter and cinematic HUD treatment.
+- [`docs/LEGENDARY_GAME_ROADMAP.md`](docs/LEGENDARY_GAME_ROADMAP.md) — full milestone and dependency plan;
+- [`docs/LEGENDARY_PRODUCTION_PILLARS.md`](docs/LEGENDARY_PRODUCTION_PILLARS.md) — fourteen art, gameplay, learning, safety and operations pillars;
+- [`docs/LEGENDARY_DEFINITION_OF_DONE.md`](docs/LEGENDARY_DEFINITION_OF_DONE.md) — five-pass acceptance standard for every feature;
+- [`production/legendary_roadmap.json`](production/legendary_roadmap.json) — machine-readable roadmap validated by CI.
 
-The same gameplay state is presented as:
+The roadmap is part of the AAA development baseline. It cannot be removed or reduced below its milestone, pillar and release-blocker floors without failing the roadmap gate.
 
-- **Phone:** companion first, five large actions, compact status flow and bottom navigation.
-- **Tablet:** two-column composition with the companion as visual anchor.
-- **Desktop:** statistics left, 3D stage center, quests and social readiness right.
+## Core experience
 
-## Authored asset path
+| Action | Immediate effect | Long-term direction |
+|---|---|---|
+| `FÜTTERN` | restores satiation and happiness | preferences and care history |
+| `SPIELEN` | opens playful activities and expeditions | coordination, creativity and humor |
+| `LERNEN` | opens adaptive learning challenges | IQ, logic, curiosity and techniques |
+| `PFLEGEN` | improves health, happiness and trust | empathy, relationship and self-care |
+| `SCHLAFEN` | restores energy | routine, wellbeing and self-control |
 
-Final art can replace the tested procedural 3D fallback without changing gameplay code. The runtime automatically detects:
+The UI reads authoritative gameplay services and does not own duplicate progression state.
+
+## Partner-world systems
+
+- developmental life seasons from hatchling to wise;
+- recoverable care quality and care strain;
+- upbringing-driven autonomous actions;
+- technique observation, aptitude, mastery and inheritance;
+- persistent settlement residents, ranks and facilities;
+- six original multi-category evolution routes;
+- voluntary legacy renewal with selected inheritance;
+- responsive Partner World interface for phone, tablet and desktop.
+
+## Production presentation
+
+The runtime currently provides a tested Godot 3D fallback with a companion stage, cyberpunk room, lighting, responsive HUD, passport, needs, relationship and interaction feedback. Final authored content can replace the fallback through the production asset contract:
 
 ```text
 assets/characters/bitling_omni/bitling_omni.glb
@@ -33,90 +49,43 @@ assets/environments/neon_loft/lighting_profile.tres
 assets/ui/metafinal/metafinal_theme.tres
 ```
 
-The rig contract expects these animations:
+Missing final assets remain a release blocker. A safe fallback is not accepted as final AAA content.
 
-```text
-idle, blink, look, happy, sad, tired, excited,
-feed, play, learn, care, sleep, surprised, clumsy
-```
-
-Missing or invalid authored assets fall back safely to the in-engine 3D stage.
-
-## Gameplay
-
-| Action | Immediate effect | Long-term direction |
-|---|---|---|
-| `FÜTTERN` | restores satiation and happiness | food preferences and care history |
-| `SPIELEN` | opens a Signal Expedition | exploration, coordination and humor |
-| `LERNEN` | opens an adaptive pattern challenge | IQ, logic, curiosity and Researcher progression |
-| `PFLEGEN` | improves health, happiness and trust | empathy, relationship and self-care |
-| `SCHLAFEN` | restores energy | routine, wellbeing and self-control |
-
-The dashboard reads authoritative values for level, XP, streak, needs, mood, intention, relationship, quests, identity, rarity and individual Bitling IQ. The UI does not own duplicate progression state.
-
-## Core systems
+## Core services
 
 | System | Responsibility |
 |---|---|
 | `GameState` | progression, needs, mood, memories and atomic persistence |
-| `CompanionBrain` | relationship, trust, personality and autonomous intentions |
-| `DevelopmentProfile` | IQ, attributes, skills, abilities, upbringing, preferences and Bronze–Platinum specializations |
-| `BitlingIdentity` | permanent ID, passport, birth, form, height, weight and IQ |
+| `CompanionBrain` | relationship, personality and autonomous intentions |
+| `DevelopmentProfile` | IQ, attributes, skills, upbringing and specializations |
+| `BitlingIdentity` | permanent ID, passport, form, height, weight and IQ |
 | `AdaptiveLearning` | adaptive challenges and mastery |
-| `ExplorationService` | Signal Expeditions and choice history |
-| `EvolutionService` | original branching forms |
-| `EmotionModel` | bounded simulated feelings |
-| `BitlingLanguage` | validated semantic packets and fictional speech |
+| `ExplorationService` | expeditions and choice history |
+| `PartnerWorld` | life seasons, care, techniques, settlement and legacy |
+| `EvolutionMatrix` | explainable multi-category development forecasts |
+| `DialogueDirector` | contextual authored dialogue and anti-repetition |
+| `OmniAudio` | runtime-safe audio buses and feedback foundation |
+| `ProductionQuality` | runtime FPS, frame-time, memory, draw-call and audio-latency budgets |
 | `SocialSessionService` | pairing, consent and bounded peer learning |
 | `LineageService` | resonance eggs, inheritance and hatchlings |
-| `WellbeingGuard` | quiet hours, break prompts and healthy engagement |
-| `ProductionBitlingStage3D` | character, room, camera, lighting and interaction presentation |
-| `ProductionAssetCatalog` | GLB/PBR/rig contract and safe fallback |
-| `MetafinalVisualDirector` | installs production graphics and action animation bridges |
-
-## Architecture
-
-```text
-project.godot
-main.tscn
-scripts/
-  core/
-  social/
-  platform/
-  visual/production_asset_catalog.gd
-  ui/
-    ultimate_dashboard.gd
-    production_bitling_stage_3d.gd
-    production_bitling_stage_3d_v2.gd
-    production_bitling_stage_3d_v3.gd
-    metafinal_visual_director_v4.gd
-    production_stage_identity_badge.gd
-    neon_glyph.gd
-    radial_status_meter.gd
-    cinematic_edge_treatment.gd
-tests/
-  ci_smoke_test.gd
-  experience_systems_test.gd
-  development_profile_test.gd
-  release_readiness_test.gd
-  visual_layout_test.gd
-```
+| `WellbeingGuard` | quiet hours, breaks and healthy engagement |
 
 ## Quality gates
 
-GitHub Actions validates the exact commit with Godot 4.6.3:
+GitHub Actions validates exact commits with Godot 4.6.3:
 
-1. repository, autoload, secret and Xogot architecture audit;
-2. resource import and parser checks;
-3. production main-scene boot;
-4. Windows, iOS/Xogot, Android, Web, Linux and macOS resource packs;
-5. core, social, development, localization, migration, stress and fuzz regressions;
-6. phone, tablet and desktop layout assertions;
-7. explicit checks for the 3D SubViewport, holographic passport, vector glyphs, radial trust meter and authored animation contract;
-8. strict failure on every script or engine error.
+1. project, autoload, secret and Xogot architecture audits;
+2. public-release and AAA development gates;
+3. legendary roadmap structure;
+4. resource import, parser checks and main-scene boot;
+5. Windows, iOS/Xogot, Android, Web, Linux and macOS packs;
+6. core, social, development, partner-world, migration, stress and fuzz regressions;
+7. runtime performance degradation and recovery tests;
+8. phone, tablet and desktop layout assertions;
+9. six rendered Home and Partner World reference images.
 
-A separate workflow renders phone, tablet and laptop PNG references on every relevant commit.
+A separate strict release workflow remains blocked until final character, environment, animation, UI, music, ambience, SFX, voice and localization packages satisfy the authored-content contract.
 
 ## Release boundary
 
-Version `0.3.0` is a tested 3D production baseline, not a claim that final AAA assets already exist. Exact concept-image fidelity still requires authored GLB character and room models, PBR textures, rigged animation, final VFX, sound, fonts and physical iPhone/iPad performance testing.
+Version `0.5.0` is a tested systemic production foundation. It is not a claim that the full game or final AAA art package is complete. Version 1.0 requires the milestones and exit gates in the legendary roadmap, external playtests, professional content production, real-device profiling, accessibility review, learning evaluation, privacy review and operational readiness.
