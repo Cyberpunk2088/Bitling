@@ -21,17 +21,24 @@
     "scripts/core/partner_world_service.gd",
     "scripts/core/evolution_matrix_service.gd",
     "scripts/core/legendary_slice_director.gd",
+    "scripts/core/legendary_slice_director_v2.gd",
     "scripts/core/legendary_slice_event_bridge.gd",
     "scripts/audio/omni_audio_director.gd",
     "scripts/ui/production_bitling_stage_3d_v5.gd",
+    "scripts/ui/production_bitling_stage_3d_v6.gd",
+    "scripts/ui/metafinal_visual_director_v7.gd",
     "scripts/ui/partner_world_overlay_runtime.gd",
     "scripts/ui/legendary_activity_overlay.gd",
+    "scripts/ui/legendary_activity_overlay_v2.gd",
+    "scripts/ui/legendary_activity_backdrop.gd",
     "scripts/ui/legendary_onboarding_overlay.gd",
     "scripts/ui/legendary_promise_overlay.gd",
+    "scripts/ui/legendary_story_hud.gd",
     "scripts/visual/production_asset_catalog.gd",
     "tests/ci_smoke_test.gd",
     "tests/partner_world_test.gd",
     "tests/legendary_vertical_slice_test.gd",
+    "tests/wave1_visual_production_test.gd",
     "tests/visual_layout_test.gd"
   ],
   "runtime_budgets": {
@@ -70,7 +77,7 @@
     }
   },
   "development_floors": {
-    "gdscript_test_files_min": 7,
+    "gdscript_test_files_min": 8,
     "responsive_capture_count_min": 6,
     "audio_bus_count_min": 5,
     "primary_action_count_min": 5,
