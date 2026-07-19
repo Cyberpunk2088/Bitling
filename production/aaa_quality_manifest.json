@@ -30,6 +30,7 @@
     "scripts/ui/production_bitling_stage_3d_v6.gd",
     "scripts/ui/production_bitling_stage_3d_v7.gd",
     "scripts/ui/production_bitling_stage_3d_v8.gd",
+    "scripts/ui/production_bitling_stage_3d_v9.gd",
     "scripts/ui/metafinal_visual_director_v7.gd",
     "scripts/ui/metafinal_visual_director_v8.gd",
     "scripts/ui/partner_world_overlay_runtime.gd",
