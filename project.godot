@@ -2,8 +2,8 @@ config_version=5
 
 [application]
 config/name="BITLING OMNI"
-config/description="An original partner-world game with expressive 3D companionship, recoverable care, autonomous learning, settlement growth, legacy and explainable evolution."
-config/version="0.6.0"
+config/description="An original partner-world game with expressive 3D companionship, a reactive living home, recoverable care, autonomous learning, settlement growth, legacy and explainable evolution."
+config/version="0.7.0"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 
@@ -33,6 +33,7 @@ DialogueDirector="*res://scripts/core/dialogue_director.gd"
 OmniAudio="*res://scripts/audio/omni_audio_director_v2.gd"
 GameState="*res://scripts/core/game_state.gd"
 CharacterPerformance="*res://scripts/core/character_performance_director.gd"
+LivingHome="*res://scripts/core/living_home_service.gd"
 PartnerWorldStore="*res://scripts/core/partner_world_store.gd"
 LegendarySlice="*res://scripts/core/legendary_slice_director_v2.gd"
 LegendarySliceBridge="*res://scripts/core/legendary_slice_event_bridge.gd"
@@ -47,6 +48,7 @@ LegendaryActivities="*res://scripts/ui/legendary_activity_overlay_v2.gd"
 LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"
 LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"
 LegendaryStoryHUD="*res://scripts/ui/legendary_story_hud.gd"
+LivingHomeOverlay="*res://scripts/ui/living_home_overlay.gd"
 
 [audio]
 driver/enable_input=true
