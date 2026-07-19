@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   capture:
-    name: Render phone, tablet and laptop dashboard references
+    name: Render home and partner-world references
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 14
     env:
       GODOT_VERSION: "4.6.3"
       GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 180 xvfb-run -a ./godot \
+          timeout 210 xvfb-run -a ./godot \
             --path . \
             --audio-driver Dummy \
             --rendering-method gl_compatibility \
@@ -65,9 +65,10 @@ jobs:
           if grep -E "SCRIPT ERROR|^ERROR:" logs/visual-capture.log; then
             exit 1
           fi
-          test -s builds/visual/bitling-phone.png
-          test -s builds/visual/bitling-tablet.png
-          test -s builds/visual/bitling-laptop.png
+          for viewport in phone tablet laptop; do
+            test -s "builds/visual/bitling-${viewport}.png"
+            test -s "builds/visual/bitling-${viewport}-partner-world.png"
+          done
 
       - name: Upload rendered dashboard references
         if: always()
