@@ -2,8 +2,8 @@ config_version=5
 
 [application]
 config/name="BITLING OMNI"
-config/description="A responsive 3D living-companion production baseline built for Xogot and Godot 4.6."
-config/version="0.3.0"
+config/description="An expressive 3D living-companion game baseline with contextual dialogue, procedural audio and focused responsive navigation for Xogot and Godot 4.6."
+config/version="0.4.0"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 
