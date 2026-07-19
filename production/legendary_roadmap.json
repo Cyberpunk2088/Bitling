@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "product": "BITLING OMNI",
+  "roadmap_status": "PRODUCT_CONSTITUTION",
+  "north_star": "A living companion whose personality, learning and world visibly reflect the player's shared history without manipulative engagement mechanics.",
+  "current_version": "0.5.0",
+  "quality_rule": "No milestone is complete until gameplay, art, animation, audio, accessibility, safety, performance and external evidence all pass.",
+  "milestones": [
+    {
+      "id": "wave_0",
+      "name": "Product Constitution",
+      "status": "IN_PROGRESS",
+      "depends_on": [],
+      "deliverables": [
+        "target_audience_decision",
+        "art_bible",
+        "narrative_bible",
+        "learning_design_bible",
+        "audio_bible",
+        "ui_design_system",
+        "asset_pipeline",
+        "risk_register",
+        "physical_device_matrix"
+      ],
+      "exit_gate": "Every major feature has player impact, ownership, dependencies, test strategy and safety review."
+    },
+    {
+      "id": "wave_1",
+      "name": "Legendary Vertical Slice",
+      "status": "PLANNED",
+      "depends_on": ["wave_0"],
+      "deliverables": [
+        "one_final_companion_archetype",
+        "three_visible_life_phases",
+        "one_final_home_environment",
+        "one_expedition_region",
+        "three_polished_minigames",
+        "one_complete_evolution_route",
+        "professional_music_voice_foley_ui_audio",
+        "final_onboarding",
+        "one_emotional_story_arc",
+        "safe_local_pairing_prototype"
+      ],
+      "exit_gate": "A 20-30 minute external playtest has no P1 issue in character, art, audio, UX or gameplay depth."
+    },
+    {
+      "id": "wave_2",
+      "name": "Companion Soul",
+      "status": "PLANNED",
+      "depends_on": ["wave_1"],
+      "deliverables": [
+        "episodic_memory",
+        "semantic_memory",
+        "relationship_repair",
+        "hobbies_and_routines",
+        "contextual_dialogue",
+        "autonomous_micro_actions",
+        "full_expression_library",
+        "visible_maturation"
+      ],
+      "exit_gate": "Thirty-day simulation passes without personality contradiction, unbounded state or dialogue collapse."
+    },
+    {
+      "id": "wave_3",
+      "name": "Living Home",
+      "status": "PLANNED",
+      "depends_on": ["wave_2"],
+      "deliverables": [
+        "interactive_home",
+        "furniture_and_collections",
+        "time_and_weather",
+        "visitor_routines",
+        "development_driven_room_changes",
+        "photo_mode"
+      ],
+      "exit_gate": "The home communicates state without requiring dashboard inspection and meets mobile performance budgets."
+    },
+    {
+      "id": "wave_4",
+      "name": "Partner World",
+      "status": "PLANNED",
+      "depends_on": ["wave_3"],
+      "deliverables": [
+        "walkable_signal_settlement",
+        "four_expedition_regions",
+        "resident_routines",
+        "technique_mentors",
+        "event_chains",
+        "world_secrets",
+        "generational_world_changes"
+      ],
+      "exit_gate": "World navigation, progression and consequences are playable end to end on phone, tablet and desktop."
+    },
+    {
+      "id": "wave_5",
+      "name": "Learning Adventures",
+      "status": "PLANNED",
+      "depends_on": ["wave_2", "wave_4"],
+      "deliverables": [
+        "twelve_core_minigames",
+        "adaptive_difficulty",
+        "learning_goal_metadata",
+        "transfer_tasks",
+        "age_profiles",
+        "educational_evaluation"
+      ],
+      "exit_gate": "Learning goals are documented, externally reviewed and produce measurable transfer without purchase pressure."
+    },
+    {
+      "id": "wave_6",
+      "name": "Social Constellation",
+      "status": "PLANNED",
+      "depends_on": ["wave_2", "wave_4"],
+      "deliverables": [
+        "pair_code_encounters",
+        "controlled_profile_exchange",
+        "bitling_language_translation",
+        "shared_activities",
+        "consent_gated_voice_video",
+        "moderation_block_report_mute_leave",
+        "adult_gated_lineage"
+      ],
+      "exit_gate": "External privacy, child-safety and moderation review passes before any social feature defaults to available."
+    },
+    {
+      "id": "wave_7",
+      "name": "Content Complete Alpha",
+      "status": "PLANNED",
+      "depends_on": ["wave_3", "wave_4", "wave_5", "wave_6"],
+      "deliverables": [
+        "all_version_1_systems_playable",
+        "complete_main_path",
+        "no_major_placeholders",
+        "save_migration",
+        "authoring_tools",
+        "localization_tools"
+      ],
+      "exit_gate": "All launch systems and the main progression path are playable with production-compatible content."
+    },
+    {
+      "id": "wave_8",
+      "name": "Feature Complete Beta",
+      "status": "PLANNED",
+      "depends_on": ["wave_7"],
+      "deliverables": [
+        "balance_pass",
+        "performance_pass",
+        "accessibility_validation",
+        "multi_age_external_tests",
+        "learning_impact_study",
+        "social_safety_penetration_tests"
+      ],
+      "exit_gate": "No new core systems; all P0/P1 findings are closed and real-device targets are met."
+    },
+    {
+      "id": "wave_9",
+      "name": "Content Lock and Release Candidate",
+      "status": "PLANNED",
+      "depends_on": ["wave_8"],
+      "deliverables": [
+        "content_lock",
+        "professional_localization",
+        "ratings_and_privacy_review",
+        "signed_builds",
+        "store_media",
+        "support_training",
+        "incident_response_training"
+      ],
+      "exit_gate": "Strict AAA release workflow passes on the exact signed candidate."
+    },
+    {
+      "id": "wave_10",
+      "name": "Version 1.0",
+      "status": "PLANNED",
+      "depends_on": ["wave_9"],
+      "deliverables": [
+        "store_release",
+        "operational_support",
+        "moderation_service",
+        "data_export_and_deletion",
+        "public_patch_notes"
+      ],
+      "exit_gate": "No open P0/P1 issues, safe operations are staffed and store claims match the shipped product."
+    },
+    {
+      "id": "wave_11",
+      "name": "Legendary Live Era",
+      "status": "PLANNED",
+      "depends_on": ["wave_10"],
+      "deliverables": [
+        "new_regions",
+        "new_generations",
+        "new_learning_fields",
+        "seasonal_storytelling",
+        "annual_technical_review",
+        "annual_ethics_review"
+      ],
+      "exit_gate": "Live content improves player value without manipulative retention or degradation of safety and accessibility."
+    }
+  ],
+  "version_1_content_targets": {
+    "rigged_base_archetypes": 4,
+    "distinct_development_forms": 24,
+    "life_phases": 7,
+    "emotion_states": 12,
+    "final_character_animations_min": 120,
+    "home_themes": 8,
+    "expedition_regions": 4,
+    "settlement_residents_min": 30,
+    "core_minigames": 12,
+    "activity_variants_min": 60,
+    "major_event_chains": 24,
+    "quest_encounter_blocks_min": 300,
+    "authored_dialogue_kernels_min": 2000,
+    "music_tracks_min": 12,
+    "ambience_loops_min": 20,
+    "foley_sfx_files_min": 250,
+    "voice_syllables_reactions_min": 300,
+    "professionally_reviewed_launch_languages_min": 2
+  },
+  "release_blockers": [
+    "open_p0_or_p1_issue",
+    "save_loss_risk",
+    "missing_final_main_scene_assets",
+    "failed_real_device_performance",
+    "failed_accessibility_review",
+    "failed_privacy_or_child_safety_review",
+    "unmoderated_social_features",
+    "unreviewed_launch_localization",
+    "store_claims_not_matching_product"
+  ]
+}
