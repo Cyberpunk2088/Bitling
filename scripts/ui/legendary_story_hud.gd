@@ -1,9 +1,10 @@
 extends CanvasLayer
 
-## Persistent, low-clutter story guidance for the Legendary Vertical Slice.
-## It exposes the next meaningful action without turning Home into a dashboard.
+## Persistent story guidance that never owns progression state.
+## The HUD is anchored through a full-rect Control, capped to a strict height,
+## and rendered below modal overlays so Home, Partner World and activities remain visible.
 
-const COLOR_PANEL := Color("071024")
+const COLOR_PANEL := Color("071024e8")
 const COLOR_PANEL_ALT := Color("101a35")
 const COLOR_TEXT := Color("f4f7ff")
 const COLOR_MUTED := Color("9ba8c7")
@@ -12,7 +13,17 @@ const COLOR_VIOLET := Color("a855f7")
 const COLOR_MAGENTA := Color("f044d4")
 const COLOR_GREEN := Color("64e6a2")
 
+const MOBILE_TOP := 68.0
+const MOBILE_HEIGHT_EXPANDED := 158.0
+const MOBILE_HEIGHT_COLLAPSED := 72.0
+const DESKTOP_TOP := 86.0
+const DESKTOP_HEIGHT_EXPANDED := 170.0
+const DESKTOP_HEIGHT_COLLAPSED := 76.0
+const MODAL_LAYER_CEILING := 45
+
+var root_control: Control
 var panel: PanelContainer
+var details_container: VBoxContainer
 var chapter_label: Label
 var title_label: Label
 var objective_label: Label
@@ -21,10 +32,11 @@ var progress_label: Label
 var continue_button: Button
 var collapse_button: Button
 var _collapsed := false
+var _compact := false
 var _last_beat_id := ""
 
 func _ready() -> void:
-	layer = 150
+	layer = 35
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_hud()
 	_connect_story()
@@ -33,21 +45,31 @@ func _ready() -> void:
 	_refresh()
 
 func _build_hud() -> void:
+	root_control = Control.new()
+	root_control.name = "LegendaryStoryHUDRoot"
+	root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(root_control)
+
 	panel = PanelContainer.new()
 	panel.name = "LegendaryStoryHUD"
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.clip_contents = true
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, Color(COLOR_CYAN, 0.62), 18, 1))
-	add_child(panel)
+	root_control.add_child(panel)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 7)
+	column.name = "StoryHUDColumn"
+	column.add_theme_constant_override("separation", 5)
 	panel.add_child(column)
 
 	var top_row := HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 8)
+	top_row.add_theme_constant_override("separation", 7)
 	column.add_child(top_row)
 	chapter_label = Label.new()
 	chapter_label.text = "LEGENDARY SLICE"
 	chapter_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chapter_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	chapter_label.add_theme_color_override("font_color", COLOR_CYAN)
 	chapter_label.add_theme_font_size_override("font_size", 11)
 	top_row.add_child(chapter_label)
@@ -59,43 +81,49 @@ func _build_hud() -> void:
 	collapse_button = Button.new()
 	collapse_button.text = "–"
 	collapse_button.tooltip_text = "Story-Hinweis ein- oder ausklappen"
-	collapse_button.custom_minimum_size = Vector2(38.0, 34.0)
+	collapse_button.custom_minimum_size = Vector2(36.0, 30.0)
 	collapse_button.add_theme_color_override("font_color", COLOR_TEXT)
-	collapse_button.add_theme_stylebox_override("normal", _style(COLOR_PANEL_ALT, Color(COLOR_VIOLET, 0.35), 10, 1))
+	collapse_button.add_theme_stylebox_override("normal", _style(COLOR_PANEL_ALT, Color(COLOR_VIOLET, 0.35), 9, 1))
 	collapse_button.pressed.connect(_toggle_collapsed)
 	top_row.add_child(collapse_button)
 
 	title_label = Label.new()
-	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title_label.add_theme_color_override("font_color", COLOR_TEXT)
 	title_label.add_theme_font_size_override("font_size", 17)
 	column.add_child(title_label)
+
+	details_container = VBoxContainer.new()
+	details_container.add_theme_constant_override("separation", 5)
+	column.add_child(details_container)
 
 	progress_bar = ProgressBar.new()
 	progress_bar.min_value = 0.0
 	progress_bar.max_value = 1.0
 	progress_bar.show_percentage = false
-	progress_bar.custom_minimum_size = Vector2(0.0, 7.0)
-	progress_bar.add_theme_stylebox_override("background", _bar_style(Color("030711"), 4))
-	progress_bar.add_theme_stylebox_override("fill", _bar_style(COLOR_CYAN, 4))
-	column.add_child(progress_bar)
+	progress_bar.custom_minimum_size = Vector2(0.0, 6.0)
+	progress_bar.add_theme_stylebox_override("background", _bar_style(Color("030711"), 3))
+	progress_bar.add_theme_stylebox_override("fill", _bar_style(COLOR_CYAN, 3))
+	details_container.add_child(progress_bar)
 
 	objective_label = Label.new()
 	objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	objective_label.max_lines_visible = 2
+	objective_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	objective_label.add_theme_color_override("font_color", COLOR_MUTED)
-	objective_label.add_theme_font_size_override("font_size", 13)
-	column.add_child(objective_label)
+	objective_label.add_theme_font_size_override("font_size", 12)
+	details_container.add_child(objective_label)
 
 	continue_button = Button.new()
 	continue_button.text = "FORTSETZEN"
-	continue_button.custom_minimum_size = Vector2(0.0, 44.0)
+	continue_button.custom_minimum_size = Vector2(0.0, 38.0)
 	continue_button.add_theme_color_override("font_color", COLOR_TEXT)
-	continue_button.add_theme_font_size_override("font_size", 13)
-	continue_button.add_theme_stylebox_override("normal", _style(Color("191642"), COLOR_MAGENTA, 13, 1))
-	continue_button.add_theme_stylebox_override("hover", _style(Color("20265a"), COLOR_CYAN, 13, 2))
-	continue_button.add_theme_stylebox_override("pressed", _style(Color("153b3f"), COLOR_GREEN, 13, 2))
+	continue_button.add_theme_font_size_override("font_size", 12)
+	continue_button.add_theme_stylebox_override("normal", _style(Color("191642"), COLOR_MAGENTA, 11, 1))
+	continue_button.add_theme_stylebox_override("hover", _style(Color("20265a"), COLOR_CYAN, 11, 2))
+	continue_button.add_theme_stylebox_override("pressed", _style(Color("153b3f"), COLOR_GREEN, 11, 2))
 	continue_button.pressed.connect(_continue_story)
-	column.add_child(continue_button)
+	details_container.add_child(continue_button)
 
 func _connect_story() -> void:
 	var director := get_node_or_null("/root/LegendarySlice")
@@ -125,7 +153,8 @@ func _refresh() -> void:
 	var snapshot: Dictionary = director.get_snapshot()
 	var active := bool(snapshot.get("active", false))
 	var completed := bool(snapshot.get("completed", false))
-	panel.visible = active or completed or not bool(snapshot.get("events", {}).has("slice_started"))
+	var events: Dictionary = snapshot.get("events", {}) as Dictionary
+	panel.visible = active or completed or not events.has("slice_started")
 	var beat: Dictionary = snapshot.get("current_beat", {}) as Dictionary
 	var beat_id := str(beat.get("id", "signal_in_darkness"))
 	var beat_index := int(snapshot.get("current_beat_index", 0))
@@ -206,30 +235,51 @@ func _toggle_collapsed() -> void:
 	_apply_collapsed_state()
 
 func _apply_collapsed_state() -> void:
-	objective_label.visible = not _collapsed
-	progress_bar.visible = not _collapsed
-	continue_button.visible = not _collapsed
-	panel.size.y = 74.0 if _collapsed else panel.size.y
+	if panel == null or details_container == null:
+		return
+	details_container.visible = not _collapsed
+	var top_value := MOBILE_TOP if _compact else DESKTOP_TOP
+	var height_value := MOBILE_HEIGHT_COLLAPSED if _compact and _collapsed else MOBILE_HEIGHT_EXPANDED if _compact else DESKTOP_HEIGHT_COLLAPSED if _collapsed else DESKTOP_HEIGHT_EXPANDED
+	panel.offset_top = top_value
+	panel.offset_bottom = top_value + height_value
 
 func _apply_layout() -> void:
 	if panel == null:
 		return
-	var viewport_size := get_viewport().get_visible_rect().size
-	if viewport_size.x < 760.0:
-		panel.position = Vector2(12.0, 80.0)
-		panel.size = Vector2(maxf(300.0, viewport_size.x - 24.0), 188.0)
-		title_label.add_theme_font_size_override("font_size", 16)
-		objective_label.add_theme_font_size_override("font_size", 12)
+	var design_size := get_viewport().get_visible_rect().size
+	var physical_size := Vector2(get_tree().root.size)
+	var effective_width := minf(design_size.x, physical_size.x) if physical_size.x > 0.0 else design_size.x
+	_compact = effective_width < 760.0
+	panel.custom_minimum_size = Vector2.ZERO
+	panel.anchor_top = 0.0
+	panel.anchor_bottom = 0.0
+	if _compact:
+		panel.anchor_left = 0.0
+		panel.anchor_right = 1.0
+		panel.offset_left = 10.0
+		panel.offset_right = -10.0
+		title_label.add_theme_font_size_override("font_size", 15)
+		objective_label.add_theme_font_size_override("font_size", 11)
+		continue_button.add_theme_font_size_override("font_size", 11)
 	else:
-		panel.position = Vector2(maxf(20.0, viewport_size.x - 420.0), 86.0)
-		panel.size = Vector2(396.0, 188.0)
+		panel.anchor_left = 1.0
+		panel.anchor_right = 1.0
+		panel.offset_left = -420.0
+		panel.offset_right = -20.0
 		title_label.add_theme_font_size_override("font_size", 18)
 		objective_label.add_theme_font_size_override("font_size", 13)
+		continue_button.add_theme_font_size_override("font_size", 12)
+	_apply_collapsed_state()
 
 func get_hud_snapshot() -> Dictionary:
 	return {
 		"visible": panel != null and panel.visible,
 		"collapsed": _collapsed,
+		"compact": _compact,
+		"canvas_layer": layer,
+		"modal_layer_ceiling": MODAL_LAYER_CEILING,
+		"panel_position": panel.position if panel != null else Vector2.ZERO,
+		"panel_size": panel.size if panel != null else Vector2.ZERO,
 		"beat_id": _last_beat_id,
 		"title": title_label.text if title_label != null else "",
 		"objective": objective_label.text if objective_label != null else "",
@@ -263,10 +313,10 @@ func _style(fill: Color, border: Color, radius: int, width: int) -> StyleBoxFlat
 	style.border_color = border
 	style.set_border_width_all(width)
 	style.set_corner_radius_all(radius)
-	style.content_margin_left = 13.0
-	style.content_margin_right = 13.0
-	style.content_margin_top = 10.0
-	style.content_margin_bottom = 10.0
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
 	return style
 
 func _bar_style(fill: Color, radius: int) -> StyleBoxFlat:
