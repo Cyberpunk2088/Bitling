@@ -36,17 +36,20 @@ jobs:
           test -s scripts/core/living_home_service.gd
           test -s scripts/core/living_home_service_v2.gd
           test -s scripts/ui/living_home_overlay.gd
+          test -s scripts/ui/living_home_overlay_v2.gd
           test -s scripts/ui/production_bitling_stage_3d_v10.gd
           test -s scripts/ui/production_bitling_stage_3d_v11.gd
+          test -s scripts/ui/production_bitling_stage_3d_v12.gd
           test -s scripts/ui/metafinal_visual_director_v9.gd
           test -s scripts/ui/premium_navigation_shell_v3.gd
           test -s tests/wave3_living_home_test.gd
           grep -F 'config/version="0.7.0"' project.godot
           grep -F 'LivingHome="*res://scripts/core/living_home_service_v2.gd"' project.godot
-          grep -F 'LivingHomeOverlay="*res://scripts/ui/living_home_overlay.gd"' project.godot
+          grep -F 'LivingHomeOverlay="*res://scripts/ui/living_home_overlay_v2.gd"' project.godot
           grep -F 'metafinal_visual_director_v9.gd' main.tscn
           grep -F 'premium_navigation_shell_v3.gd' main.tscn
           grep -F 'ProductionStage3DV11' scripts/ui/metafinal_visual_director_v9.gd
+          grep -F 'FullscreenHomeStage' scripts/ui/living_home_overlay_v2.gd
           grep -F 'application/short_version="0.7.0"' export_presets.cfg
           grep -F 'version/code=7' export_presets.cfg
 
