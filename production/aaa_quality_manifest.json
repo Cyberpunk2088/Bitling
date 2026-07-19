@@ -20,6 +20,7 @@
     "scripts/core/dialogue_director.gd",
     "scripts/core/character_performance_director.gd",
     "scripts/core/living_home_service.gd",
+    "scripts/core/living_home_service_v2.gd",
     "scripts/core/partner_world_service.gd",
     "scripts/core/evolution_matrix_service.gd",
     "scripts/core/legendary_slice_director.gd",
@@ -33,11 +34,14 @@
     "scripts/ui/production_bitling_stage_3d_v8.gd",
     "scripts/ui/production_bitling_stage_3d_v9.gd",
     "scripts/ui/production_bitling_stage_3d_v10.gd",
+    "scripts/ui/production_bitling_stage_3d_v11.gd",
+    "scripts/ui/production_bitling_stage_3d_v12.gd",
     "scripts/ui/metafinal_visual_director_v7.gd",
     "scripts/ui/metafinal_visual_director_v8.gd",
     "scripts/ui/metafinal_visual_director_v9.gd",
     "scripts/ui/premium_navigation_shell_v3.gd",
     "scripts/ui/living_home_overlay.gd",
+    "scripts/ui/living_home_overlay_v2.gd",
     "scripts/ui/partner_world_overlay_runtime.gd",
     "scripts/ui/legendary_activity_overlay.gd",
     "scripts/ui/legendary_activity_overlay_v2.gd",
@@ -52,6 +56,7 @@
     "tests/wave1_visual_production_test.gd",
     "tests/wave2_character_performance_test.gd",
     "tests/wave3_living_home_test.gd",
+    "tests/wave3_fullscreen_home_test.gd",
     "tests/visual_layout_test.gd"
   ],
   "runtime_budgets": {
@@ -90,7 +95,7 @@
     }
   },
   "development_floors": {
-    "gdscript_test_files_min": 10,
+    "gdscript_test_files_min": 11,
     "responsive_capture_count_min": 27,
     "audio_bus_count_min": 5,
     "primary_action_count_min": 5,
