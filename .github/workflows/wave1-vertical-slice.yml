@@ -1,0 +1,99 @@
+name: Wave 1 Legendary Vertical Slice Gate
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/wave1-**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave1-slice-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+jobs:
+  vertical-slice:
+    name: Story, activities, persistence and Xogot boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+
+      - name: Validate Wave 1 production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          test -s docs/WAVE_1_EXECUTION_PLAN.md
+          test -s scripts/core/legendary_slice_director.gd
+          test -s scripts/core/legendary_slice_event_bridge.gd
+          test -s scripts/ui/legendary_activity_overlay.gd
+          test -s scripts/ui/legendary_onboarding_overlay.gd
+          test -s scripts/ui/legendary_promise_overlay.gd
+          test -s tests/legendary_vertical_slice_test.gd
+          grep -F 'LegendarySlice="*res://scripts/core/legendary_slice_director.gd"' project.godot
+          grep -F 'LegendaryActivities="*res://scripts/ui/legendary_activity_overlay.gd"' project.godot
+          grep -F 'LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"' project.godot
+          grep -F 'LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"' project.godot
+
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import and parse Wave 1 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave1-import.log
+          timeout 90 ./godot --headless --path . --script res://tests/legendary_vertical_slice_test.gd --check-only --log-file logs/wave1-parse.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave1-*.log; then
+            cat logs/wave1-*.log
+            exit 1
+          fi
+
+      - name: Boot premium main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/wave1-boot.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave1-boot.log; then
+            cat logs/wave1-boot.log
+            exit 1
+          fi
+
+      - name: Run Legendary Vertical Slice regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150 ./godot --headless --path . --script res://tests/legendary_vertical_slice_test.gd --log-file logs/wave1-tests.log
+          grep -F "[CI-SLICE] PASS" logs/wave1-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave1-tests.log; then
+            cat logs/wave1-tests.log
+            exit 1
+          fi
+
+      - name: Upload Wave 1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave1-vertical-slice-evidence
+          path: logs
+          if-no-files-found: warn
+          retention-days: 14
