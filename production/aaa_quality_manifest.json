@@ -10,6 +10,10 @@
     "project.godot",
     "main.tscn",
     "export_presets.cfg",
+    "docs/LEGENDARY_GAME_ROADMAP.md",
+    "docs/LEGENDARY_PRODUCTION_PILLARS.md",
+    "docs/LEGENDARY_DEFINITION_OF_DONE.md",
+    "production/legendary_roadmap.json",
     "scripts/core/game_state.gd",
     "scripts/core/companion_brain.gd",
     "scripts/core/dialogue_director.gd",
@@ -66,7 +70,10 @@
     "evolution_route_count_min": 6,
     "partner_technique_count_min": 6,
     "dialogue_core_count_min": 60,
-    "required_character_animation_contract_min": 14
+    "required_character_animation_contract_min": 14,
+    "legendary_roadmap_milestones_min": 12,
+    "legendary_production_pillars_min": 14,
+    "legendary_release_blockers_min": 9
   },
   "release_assets": [
     "assets/characters/bitling_omni/bitling_omni.glb",
