@@ -62,13 +62,16 @@ func _test_activity_scoring() -> void:
 	_assert(activities != null, "LegendaryActivities autoload exists")
 	if activities == null:
 		return
-	var success: Dictionary = activities.simulate_activity("pattern_focus", [1.0, 0.8, 0.9])
+	var strong_scores: Array[float] = [1.0, 0.8, 0.9]
+	var weak_scores: Array[float] = [0.1, 0.3, 0.4]
+	var invalid_scores: Array[float] = [1.0]
+	var success: Dictionary = activities.simulate_activity("pattern_focus", strong_scores)
 	_assert(bool(success.get("accepted", false)), "Known activity accepts simulated scoring")
 	_assert(bool(success.get("success", false)), "Strong average score succeeds")
 	_assert(float(success.get("score", 0.0)) > 0.85, "Activity score preserves average quality")
-	var failure: Dictionary = activities.simulate_activity("resonance_rhythm", [0.1, 0.3, 0.4])
+	var failure: Dictionary = activities.simulate_activity("resonance_rhythm", weak_scores)
 	_assert(not bool(failure.get("success", true)), "Weak average score fails without rejecting the attempt")
-	var invalid: Dictionary = activities.simulate_activity("unknown", [1.0])
+	var invalid: Dictionary = activities.simulate_activity("unknown", invalid_scores)
 	_assert(not bool(invalid.get("accepted", true)), "Unknown activity fails closed")
 
 func _test_bounded_history_and_persistence() -> void:
