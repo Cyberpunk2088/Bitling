@@ -1,6 +1,6 @@
 extends "res://scripts/ui/metafinal_visual_director_v6.gd"
 
-const ProductionStage3DV6 := preload("res://scripts/ui/production_bitling_stage_3d_v6.gd")
+const ProductionStage3DV7 := preload("res://scripts/ui/production_bitling_stage_3d_v7.gd")
 
 func _install() -> void:
 	super._install()
@@ -16,7 +16,7 @@ func _install_production_stage() -> void:
 	if parent == null:
 		return
 	var child_index := previous.get_index()
-	_stage = ProductionStage3DV6.new()
+	_stage = ProductionStage3DV7.new()
 	_stage.name = "LegendaryWave1Stage3D"
 	_stage.custom_minimum_size = previous.custom_minimum_size
 	_stage.size_flags_horizontal = previous.size_flags_horizontal
