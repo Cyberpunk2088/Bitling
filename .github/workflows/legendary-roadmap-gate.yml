@@ -1,0 +1,48 @@
+name: Legendary Roadmap Gate
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legendary-roadmap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  roadmap:
+    name: Validate product constitution and development tree
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate roadmap structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          python3 -m py_compile tools/legendary_roadmap_gate.py
+          python3 tools/legendary_roadmap_gate.py | tee logs/legendary-roadmap-gate.log
+          grep -F "[ROADMAP-GATE] PASS" logs/legendary-roadmap-gate.log
+
+      - name: Upload roadmap evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendary-roadmap-evidence
+          path: |
+            logs/legendary-roadmap-gate.log
+            docs/LEGENDARY_GAME_ROADMAP.md
+            docs/LEGENDARY_PRODUCTION_PILLARS.md
+            docs/LEGENDARY_DEFINITION_OF_DONE.md
+            production/legendary_roadmap.json
+          if-no-files-found: error
+          retention-days: 30
