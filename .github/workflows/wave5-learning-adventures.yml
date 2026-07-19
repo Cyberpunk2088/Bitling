@@ -1,0 +1,116 @@
+name: Wave 5 Learning Adventures Gate
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/wave5-**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave5-learning-adventures-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+jobs:
+  learning-adventures:
+    name: Twelve adventures, adaptive mastery, transfer and Xogot boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+
+      - name: Validate Wave 5 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          test -s scripts/core/learning_adventure_service.gd
+          test -s scripts/ui/learning_adventure_overlay.gd
+          test -s scripts/ui/learning_adventure_backdrop.gd
+          test -s scripts/ui/learning_overlay_v2.gd
+          test -s scripts/audio/omni_audio_director_v4.gd
+          test -s tests/wave5_learning_adventures_test.gd
+          grep -F 'config/version="0.9.0"' project.godot
+          grep -F 'LearningAdventures="*res://scripts/core/learning_adventure_service.gd"' project.godot
+          grep -F 'LearningAdventureOverlay="*res://scripts/ui/learning_adventure_overlay.gd"' project.godot
+          grep -F 'LearningOverlay="*res://scripts/ui/learning_overlay_v2.gd"' project.godot
+          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v4.gd"' project.godot
+          grep -F 'extends "res://scripts/audio/omni_audio_director_v3.gd"' scripts/audio/omni_audio_director_v4.gd
+          grep -F '"pattern_relay"' scripts/core/learning_adventure_service.gd
+          grep -F '"mentor_workshop"' scripts/core/learning_adventure_service.gd
+          test "$(grep -o '"transfer_prompt"' scripts/core/learning_adventure_service.gd | wc -l)" -ge 12
+          test "$(grep -o '{"prompt":' scripts/core/learning_adventure_service.gd | wc -l)" -ge 60
+          grep -F 'application/short_version="0.9.0"' export_presets.cfg
+          grep -F 'version/code=9' export_presets.cfg
+
+      - name: Enforce AAA Learning Adventure floors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/*.py
+          python3 tools/aaa_production_gate.py \
+            --profile development \
+            --output logs/wave5-aaa-gate.json | tee logs/wave5-aaa-gate.log
+          grep -F "[AAA-GATE] PASS (development)" logs/wave5-aaa-gate.log
+
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import and parse Learning Adventures runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave5-import.log
+          timeout 120 ./godot --headless --path . --script res://tests/wave5_learning_adventures_test.gd --check-only --log-file logs/wave5-parse.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave5-import.log logs/wave5-parse.log; then
+            cat logs/wave5-import.log logs/wave5-parse.log
+            exit 1
+          fi
+
+      - name: Boot premium main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/wave5-boot.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave5-boot.log; then
+            cat logs/wave5-boot.log
+            exit 1
+          fi
+
+      - name: Run Learning Adventures regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300 ./godot --headless --path . --script res://tests/wave5_learning_adventures_test.gd --log-file logs/wave5-tests.log
+          grep -F "[CI-WAVE5] PASS" logs/wave5-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave5-tests.log; then
+            cat logs/wave5-tests.log
+            exit 1
+          fi
+
+      - name: Upload Wave 5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave5-learning-adventures-evidence
+          path: logs
+          if-no-files-found: warn
+          retention-days: 14
