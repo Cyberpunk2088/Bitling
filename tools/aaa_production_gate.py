@@ -98,6 +98,7 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     dialogue = read_text("scripts/core/dialogue_director.gd")
     evolution = read_text("scripts/core/evolution_matrix_service.gd")
     partner = read_text("scripts/core/partner_world_service.gd")
+    living_home = read_text("scripts/core/living_home_service.gd")
     audio = read_text("scripts/audio/omni_audio_director.gd")
     assets = read_text("scripts/visual/production_asset_catalog.gd")
     workflow = read_text(".github/workflows/visual-capture.yml")
@@ -116,13 +117,19 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     animation_block = extract_block(assets, "REQUIRED_CHARACTER_ANIMATIONS", "]")
     animation_count = len(re.findall(r'"[^"]+"', animation_block))
 
-    capture_count = len(re.findall(r'test -s builds/visual/bitling-(?:phone|tablet|laptop)(?:-partner-world)?\.png', workflow))
+    capture_lines = re.findall(r'test -s "builds/visual/bitling-\$\{viewport\}[^"]*\.png"', workflow)
+    capture_count = len(capture_lines)
+    if "for viewport in phone tablet laptop" in workflow:
+        capture_count *= 3
     if capture_count == 0:
-        has_three_viewports = "for viewport in phone tablet laptop" in workflow
-        has_home_capture = 'bitling-${viewport}.png' in workflow
-        has_partner_capture = 'bitling-${viewport}-partner-world.png' in workflow
-        if has_three_viewports and has_home_capture and has_partner_capture:
-            capture_count = 6
+        capture_count = len(re.findall(r'test -s "?builds/visual/bitling-(?:phone|tablet|laptop)[^"]*\.png"?', workflow))
+
+    living_home_object_count = len(
+        re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"max_level":', living_home, flags=re.MULTILINE)
+    )
+    living_home_decoration_count = len(
+        re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"comfort":', living_home, flags=re.MULTILINE)
+    )
     test_count = count_files(ROOT / "tests", (".gd",))
 
     values = {
@@ -134,6 +141,8 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
         "partner_technique_count": technique_count,
         "dialogue_core_count": dialogue_count,
         "required_character_animation_contract": animation_count,
+        "living_home_object_count": living_home_object_count,
+        "living_home_decoration_count": living_home_decoration_count,
     }
     for metric, actual in values.items():
         target = int(floors.get(f"{metric}_min", 0))
