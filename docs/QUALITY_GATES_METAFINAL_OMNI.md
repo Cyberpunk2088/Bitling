@@ -1,0 +1,1 @@
+Quality gates are documented in METAFINAL_OMNI_ULTRA_CHECKLIST.md and THREE_PASS_DEFINITION_OF_DONE.md.
