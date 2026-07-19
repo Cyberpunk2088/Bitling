@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   capture:
-    name: Render Living Home, Partner World, expeditions and performances
+    name: Render worlds, Learning Adventures and character performances
     runs-on: ubuntu-latest
-    timeout-minutes: 32
+    timeout-minutes: 38
     env:
       GODOT_VERSION: "4.6.3"
       GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
@@ -50,7 +50,7 @@ jobs:
             exit 1
           fi
 
-      - name: Render responsive reference captures
+      - name: Render responsive world references
         shell: bash
         run: |
           set -euo pipefail
@@ -65,6 +65,27 @@ jobs:
           if grep -E "SCRIPT ERROR|^ERROR:" logs/visual-capture.log; then
             exit 1
           fi
+
+      - name: Render Learning Adventure references
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300 xvfb-run -a ./godot \
+            --path . \
+            --audio-driver Dummy \
+            --rendering-method gl_compatibility \
+            --script res://tools/capture_learning_adventures.gd \
+            --log-file logs/learning-capture.log
+          cat logs/learning-capture.log
+          grep -F "[LEARNING-CAPTURE] PASS" logs/learning-capture.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/learning-capture.log; then
+            exit 1
+          fi
+
+      - name: Verify 39 responsive captures
+        shell: bash
+        run: |
+          set -euo pipefail
           for viewport in phone tablet laptop; do
             test -s "builds/visual/bitling-${viewport}.png"
             test -s "builds/visual/bitling-${viewport}-play.png"
@@ -77,6 +98,8 @@ jobs:
             test -s "builds/visual/bitling-${viewport}-signal-expedition.png"
             test -s "builds/visual/bitling-${viewport}-rooftops.png"
             test -s "builds/visual/bitling-${viewport}-activity.png"
+            test -s "builds/visual/bitling-${viewport}-learning-catalog.png"
+            test -s "builds/visual/bitling-${viewport}-learning-session.png"
           done
 
       - name: Upload rendered dashboard references
@@ -86,6 +109,6 @@ jobs:
           name: bitling-responsive-visuals
           path: |
             builds/visual/*.png
-            logs/visual-*.log
+            logs/*capture*.log
           if-no-files-found: warn
           retention-days: 14
