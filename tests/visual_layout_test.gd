@@ -10,7 +10,7 @@ func _run() -> void:
 	_ensure_runtime_nodes()
 	await process_frame
 	await _test_layout(Vector2i(390, 844), 1, true, false, "phone")
-	await _test_layout(Vector2i(1024, 768), 2, false, false, "tablet")
+	await _test_layout(Vector2i(900, 1200), 2, false, false, "tablet")
 	await _test_layout(Vector2i(1440, 900), 3, false, true, "laptop")
 	if failures.is_empty():
 		print("[CI-VISUAL] PASS: %d assertions" % assertions)
