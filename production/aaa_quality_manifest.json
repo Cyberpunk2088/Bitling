@@ -5,7 +5,7 @@
   "runtime_sample_interval_seconds": 1.0,
   "violation_grace_samples": 3,
   "history_limit": 120,
-  "minimum_project_version": "0.6.0",
+  "minimum_project_version": "0.7.0",
   "required_files": [
     "project.godot",
     "main.tscn",
@@ -19,6 +19,7 @@
     "scripts/core/companion_brain.gd",
     "scripts/core/dialogue_director.gd",
     "scripts/core/character_performance_director.gd",
+    "scripts/core/living_home_service.gd",
     "scripts/core/partner_world_service.gd",
     "scripts/core/evolution_matrix_service.gd",
     "scripts/core/legendary_slice_director.gd",
@@ -31,8 +32,12 @@
     "scripts/ui/production_bitling_stage_3d_v7.gd",
     "scripts/ui/production_bitling_stage_3d_v8.gd",
     "scripts/ui/production_bitling_stage_3d_v9.gd",
+    "scripts/ui/production_bitling_stage_3d_v10.gd",
     "scripts/ui/metafinal_visual_director_v7.gd",
     "scripts/ui/metafinal_visual_director_v8.gd",
+    "scripts/ui/metafinal_visual_director_v9.gd",
+    "scripts/ui/premium_navigation_shell_v3.gd",
+    "scripts/ui/living_home_overlay.gd",
     "scripts/ui/partner_world_overlay_runtime.gd",
     "scripts/ui/legendary_activity_overlay.gd",
     "scripts/ui/legendary_activity_overlay_v2.gd",
@@ -46,6 +51,7 @@
     "tests/legendary_vertical_slice_test.gd",
     "tests/wave1_visual_production_test.gd",
     "tests/wave2_character_performance_test.gd",
+    "tests/wave3_living_home_test.gd",
     "tests/visual_layout_test.gd"
   ],
   "runtime_budgets": {
@@ -84,14 +90,16 @@
     }
   },
   "development_floors": {
-    "gdscript_test_files_min": 9,
-    "responsive_capture_count_min": 6,
+    "gdscript_test_files_min": 10,
+    "responsive_capture_count_min": 27,
     "audio_bus_count_min": 5,
     "primary_action_count_min": 5,
     "evolution_route_count_min": 6,
     "partner_technique_count_min": 6,
     "dialogue_core_count_min": 60,
     "required_character_animation_contract_min": 14,
+    "living_home_object_count_min": 8,
+    "living_home_decoration_count_min": 10,
     "legendary_roadmap_milestones_min": 12,
     "legendary_production_pillars_min": 14,
     "legendary_release_blockers_min": 9
