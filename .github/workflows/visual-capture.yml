@@ -56,6 +56,7 @@ jobs:
           set -euo pipefail
           timeout 180 xvfb-run -a ./godot \
             --path . \
+            --audio-driver Dummy \
             --rendering-method gl_compatibility \
             --script res://tools/capture_visual.gd \
             --log-file logs/visual-capture.log
