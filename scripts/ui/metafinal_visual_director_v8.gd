@@ -3,7 +3,7 @@ extends "res://scripts/ui/metafinal_visual_director_v7.gd"
 ## Wave 2 integration layer. Gameplay actions, dialogue, story beats and lifecycle
 ## state all drive one semantic performance stream shared by animation and audio.
 
-const ProductionStage3DV8 := preload("res://scripts/ui/production_bitling_stage_3d_v8.gd")
+const ProductionStage3DV9 := preload("res://scripts/ui/production_bitling_stage_3d_v9.gd")
 
 var _performance_callback := Callable()
 var _touch_callback := Callable()
@@ -25,7 +25,7 @@ func _install_production_stage() -> void:
 	if parent == null:
 		return
 	var child_index := previous.get_index()
-	_stage = ProductionStage3DV8.new()
+	_stage = ProductionStage3DV9.new()
 	_stage.name = "LegendaryWave2CharacterStage3D"
 	_stage.custom_minimum_size = previous.custom_minimum_size
 	_stage.size_flags_horizontal = previous.size_flags_horizontal
