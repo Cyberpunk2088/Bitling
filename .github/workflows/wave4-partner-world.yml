@@ -35,6 +35,7 @@ jobs:
           mkdir -p logs
           test -s scripts/core/signal_settlement_service.gd
           test -s scripts/audio/omni_audio_director_v3.gd
+          test -s scripts/audio/omni_audio_director_v4.gd
           test -s scripts/ui/signal_settlement_map.gd
           test -s scripts/ui/signal_settlement_map_v2.gd
           test -s scripts/ui/signal_settlement_overlay.gd
@@ -42,10 +43,11 @@ jobs:
           test -s scripts/ui/partner_world_overlay_runtime_v2.gd
           test -s scripts/ui/premium_navigation_shell_v4.gd
           test -s tests/wave4_partner_world_test.gd
-          grep -F 'config/version="0.8.0"' project.godot
+          grep -F 'config/version="0.9.0"' project.godot
           grep -F 'SignalSettlement="*res://scripts/core/signal_settlement_service.gd"' project.godot
           grep -F 'SignalSettlementOverlay="*res://scripts/ui/signal_settlement_overlay_v2.gd"' project.godot
-          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v3.gd"' project.godot
+          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v4.gd"' project.godot
+          grep -F 'extends "res://scripts/audio/omni_audio_director_v3.gd"' scripts/audio/omni_audio_director_v4.gd
           grep -F 'premium_navigation_shell_v4.gd' main.tscn
           grep -F '"prismatic_rooftops"' scripts/core/signal_settlement_service.gd
           grep -F '"quiet_orbit"' scripts/core/signal_settlement_service.gd
