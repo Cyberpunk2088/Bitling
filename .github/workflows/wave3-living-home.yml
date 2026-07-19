@@ -20,9 +20,9 @@ env:
 
 jobs:
   living-home:
-    name: Room simulation, persistence, 3D atmosphere and Xogot boot
+    name: Room simulation, persistence, fullscreen atmosphere and Xogot boot
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 24
 
     steps:
       - name: Check out exact candidate
@@ -43,6 +43,7 @@ jobs:
           test -s scripts/ui/metafinal_visual_director_v9.gd
           test -s scripts/ui/premium_navigation_shell_v3.gd
           test -s tests/wave3_living_home_test.gd
+          test -s tests/wave3_fullscreen_home_test.gd
           grep -F 'config/version="0.7.0"' project.godot
           grep -F 'LivingHome="*res://scripts/core/living_home_service_v2.gd"' project.godot
           grep -F 'LivingHomeOverlay="*res://scripts/ui/living_home_overlay_v2.gd"' project.godot
@@ -70,7 +71,9 @@ jobs:
         run: |
           set -euo pipefail
           timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave3-import.log
-          timeout 90 ./godot --headless --path . --script res://tests/wave3_living_home_test.gd --check-only --log-file logs/wave3-parse.log
+          for script in wave3_living_home_test wave3_fullscreen_home_test; do
+            timeout 90 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/wave3-parse-${script}.log"
+          done
           if grep -E "SCRIPT ERROR|^ERROR:" logs/wave3-*.log; then
             cat logs/wave3-*.log
             exit 1
@@ -92,8 +95,10 @@ jobs:
           set -euo pipefail
           timeout 210 ./godot --headless --path . --script res://tests/wave3_living_home_test.gd --log-file logs/wave3-tests.log
           grep -F "[CI-WAVE3] PASS" logs/wave3-tests.log
-          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave3-tests.log; then
-            cat logs/wave3-tests.log
+          timeout 150 ./godot --headless --path . --script res://tests/wave3_fullscreen_home_test.gd --log-file logs/wave3-fullscreen-tests.log
+          grep -F "[CI-WAVE3-FULL] PASS" logs/wave3-fullscreen-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave3-tests.log logs/wave3-fullscreen-tests.log; then
+            cat logs/wave3-tests.log logs/wave3-fullscreen-tests.log
             exit 1
           fi
 
