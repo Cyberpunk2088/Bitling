@@ -12,7 +12,7 @@ func _build_room() -> void:
 	if room_scene == null:
 		super._build_room()
 		return
-	var instance := room_scene.instantiate()
+	var instance: Node = room_scene.instantiate()
 	if not instance is Node3D:
 		instance.queue_free()
 		super._build_room()
@@ -27,7 +27,7 @@ func _build_bitling() -> void:
 	if character_scene == null:
 		super._build_bitling()
 		return
-	var instance := character_scene.instantiate()
+	var instance: Node = character_scene.instantiate()
 	if not instance is Node3D:
 		instance.queue_free()
 		super._build_bitling()
@@ -73,14 +73,14 @@ func _process(delta: float) -> void:
 		return
 	_elapsed += delta
 	_reaction = move_toward(_reaction, 0.0, delta * 2.8)
-	var motion_scale := 0.25 if _reduce_motion_enabled() else 1.0
+	var motion_scale: float = 0.25 if _reduce_motion_enabled() else 1.0
 	_bitling.position.y = -0.12 + sin(_elapsed * 1.75) * 0.035 * motion_scale + _reaction * 0.06
 	_bitling.rotation.y = sin(_elapsed * 0.48) * 0.025 * motion_scale
 	for index in range(_platform_rings.size()):
 		_platform_rings[index].rotation.y += delta * (0.22 + float(index) * 0.08) * (1.0 if index % 2 == 0 else -1.0)
 	_update_light_pulse()
 	for index in range(_ambient_sparks.size()):
-		var spark := _ambient_sparks[index]
+		var spark: Node3D = _ambient_sparks[index]
 		spark.position.y += delta * (0.03 + 0.015 * float(index % 4))
 		if spark.position.y > 3.9:
 			spark.position.y = 0.45
@@ -89,14 +89,15 @@ func play_action_animation(action_name: String) -> void:
 	if not _authored_character_active:
 		play_reaction()
 		return
-	var animation_name := {
+	var animation_map: Dictionary = {
 		"feed": "feed",
 		"play": "play",
 		"learn": "learn",
 		"care": "care",
 		"rest": "sleep"
-	}.get(action_name, "surprised")
-	_play_authored_animation(str(animation_name))
+	}
+	var animation_name: String = str(animation_map.get(action_name, "surprised"))
+	_play_authored_animation(animation_name)
 
 func authored_assets_status() -> Dictionary:
 	return {
@@ -125,7 +126,7 @@ func _play_authored_animation(animation_name: String) -> void:
 func _find_animation_player(root_node: Node) -> AnimationPlayer:
 	if root_node is AnimationPlayer:
 		return root_node as AnimationPlayer
-	var found := root_node.find_child("*", true, false)
+	var found: Node = root_node.find_child("*", true, false)
 	if found is AnimationPlayer:
 		return found as AnimationPlayer
 	for candidate in root_node.find_children("*", "AnimationPlayer", true, false):
