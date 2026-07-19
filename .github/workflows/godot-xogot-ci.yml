@@ -22,7 +22,7 @@ jobs:
   validate:
     name: Xogot 4.6 integrity, exports, visuals and regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 28
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for script in ci_smoke_test experience_systems_test development_profile_test release_readiness_test visual_layout_test; do
+          for script in ci_smoke_test experience_systems_test development_profile_test partner_world_test release_readiness_test visual_layout_test; do
             timeout 60 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/parse-${script}.log"
           done
           if grep -E "SCRIPT ERROR|^ERROR:" logs/parse-*.log; then
@@ -141,6 +141,17 @@ jobs:
             exit 1
           fi
           grep -F "[CI-DEV] PASS" logs/tests-development.log
+
+      - name: Run partner-world clean-room regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120 ./godot --headless --path . --script res://tests/partner_world_test.gd --log-file logs/tests-partner-world.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-partner-world.log; then
+            cat logs/tests-partner-world.log
+            exit 1
+          fi
+          grep -F "[CI-PARTNER] PASS" logs/tests-partner-world.log
 
       - name: Run release stress and migration tests
         shell: bash
