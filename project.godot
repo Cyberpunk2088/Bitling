@@ -2,8 +2,8 @@ config_version=5
 
 [application]
 config/name="BITLING OMNI"
-config/description="An expressive 3D living-companion game baseline with contextual dialogue, procedural audio and focused responsive navigation for Xogot and Godot 4.6."
-config/version="0.4.0"
+config/description="An original partner-world game with expressive 3D companionship, recoverable care, autonomous learning, settlement growth, legacy and explainable evolution."
+config/version="0.5.0-dev"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 
@@ -26,6 +26,8 @@ AdaptiveLearning="*res://scripts/core/adaptive_learning.gd"
 EvolutionService="*res://scripts/core/evolution_service.gd"
 VitalityService="*res://scripts/core/vitality_service.gd"
 ExplorationService="*res://scripts/core/exploration_service.gd"
+PartnerWorld="*res://scripts/core/partner_world_service.gd"
+EvolutionMatrix="*res://scripts/core/evolution_matrix_service.gd"
 DialogueDirector="*res://scripts/core/dialogue_director.gd"
 OmniAudio="*res://scripts/audio/omni_audio_director.gd"
 GameState="*res://scripts/core/game_state.gd"
