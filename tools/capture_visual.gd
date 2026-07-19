@@ -28,6 +28,8 @@ func _run() -> void:
 		var dashboard := packed_scene.instantiate()
 		root.add_child(dashboard)
 		await _settle_frames(10, 0.18)
+		_prepare_deterministic_story_state()
+		await _settle_frames(8, 0.18)
 		if not _save_capture(output_directory, "bitling-%s.png" % capture.name, str(capture.name)):
 			quit(1)
 			return
@@ -46,11 +48,62 @@ func _run() -> void:
 			overlay.call("close_partner_world")
 		await _settle_frames(4, 0.18)
 
+		_prepare_rooftop_story_beat()
+		await _settle_frames(14, 0.35)
+		if not _save_capture(output_directory, "bitling-%s-rooftops.png" % capture.name, "%s rooftops" % capture.name):
+			quit(1)
+			return
+
+		var activities := root.get_node_or_null("LegendaryActivities")
+		if activities == null or not activities.has_method("open_activity"):
+			push_error("[VISUAL-CAPTURE] LegendaryActivities is unavailable")
+			quit(1)
+			return
+		activities.call("open_activity", "resonance_rhythm")
+		await _settle_frames(12, 0.30)
+		if not _save_capture(output_directory, "bitling-%s-activity.png" % capture.name, "%s activity" % capture.name):
+			quit(1)
+			return
+		if activities.has_method("_close_overlay"):
+			activities.call("_close_overlay")
+		await _settle_frames(4, 0.15)
+
 		dashboard.queue_free()
 		await process_frame
 
 	print("[VISUAL-CAPTURE] PASS")
 	quit(0)
+
+func _prepare_deterministic_story_state() -> void:
+	var onboarding := root.get_node_or_null("LegendaryOnboarding")
+	if onboarding != null and onboarding.has_method("_close"):
+		onboarding.call("_close")
+	var state := root.get_node_or_null("GameState")
+	if state != null and state.has_method("hatch"):
+		state.call("hatch")
+	var director := root.get_node_or_null("LegendarySlice")
+	if director != null:
+		director.call("reset_state")
+		director.call("start_slice", "Zumi", "neugierig")
+	var hud := root.get_node_or_null("LegendaryStoryHUD")
+	if hud != null and hud.has_method("_refresh"):
+		hud.call("_refresh")
+
+func _prepare_rooftop_story_beat() -> void:
+	var director := root.get_node_or_null("LegendarySlice")
+	if director == null:
+		return
+	director.call("reset_state")
+	director.call("start_slice", "Zumi", "neugierig")
+	director.call("record_first_care", "care")
+	for activity_id in ["resonance_rhythm", "signal_translation", "pattern_focus"]:
+		director.call("record_activity", activity_id, {"accepted": true, "success": true, "score": 0.92})
+	var hud := root.get_node_or_null("LegendaryStoryHUD")
+	if hud != null and hud.has_method("_refresh"):
+		hud.call("_refresh")
+	var stage := root.find_child("LegendaryWave1Stage3D", true, false)
+	if stage != null and stage.has_method("set_story_beat"):
+		stage.call("set_story_beat", "prismatic_rooftops")
 
 func _settle_frames(frame_count: int, delay: float) -> void:
 	for _frame in range(frame_count):
