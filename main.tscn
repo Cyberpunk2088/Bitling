@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/ultimate_dashboard.gd" id="1_dashboard"]
 [ext_resource type="Script" path="res://scripts/ui/profile_launcher_guard.gd" id="2_guard"]
@@ -7,12 +7,16 @@
 [ext_resource type="Script" path="res://scripts/ui/quest_localization_adapter.gd" id="5_quests"]
 [ext_resource type="Script" path="res://scripts/ui/stage_frame_budget.gd" id="6_budget"]
 [ext_resource type="Script" path="res://scripts/ui/metafinal_visual_director_v6.gd" id="7_metafinal"]
+[ext_resource type="Script" path="res://scripts/ui/premium_navigation_shell.gd" id="8_navigation"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_dashboard")
 
 [node name="MetafinalVisualDirector" type="Node" parent="."]
 script = ExtResource("7_metafinal")
+
+[node name="PremiumNavigationShell" type="Node" parent="."]
+script = ExtResource("8_navigation")
 
 [node name="ProfileLauncherGuard" type="Node" parent="."]
 script = ExtResource("2_guard")
