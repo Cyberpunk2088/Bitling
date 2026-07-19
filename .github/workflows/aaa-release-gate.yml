@@ -1,0 +1,137 @@
+name: AAA Production Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aaa-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+jobs:
+  release-candidate:
+    name: Strict authored-content and platform release gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out exact release candidate
+        uses: actions/checkout@v4
+
+      - name: Enforce authored AAA release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs builds/release
+          python3 -m py_compile tools/*.py
+          python3 tools/aaa_production_gate.py \
+            --profile release \
+            --output logs/aaa-release-gate.json | tee logs/aaa-release-gate.log
+          grep -F "[AAA-GATE] PASS (release)" logs/aaa-release-gate.log
+
+      - name: Install exact Godot runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import and boot release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/release-import.log
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/release-boot.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/release-*.log; then
+            cat logs/release-*.log
+            exit 1
+          fi
+
+      - name: Run complete release regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          declare -A suites=(
+            [core]="ci_smoke_test:[CI] PASS"
+            [experience]="experience_systems_test:[CI-XP] PASS"
+            [development]="development_profile_test:[CI-DEV] PASS"
+            [partner]="partner_world_test:[CI-PARTNER] PASS"
+            [aaa]="aaa_production_test:[CI-AAA] PASS"
+            [release]="release_readiness_test:[CI-RELEASE] PASS"
+            [visual]="visual_layout_test:[CI-VISUAL] PASS"
+          )
+          for slug in core experience development partner aaa release visual; do
+            IFS=":" read -r script marker <<< "${suites[$slug]}"
+            log="logs/release-test-${slug}.log"
+            timeout 150 ./godot --headless --path . --script "res://tests/${script}.gd" --log-file "$log"
+            grep -F "$marker" "$log"
+            if grep -E "SCRIPT ERROR|^ERROR:" "$log"; then
+              cat "$log"
+              exit 1
+            fi
+          done
+
+      - name: Build all platform resource packs
+        shell: bash
+        run: |
+          set -euo pipefail
+          declare -A presets=(
+            [windows]="Windows Desktop"
+            [ios]="iOS Xogot"
+            [android]="Android"
+            [web]="Web"
+            [linux]="Linux"
+            [macos]="macOS"
+          )
+          for slug in windows ios android web linux macos; do
+            preset="${presets[$slug]}"
+            log="logs/release-export-${slug}.log"
+            timeout 150 ./godot --headless --path . --export-pack "$preset" "builds/release/${slug}.pck" --log-file "$log"
+            test -s "builds/release/${slug}.pck"
+            if grep -E "SCRIPT ERROR|^ERROR:" "$log"; then
+              cat "$log"
+              exit 1
+            fi
+          done
+
+      - name: Render six release reference images
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 240 xvfb-run -a ./godot \
+            --path . \
+            --audio-driver Dummy \
+            --rendering-method gl_compatibility \
+            --script res://tools/capture_visual.gd \
+            --log-file logs/release-visual-capture.log
+          grep -F "[VISUAL-CAPTURE] PASS" logs/release-visual-capture.log
+          for viewport in phone tablet laptop; do
+            test -s "builds/visual/bitling-${viewport}.png"
+            test -s "builds/visual/bitling-${viewport}-partner-world.png"
+          done
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aaa-release-evidence
+          path: |
+            logs
+            builds/release
+            builds/visual/*.png
+          if-no-files-found: warn
+          retention-days: 30
