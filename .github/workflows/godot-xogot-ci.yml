@@ -20,9 +20,9 @@ env:
 
 jobs:
   validate:
-    name: Integrity, release audit, import, exports, boot and regressions
+    name: Integrity, release audit, exports, visuals and regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -42,7 +42,7 @@ jobs:
           set -euo pipefail
           python3 tools/release_readiness.py --output logs/release-readiness.json | tee logs/release-readiness.log
 
-      - name: Install Godot 4.4.1
+      - name: Install Godot 4.4.1 compatibility runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -72,6 +72,7 @@ jobs:
           timeout 60 ./godot --headless --path . --script res://tests/experience_systems_test.gd --check-only --log-file logs/parse-experience.log
           timeout 60 ./godot --headless --path . --script res://tests/development_profile_test.gd --check-only --log-file logs/parse-development.log
           timeout 60 ./godot --headless --path . --script res://tests/release_readiness_test.gd --check-only --log-file logs/parse-release.log
+          timeout 60 ./godot --headless --path . --script res://tests/visual_layout_test.gd --check-only --log-file logs/parse-visual.log
           if grep -E "SCRIPT ERROR|^ERROR:" logs/parse-*.log; then
             cat logs/parse-*.log
             exit 1
@@ -155,11 +156,114 @@ jobs:
           fi
           grep -F "[CI-RELEASE] PASS" logs/tests-release.log
 
+      - name: Run responsive visual layout tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120 ./godot --headless --path . --script res://tests/visual_layout_test.gd --log-file logs/tests-visual.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-visual.log; then
+            cat logs/tests-visual.log
+            exit 1
+          fi
+          grep -F "[CI-VISUAL] PASS" logs/tests-visual.log
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: godot-xogot-diagnostics
+          name: godot-xogot-diagnostics-4.4
+          path: logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+  xogot-46:
+    name: Xogot Godot 4.6.3 import, boot and full regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      GODOT_VERSION: "4.6.3"
+      GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Audit runtime architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          python3 -m py_compile tools/*.py
+          python3 tools/project_integrity.py | tee logs/project-integrity.log
+
+      - name: Install Godot 4.6.3 Xogot runtime target
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import with Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/import-46.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/import-46.log; then
+            cat logs/import-46.log
+            exit 1
+          fi
+
+      - name: Parse all test entrypoints on 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          for script in ci_smoke_test experience_systems_test development_profile_test release_readiness_test visual_layout_test; do
+            timeout 60 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/parse-${script}-46.log"
+          done
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/parse-*-46.log; then
+            cat logs/parse-*-46.log
+            exit 1
+          fi
+
+      - name: Boot premium main scene on 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/boot-46.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/boot-46.log; then
+            cat logs/boot-46.log
+            exit 1
+          fi
+
+      - name: Run full regression suite on 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 90 ./godot --headless --path . --script res://tests/ci_smoke_test.gd --log-file logs/tests-core-46.log
+          timeout 90 ./godot --headless --path . --script res://tests/experience_systems_test.gd --log-file logs/tests-experience-46.log
+          timeout 90 ./godot --headless --path . --script res://tests/development_profile_test.gd --log-file logs/tests-development-46.log
+          timeout 120 ./godot --headless --path . --script res://tests/release_readiness_test.gd --log-file logs/tests-release-46.log
+          timeout 120 ./godot --headless --path . --script res://tests/visual_layout_test.gd --log-file logs/tests-visual-46.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-*-46.log; then
+            cat logs/tests-*-46.log
+            exit 1
+          fi
+          grep -F "[CI] PASS" logs/tests-core-46.log
+          grep -F "[CI-XP] PASS" logs/tests-experience-46.log
+          grep -F "[CI-DEV] PASS" logs/tests-development-46.log
+          grep -F "[CI-RELEASE] PASS" logs/tests-release-46.log
+          grep -F "[CI-VISUAL] PASS" logs/tests-visual-46.log
+
+      - name: Upload Xogot 4.6 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-xogot-diagnostics-4.6
           path: logs
           if-no-files-found: ignore
           retention-days: 14
