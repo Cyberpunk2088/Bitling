@@ -38,6 +38,10 @@ func _run() -> void:
 			quit(1)
 			return
 
+		if not await _capture_living_home(output_directory, str(capture.name)):
+			quit(1)
+			return
+
 		var overlay := root.get_node_or_null("PartnerWorldOverlay")
 		if overlay == null or not overlay.has_method("open_partner_world"):
 			push_error("[VISUAL-CAPTURE] PartnerWorldOverlay is unavailable")
@@ -104,6 +108,43 @@ func _capture_character_performances(output_directory: String, viewport_name: St
 		return false
 	return true
 
+func _capture_living_home(output_directory: String, viewport_name: String) -> bool:
+	var home := root.get_node_or_null("LivingHome")
+	var overlay := root.get_node_or_null("LivingHomeOverlay")
+	if home == null or overlay == null:
+		push_error("[VISUAL-CAPTURE] Living Home runtime is unavailable")
+		return false
+	if not home.has_method("reset_state") or not overlay.has_method("open_home"):
+		push_error("[VISUAL-CAPTURE] Living Home contract is incomplete")
+		return false
+
+	home.call("reset_state")
+	home.call("set_theme", "star_archive")
+	home.call("set_time_mode", "NIGHT")
+	home.call("set_weather", "RAIN")
+	for decoration_id in ["moon_lantern", "star_map", "memory_ribbon", "aurora_rug"]:
+		home.call("place_decoration", decoration_id)
+	home.call("interact_object", "learning_desk")
+	home.call("interact_object", "memory_archive")
+	overlay.call("open_home")
+	await _settle_frames(14, 0.34)
+	if not _save_capture(output_directory, "bitling-%s-living-home.png" % viewport_name, "%s Living Home rain" % viewport_name):
+		return false
+
+	home.call("set_theme", "botanical_lab")
+	home.call("set_time_mode", "EVENING")
+	home.call("set_weather", "AURORA")
+	home.call("remove_decoration", "star_map")
+	home.call("place_decoration", "moss_cushion")
+	home.call("place_decoration", "tiny_planet")
+	home.call("interact_object", "garden_wall")
+	await _settle_frames(14, 0.34)
+	if not _save_capture(output_directory, "bitling-%s-living-home-aurora.png" % viewport_name, "%s Living Home aurora" % viewport_name):
+		return false
+	overlay.call("close_home")
+	await _settle_frames(4, 0.12)
+	return true
+
 func _prepare_deterministic_story_state() -> void:
 	var onboarding := root.get_node_or_null("LegendaryOnboarding")
 	if onboarding != null and onboarding.has_method("_close"):
@@ -134,7 +175,7 @@ func _prepare_rooftop_story_beat() -> void:
 	var hud := root.get_node_or_null("LegendaryStoryHUD")
 	if hud != null and hud.has_method("_refresh"):
 		hud.call("_refresh")
-	var stage := root.find_child("LegendaryWave2CharacterStage3D", true, false)
+	var stage := root.find_child("LegendaryWave3LivingHomeStage3D", true, false)
 	if stage != null and stage.has_method("set_story_beat"):
 		stage.call("set_story_beat", "prismatic_rooftops")
 	var audio := root.get_node_or_null("OmniAudio")
