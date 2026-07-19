@@ -34,6 +34,10 @@ func _run() -> void:
 			quit(1)
 			return
 
+		if not await _capture_living_home(output_directory, str(capture.name)):
+			quit(1)
+			return
+
 		if not await _capture_character_performances(output_directory, str(capture.name)):
 			quit(1)
 			return
@@ -77,6 +81,20 @@ func _run() -> void:
 
 	print("[VISUAL-CAPTURE] PASS")
 	quit(0)
+
+func _capture_living_home(output_directory: String, viewport_name: String) -> bool:
+	var living_home := root.get_node_or_null("LivingHomeOverlay")
+	if living_home == null or not living_home.has_method("open_living_home"):
+		push_error("[VISUAL-CAPTURE] LivingHomeOverlay is unavailable")
+		return false
+	living_home.call("open_living_home")
+	await _settle_frames(10, 0.26)
+	if not _save_capture(output_directory, "bitling-%s-living-home.png" % viewport_name, "%s living home" % viewport_name):
+		return false
+	if living_home.has_method("close_living_home"):
+		living_home.call("close_living_home")
+	await _settle_frames(4, 0.15)
+	return true
 
 func _capture_character_performances(output_directory: String, viewport_name: String) -> bool:
 	var performance := root.get_node_or_null("CharacterPerformance")
@@ -134,7 +152,9 @@ func _prepare_rooftop_story_beat() -> void:
 	var hud := root.get_node_or_null("LegendaryStoryHUD")
 	if hud != null and hud.has_method("_refresh"):
 		hud.call("_refresh")
-	var stage := root.find_child("LegendaryWave2CharacterStage3D", true, false)
+	var stage := root.find_child("LegendaryWave3LivingHomeStage3D", true, false)
+	if stage == null:
+		stage = root.find_child("LegendaryWave2CharacterStage3D", true, false)
 	if stage != null and stage.has_method("set_story_beat"):
 		stage.call("set_story_beat", "prismatic_rooftops")
 	var audio := root.get_node_or_null("OmniAudio")
