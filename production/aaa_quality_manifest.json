@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "product": "BITLING OMNI",
+  "quality_tier": "AAA_PRODUCTION_CANDIDATE",
+  "runtime_sample_interval_seconds": 1.0,
+  "violation_grace_samples": 3,
+  "history_limit": 120,
+  "minimum_project_version": "0.5.0",
+  "required_files": [
+    "project.godot",
+    "main.tscn",
+    "export_presets.cfg",
+    "scripts/core/game_state.gd",
+    "scripts/core/companion_brain.gd",
+    "scripts/core/dialogue_director.gd",
+    "scripts/core/partner_world_service.gd",
+    "scripts/core/evolution_matrix_service.gd",
+    "scripts/audio/omni_audio_director.gd",
+    "scripts/ui/production_bitling_stage_3d_v5.gd",
+    "scripts/ui/partner_world_overlay_runtime.gd",
+    "scripts/visual/production_asset_catalog.gd",
+    "tests/ci_smoke_test.gd",
+    "tests/partner_world_test.gd",
+    "tests/visual_layout_test.gd"
+  ],
+  "runtime_budgets": {
+    "mobile": {
+      "fps_min": 50.0,
+      "frame_time_ms_max": 22.0,
+      "static_memory_mb_max": 384.0,
+      "video_memory_mb_max": 512.0,
+      "node_count_max": 2500.0,
+      "object_count_max": 6000.0,
+      "draw_calls_max": 900.0,
+      "orphan_nodes_max": 0.0,
+      "audio_latency_ms_max": 160.0
+    },
+    "tablet": {
+      "fps_min": 55.0,
+      "frame_time_ms_max": 19.0,
+      "static_memory_mb_max": 640.0,
+      "video_memory_mb_max": 768.0,
+      "node_count_max": 4000.0,
+      "object_count_max": 9000.0,
+      "draw_calls_max": 1400.0,
+      "orphan_nodes_max": 0.0,
+      "audio_latency_ms_max": 140.0
+    },
+    "desktop": {
+      "fps_min": 58.0,
+      "frame_time_ms_max": 17.5,
+      "static_memory_mb_max": 1024.0,
+      "video_memory_mb_max": 1536.0,
+      "node_count_max": 6500.0,
+      "object_count_max": 14000.0,
+      "draw_calls_max": 2200.0,
+      "orphan_nodes_max": 0.0,
+      "audio_latency_ms_max": 120.0
+    }
+  },
+  "development_floors": {
+    "gdscript_test_files_min": 6,
+    "responsive_capture_count_min": 6,
+    "audio_bus_count_min": 5,
+    "primary_action_count_min": 5,
+    "evolution_route_count_min": 6,
+    "partner_technique_count_min": 6,
+    "dialogue_core_count_min": 60,
+    "required_character_animation_contract_min": 14
+  },
+  "release_assets": [
+    "assets/characters/bitling_omni/bitling_omni.glb",
+    "assets/characters/bitling_omni/material_profile.tres",
+    "assets/characters/bitling_omni/bitling_animations.res",
+    "assets/environments/neon_loft/neon_loft.glb",
+    "assets/environments/neon_loft/lighting_profile.tres",
+    "assets/ui/metafinal/metafinal_theme.tres",
+    "assets/audio/music/home_theme.ogg",
+    "assets/audio/music/partner_world_theme.ogg",
+    "assets/audio/ambience/neon_loft_loop.ogg",
+    "assets/audio/ambience/signal_settlement_loop.ogg"
+  ],
+  "release_content_floors": {
+    "authored_music_tracks_min": 3,
+    "authored_ambience_loops_min": 3,
+    "authored_sfx_files_min": 15,
+    "authored_voice_files_min": 20,
+    "supported_locales_min": 2
+  }
+}
