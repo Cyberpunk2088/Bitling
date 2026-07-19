@@ -5,7 +5,6 @@ Development mode validates the enforceable code/content baseline on every change
 Release mode additionally requires the authored character, environment, UI and
 sound packages declared in production/aaa_quality_manifest.json.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -116,13 +115,20 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     animation_block = extract_block(assets, "REQUIRED_CHARACTER_ANIMATIONS", "]")
     animation_count = len(re.findall(r'"[^"]+"', animation_block))
 
-    capture_count = len(re.findall(r'test -s builds/visual/bitling-(?:phone|tablet|laptop)(?:-partner-world)?\.png', workflow))
+    capture_count = 0
+    if "for viewport in phone tablet laptop" in workflow:
+        capture_templates = set(
+            re.findall(r'test -s "builds/visual/bitling-\$\{viewport\}([^"]*)\.png"', workflow)
+        )
+        capture_count = len(capture_templates) * 3
     if capture_count == 0:
-        has_three_viewports = "for viewport in phone tablet laptop" in workflow
-        has_home_capture = 'bitling-${viewport}.png' in workflow
-        has_partner_capture = 'bitling-${viewport}-partner-world.png' in workflow
-        if has_three_viewports and has_home_capture and has_partner_capture:
-            capture_count = 6
+        capture_count = len(
+            re.findall(
+                r'test -s ["\']?builds/visual/bitling-(?:phone|tablet|laptop)(?:-[a-z0-9-]+)?\.png["\']?',
+                workflow,
+            )
+        )
+
     test_count = count_files(ROOT / "tests", (".gd",))
 
     values = {
