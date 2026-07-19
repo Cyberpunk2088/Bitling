@@ -3,7 +3,7 @@ extends "res://scripts/ui/metafinal_visual_director_v8.gd"
 ## Wave 3 integration layer. It installs the Living Home stage and keeps the
 ## persistent room simulation synchronized with story, performance and audio.
 
-const ProductionStage3DV10 := preload("res://scripts/ui/production_bitling_stage_3d_v10.gd")
+const ProductionStage3DV11 := preload("res://scripts/ui/production_bitling_stage_3d_v11.gd")
 
 var _home_callback := Callable()
 var _last_home_snapshot: Dictionary = {}
@@ -22,7 +22,7 @@ func _install_production_stage() -> void:
 	if parent == null:
 		return
 	var child_index := previous.get_index()
-	_stage = ProductionStage3DV10.new()
+	_stage = ProductionStage3DV11.new()
 	_stage.name = "LegendaryWave3LivingHomeStage3D"
 	_stage.custom_minimum_size = previous.custom_minimum_size
 	_stage.size_flags_horizontal = previous.size_flags_horizontal
