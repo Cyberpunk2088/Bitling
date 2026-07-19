@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   capture:
-    name: Render worlds, activities and character performances
+    name: Render worlds, living home, activities and character performances
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 26
     env:
       GODOT_VERSION: "4.6.3"
       GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 420 xvfb-run -a ./godot \
+          timeout 480 xvfb-run -a ./godot \
             --path . \
             --audio-driver Dummy \
             --rendering-method gl_compatibility \
@@ -67,6 +67,7 @@ jobs:
           fi
           for viewport in phone tablet laptop; do
             test -s "builds/visual/bitling-${viewport}.png"
+            test -s "builds/visual/bitling-${viewport}-living-home.png"
             test -s "builds/visual/bitling-${viewport}-play.png"
             test -s "builds/visual/bitling-${viewport}-touch.png"
             test -s "builds/visual/bitling-${viewport}-dialogue.png"
