@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 ## Responsive learning overlay opened by the existing LERNEN interaction.
-## Uses only standard Controls for Xogot compatibility.
+## During the Legendary Slice it routes into the authored three-activity arc.
 
 const COLOR_BACKDROP := Color(0.01, 0.02, 0.05, 0.88)
 const COLOR_PANEL := Color("111a2d")
@@ -163,8 +163,17 @@ func _apply_result(result: Dictionary) -> void:
 	state.save_game_state()
 
 func _on_interaction_completed(interaction_id: String, _tags: Array[String]) -> void:
-	if interaction_id == "learn":
-		call_deferred("open_challenge")
+	if interaction_id != "learn":
+		return
+	var director := get_node_or_null("/root/LegendarySlice")
+	var activities := get_node_or_null("/root/LegendaryActivities")
+	if director != null and activities != null and director.has_method("get_current_beat"):
+		var beat: Dictionary = director.get_current_beat()
+		var expected := str(beat.get("expected_event", ""))
+		if expected in ["resonance_rhythm", "signal_translation", "pattern_focus"] and not bool(director.get("completed")):
+			activities.call_deferred("open_activity", expected)
+			return
+	call_deferred("open_challenge")
 
 func _close_overlay() -> void:
 	backdrop.visible = false
