@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Three-stage choice expedition opened by the SPIELEN interaction.
+## Completion also advances the Legendary Slice roof-garden story beat.
 
 const COLOR_BACKDROP := Color(0.01, 0.02, 0.05, 0.88)
 const COLOR_PANEL := Color("111a2d")
@@ -42,7 +43,7 @@ func _build_ui() -> void:
 	var header := HBoxContainer.new()
 	column.add_child(header)
 	var title := Label.new()
-	title.text = "SIGNAL-EXPEDITION"
+	title.text = "PRISMATISCHE DACHGÄRTEN"
 	title.add_theme_color_override("font_color", COLOR_TEXT)
 	title.add_theme_font_size_override("font_size", 22)
 	header.add_child(title)
@@ -136,11 +137,24 @@ func _on_choice_pressed(index: int) -> void:
 	await get_tree().create_timer(1.5).timeout
 	if bool(result.get("completed", false)):
 		var summary: Dictionary = result.get("summary", {})
-		feedback_label.text = "Expedition abgeschlossen • %d XP gesammelt" % int(summary.get("total_xp", 0))
+		feedback_label.text = "Dachgärten erkundet • %d XP gesammelt" % int(summary.get("total_xp", 0))
+		_record_legendary_completion(summary)
 		await get_tree().create_timer(1.2).timeout
 		_close()
 	else:
 		_show_stage(result.get("next_stage", {}))
+
+func _record_legendary_completion(summary: Dictionary) -> void:
+	var director := get_node_or_null("/root/LegendarySlice")
+	if director == null or not director.has_method("record_activity"):
+		return
+	var score := clampf(float(summary.get("total_xp", 0)) / 55.0, 0.55, 1.0)
+	director.record_activity("prism_rooftops", {
+		"accepted": true,
+		"success": true,
+		"score": score,
+		"xp": int(summary.get("total_xp", 0))
+	})
 
 func _on_interaction_completed(interaction_id: String, _tags: Array[String]) -> void:
 	if interaction_id == "play":
