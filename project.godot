@@ -2,8 +2,8 @@ config_version=5
 
 [application]
 config/name="BITLING OMNI"
-config/description="An original partner-world game with expressive 3D companionship, a reactive living home, a navigable Signal Settlement, recoverable care, autonomous learning, legacy and explainable evolution."
-config/version="0.8.0"
+config/description="An original partner-world game with expressive companionship, a reactive living home, a navigable Signal Settlement, twelve adaptive Learning Adventures, recoverable care, legacy and explainable evolution."
+config/version="0.9.0"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 
@@ -24,6 +24,7 @@ SocialSessionService="*res://scripts/social/social_session_service.gd"
 LineageService="*res://scripts/social/lineage_service.gd"
 WellbeingGuard="*res://scripts/core/wellbeing_guard.gd"
 AdaptiveLearning="*res://scripts/core/adaptive_learning.gd"
+LearningAdventures="*res://scripts/core/learning_adventure_service.gd"
 EvolutionService="*res://scripts/core/evolution_service.gd"
 VitalityService="*res://scripts/core/vitality_service.gd"
 ExplorationService="*res://scripts/core/exploration_service.gd"
@@ -40,7 +41,8 @@ LegendarySlice="*res://scripts/core/legendary_slice_director_v2.gd"
 LegendarySliceBridge="*res://scripts/core/legendary_slice_event_bridge.gd"
 HapticService="*res://scripts/platform/haptic_service.gd"
 DialogueToast="*res://scripts/ui/dialogue_toast.gd"
-LearningOverlay="*res://scripts/ui/learning_overlay.gd"
+LearningOverlay="*res://scripts/ui/learning_overlay_v2.gd"
+LearningAdventureOverlay="*res://scripts/ui/learning_adventure_overlay.gd"
 ExplorationOverlay="*res://scripts/ui/exploration_overlay.gd"
 EvolutionOverlay="*res://scripts/ui/evolution_overlay.gd"
 ProfileOverlay="*res://scripts/ui/profile_overlay.gd"
