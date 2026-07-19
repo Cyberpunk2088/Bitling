@@ -48,7 +48,7 @@ LegendaryActivities="*res://scripts/ui/legendary_activity_overlay_v2.gd"
 LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"
 LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"
 LegendaryStoryHUD="*res://scripts/ui/legendary_story_hud.gd"
-LivingHomeOverlay="*res://scripts/ui/living_home_overlay.gd"
+LivingHomeOverlay="*res://scripts/ui/living_home_overlay_v2.gd"
 
 [audio]
 driver/enable_input=true
