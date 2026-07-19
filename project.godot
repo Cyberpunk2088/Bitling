@@ -42,9 +42,10 @@ ExplorationOverlay="*res://scripts/ui/exploration_overlay.gd"
 EvolutionOverlay="*res://scripts/ui/evolution_overlay.gd"
 ProfileOverlay="*res://scripts/ui/profile_overlay.gd"
 PartnerWorldOverlay="*res://scripts/ui/partner_world_overlay_runtime.gd"
-LegendaryActivities="*res://scripts/ui/legendary_activity_overlay.gd"
+LegendaryActivities="*res://scripts/ui/legendary_activity_overlay_v2.gd"
 LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"
 LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"
+LegendaryStoryHUD="*res://scripts/ui/legendary_story_hud.gd"
 
 [audio]
 driver/enable_input=true
