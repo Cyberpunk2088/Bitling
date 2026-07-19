@@ -38,6 +38,7 @@ LearningOverlay="*res://scripts/ui/learning_overlay.gd"
 ExplorationOverlay="*res://scripts/ui/exploration_overlay.gd"
 EvolutionOverlay="*res://scripts/ui/evolution_overlay.gd"
 ProfileOverlay="*res://scripts/ui/profile_overlay.gd"
+PartnerWorldOverlay="*res://scripts/ui/partner_world_overlay_runtime.gd"
 
 [audio]
 driver/enable_input=true
