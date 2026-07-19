@@ -140,9 +140,11 @@ func _test_main_scene_integration() -> void:
 	await process_frame
 	await process_frame
 	var director := main.get_node_or_null("MetafinalVisualDirector")
-	_assert(director != null and director.get_script().resource_path.ends_with("metafinal_visual_director_v8.gd"), "Main scene installs Wave 2 visual director")
-	var stage := main.find_child("LegendaryWave2CharacterStage3D", true, false)
-	_assert(stage != null, "Main scene installs Wave 2 character stage")
+	_assert(director != null and director.has_method("get_wave2_status"), "Main scene preserves Wave 2 visual-performance capability")
+	var stage := main.find_child("LegendaryWave3LivingHomeStage3D", true, false)
+	if stage == null:
+		stage = main.find_child("LegendaryWave2CharacterStage3D", true, false)
+	_assert(stage != null and stage.has_method("get_character_life_snapshot"), "Main scene preserves Wave 2 character-stage capability")
 	if director != null and director.has_method("get_wave2_status"):
 		var status: Dictionary = director.get_wave2_status()
 		_assert(status.has("performance") and status.has("audio") and status.has("stage"), "Visual director exposes integrated performance diagnostics")
