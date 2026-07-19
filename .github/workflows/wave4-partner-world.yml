@@ -1,0 +1,102 @@
+name: Wave 4 Partner World Gate
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/wave4-**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave4-partner-world-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+jobs:
+  partner-world:
+    name: Settlement navigation, mentors, secrets, expeditions and Xogot boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+
+      - name: Validate Wave 4 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          test -s scripts/core/signal_settlement_service.gd
+          test -s scripts/audio/omni_audio_director_v3.gd
+          test -s scripts/ui/signal_settlement_map.gd
+          test -s scripts/ui/signal_settlement_overlay.gd
+          test -s scripts/ui/partner_world_overlay_runtime_v2.gd
+          test -s scripts/ui/premium_navigation_shell_v4.gd
+          test -s tests/wave4_partner_world_test.gd
+          grep -F 'config/version="0.8.0"' project.godot
+          grep -F 'SignalSettlement="*res://scripts/core/signal_settlement_service.gd"' project.godot
+          grep -F 'SignalSettlementOverlay="*res://scripts/ui/signal_settlement_overlay.gd"' project.godot
+          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v3.gd"' project.godot
+          grep -F 'premium_navigation_shell_v4.gd' main.tscn
+          grep -F '"prismatic_rooftops"' scripts/core/signal_settlement_service.gd
+          grep -F '"quiet_orbit"' scripts/core/signal_settlement_service.gd
+
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import and parse Partner World runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave4-import.log
+          timeout 90 ./godot --headless --path . --script res://tests/wave4_partner_world_test.gd --check-only --log-file logs/wave4-parse.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave4-*.log; then
+            cat logs/wave4-*.log
+            exit 1
+          fi
+
+      - name: Boot premium main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/wave4-boot.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave4-boot.log; then
+            cat logs/wave4-boot.log
+            exit 1
+          fi
+
+      - name: Run Partner World regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 210 ./godot --headless --path . --script res://tests/wave4_partner_world_test.gd --log-file logs/wave4-tests.log
+          grep -F "[CI-WAVE4] PASS" logs/wave4-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave4-tests.log; then
+            cat logs/wave4-tests.log
+            exit 1
+          fi
+
+      - name: Upload Wave 4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave4-partner-world-evidence
+          path: logs
+          if-no-files-found: warn
+          retention-days: 14
