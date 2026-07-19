@@ -26,6 +26,7 @@
     "scripts/audio/omni_audio_director.gd",
     "scripts/ui/production_bitling_stage_3d_v5.gd",
     "scripts/ui/production_bitling_stage_3d_v6.gd",
+    "scripts/ui/production_bitling_stage_3d_v7.gd",
     "scripts/ui/metafinal_visual_director_v7.gd",
     "scripts/ui/partner_world_overlay_runtime.gd",
     "scripts/ui/legendary_activity_overlay.gd",
