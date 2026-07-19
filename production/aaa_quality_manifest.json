@@ -5,7 +5,7 @@
   "runtime_sample_interval_seconds": 1.0,
   "violation_grace_samples": 3,
   "history_limit": 120,
-  "minimum_project_version": "0.8.0",
+  "minimum_project_version": "0.9.0",
   "required_files": [
     "project.godot",
     "main.tscn",
@@ -23,6 +23,8 @@
     "scripts/core/living_home_service_v2.gd",
     "scripts/core/partner_world_service.gd",
     "scripts/core/signal_settlement_service.gd",
+    "scripts/core/learning_adventure_service.gd",
+    "scripts/core/learning_adventure_service_v2.gd",
     "scripts/core/evolution_matrix_service.gd",
     "scripts/core/legendary_slice_director.gd",
     "scripts/core/legendary_slice_director_v2.gd",
@@ -51,6 +53,10 @@
     "scripts/ui/signal_settlement_map_v2.gd",
     "scripts/ui/signal_settlement_overlay.gd",
     "scripts/ui/signal_settlement_overlay_v2.gd",
+    "scripts/ui/learning_overlay.gd",
+    "scripts/ui/learning_overlay_v2.gd",
+    "scripts/ui/learning_adventure_overlay.gd",
+    "scripts/ui/learning_adventure_overlay_v2.gd",
     "scripts/ui/legendary_activity_overlay.gd",
     "scripts/ui/legendary_activity_overlay_v2.gd",
     "scripts/ui/legendary_activity_backdrop.gd",
@@ -58,6 +64,8 @@
     "scripts/ui/legendary_promise_overlay.gd",
     "scripts/ui/legendary_story_hud.gd",
     "scripts/visual/production_asset_catalog.gd",
+    "tools/capture_visual.gd",
+    "tools/capture_learning_adventures.gd",
     "tests/ci_smoke_test.gd",
     "tests/partner_world_test.gd",
     "tests/legendary_vertical_slice_test.gd",
@@ -66,6 +74,7 @@
     "tests/wave3_living_home_test.gd",
     "tests/wave3_fullscreen_home_test.gd",
     "tests/wave4_partner_world_test.gd",
+    "tests/wave5_learning_adventures_test.gd",
     "tests/visual_layout_test.gd"
   ],
   "runtime_budgets": {
@@ -104,8 +113,8 @@
     }
   },
   "development_floors": {
-    "gdscript_test_files_min": 12,
-    "responsive_capture_count_min": 33,
+    "gdscript_test_files_min": 13,
+    "responsive_capture_count_min": 39,
     "audio_bus_count_min": 5,
     "primary_action_count_min": 5,
     "evolution_route_count_min": 6,
@@ -118,6 +127,9 @@
     "signal_settlement_citizen_count_min": 12,
     "signal_settlement_secret_count_min": 4,
     "signal_settlement_expedition_count_min": 4,
+    "learning_adventure_count_min": 12,
+    "learning_domain_count_min": 10,
+    "learning_approach_count_min": 4,
     "legendary_roadmap_milestones_min": 12,
     "legendary_production_pillars_min": 14,
     "legendary_release_blockers_min": 9
