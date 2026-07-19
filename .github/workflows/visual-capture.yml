@@ -1,0 +1,80 @@
+name: BITLING Visual Capture
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bitling-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Render phone, tablet and laptop dashboard references
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GODOT_VERSION: "4.6.3"
+      GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs builds/visual
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/visual-import.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/visual-import.log; then
+            cat logs/visual-import.log
+            exit 1
+          fi
+
+      - name: Render responsive reference captures
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 xvfb-run -a ./godot \
+            --path . \
+            --rendering-method gl_compatibility \
+            --script res://tools/capture_visual.gd \
+            --log-file logs/visual-capture.log
+          cat logs/visual-capture.log
+          grep -F "[VISUAL-CAPTURE] PASS" logs/visual-capture.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/visual-capture.log; then
+            exit 1
+          fi
+          test -s builds/visual/bitling-phone.png
+          test -s builds/visual/bitling-tablet.png
+          test -s builds/visual/bitling-laptop.png
+
+      - name: Upload rendered dashboard references
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitling-responsive-visuals
+          path: |
+            builds/visual/*.png
+            logs/visual-*.log
+          if-no-files-found: warn
+          retention-days: 14
