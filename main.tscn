@@ -6,7 +6,7 @@
 [ext_resource type="Script" path="res://scripts/ui/production_stage_identity_badge.gd" id="4_badge"]
 [ext_resource type="Script" path="res://scripts/ui/quest_localization_adapter.gd" id="5_quests"]
 [ext_resource type="Script" path="res://scripts/ui/stage_frame_budget.gd" id="6_budget"]
-[ext_resource type="Script" path="res://scripts/ui/metafinal_visual_director_v2.gd" id="7_metafinal"]
+[ext_resource type="Script" path="res://scripts/ui/metafinal_visual_director_v3.gd" id="7_metafinal"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_dashboard")
