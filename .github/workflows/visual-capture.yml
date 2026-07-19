@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   capture:
-    name: Render Living Home, Partner World, expeditions and performances
+    name: Render Living Home, Partner World, Learning Adventures and performances
     runs-on: ubuntu-latest
-    timeout-minutes: 32
+    timeout-minutes: 38
     env:
       GODOT_VERSION: "4.6.3"
       GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 660 xvfb-run -a ./godot \
+          timeout 780 xvfb-run -a ./godot \
             --path . \
             --audio-driver Dummy \
             --rendering-method gl_compatibility \
@@ -75,6 +75,10 @@ jobs:
             test -s "builds/visual/bitling-${viewport}-partner-world.png"
             test -s "builds/visual/bitling-${viewport}-signal-settlement.png"
             test -s "builds/visual/bitling-${viewport}-signal-expedition.png"
+            test -s "builds/visual/bitling-${viewport}-learning-hub.png"
+            test -s "builds/visual/bitling-${viewport}-learning-choice.png"
+            test -s "builds/visual/bitling-${viewport}-learning-rhythm.png"
+            test -s "builds/visual/bitling-${viewport}-learning-transfer.png"
             test -s "builds/visual/bitling-${viewport}-rooftops.png"
             test -s "builds/visual/bitling-${viewport}-activity.png"
           done
