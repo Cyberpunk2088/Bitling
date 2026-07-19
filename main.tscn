@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/ultimate_dashboard.gd" id="1_dashboard"]
 [ext_resource type="Script" path="res://scripts/ui/profile_launcher_guard.gd" id="2_guard"]
 [ext_resource type="Script" path="res://scripts/ui/visual_layout_enhancer.gd" id="3_enhancer"]
 [ext_resource type="Script" path="res://scripts/ui/stage_identity_badge.gd" id="4_badge"]
 [ext_resource type="Script" path="res://scripts/ui/quest_localization_adapter.gd" id="5_quests"]
+[ext_resource type="Script" path="res://scripts/ui/stage_frame_budget.gd" id="6_budget"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_dashboard")
@@ -20,3 +21,6 @@ script = ExtResource("4_badge")
 
 [node name="QuestLocalizationAdapter" type="Node" parent="."]
 script = ExtResource("5_quests")
+
+[node name="StageFrameBudget" type="Node" parent="."]
+script = ExtResource("6_budget")
