@@ -30,8 +30,7 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def read_text(relative_path: str) -> str:
-    path = ROOT / relative_path
-    return path.read_text(encoding="utf-8")
+    return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
 def extract_block(source: str, constant_name: str, closing: str) -> str:
@@ -54,13 +53,7 @@ def count_files(directory: Path, suffixes: tuple[str, ...]) -> int:
 
 
 def add_check(report: dict[str, Any], name: str, passed: bool, actual: Any, target: Any, severity: str = "error") -> None:
-    entry = {
-        "name": name,
-        "passed": bool(passed),
-        "actual": actual,
-        "target": target,
-        "severity": severity,
-    }
+    entry = {"name": name, "passed": bool(passed), "actual": actual, "target": target, "severity": severity}
     report["checks"].append(entry)
     if not passed:
         report["failures"].append(entry)
@@ -77,14 +70,7 @@ def audit_project(manifest: dict[str, Any], report: dict[str, Any]) -> None:
     version_match = re.search(r'config/version="([^"]+)"', project)
     project_version = version_match.group(1) if version_match else "0.0.0"
     minimum_version = str(manifest.get("minimum_project_version", "0.0.0"))
-    add_check(
-        report,
-        "project_version",
-        version_tuple(project_version) >= version_tuple(minimum_version),
-        project_version,
-        minimum_version,
-    )
-
+    add_check(report, "project_version", version_tuple(project_version) >= version_tuple(minimum_version), project_version, minimum_version)
     autoload_matches = re.findall(r'^([A-Za-z0-9_]+)="\*res://([^"]+)"$', project, flags=re.MULTILINE)
     names = [name for name, _ in autoload_matches]
     add_check(report, "autoload_names_unique", len(names) == len(set(names)), len(set(names)), len(names))
@@ -99,6 +85,7 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     evolution = read_text("scripts/core/evolution_matrix_service.gd")
     partner = read_text("scripts/core/partner_world_service.gd")
     settlement = read_text("scripts/core/signal_settlement_service.gd")
+    learning = read_text("scripts/core/learning_adventure_service.gd")
     living_home = read_text("scripts/core/living_home_service.gd")
     audio = read_text("scripts/audio/omni_audio_director.gd")
     assets = read_text("scripts/visual/production_asset_catalog.gd")
@@ -106,14 +93,11 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
 
     dialogue_count = len(re.findall(r'\{"id":\s*"[^"]+",\s*"text":', dialogue))
     evolution_count = len(re.findall(r'"minimum_level"\s*:', evolution))
-
     technique_block = extract_block(partner, "TECHNIQUE_THRESHOLDS", "}")
     technique_count = len(re.findall(r'^\s*"[^"]+"\s*:\s*[0-9.]+', technique_block, flags=re.MULTILINE))
-
     bus_block = extract_block(audio, "BUS_LEVELS", "}")
     audio_bus_count = len(re.findall(r'^\s*"[^"]+"\s*:', bus_block, flags=re.MULTILINE))
     primary_actions = sum(1 for action in ("feed", "play", "learn", "care", "rest") if f'"{action}":' in audio)
-
     animation_block = extract_block(assets, "REQUIRED_CHARACTER_ANIMATIONS", "]")
     animation_count = len(re.findall(r'"[^"]+"', animation_block))
 
@@ -124,25 +108,18 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     if capture_count == 0:
         capture_count = len(re.findall(r'test -s "?builds/visual/bitling-(?:phone|tablet|laptop)[^"]*\.png"?', workflow))
 
-    living_home_object_count = len(
-        re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"max_level":', living_home, flags=re.MULTILINE)
-    )
-    living_home_decoration_count = len(
-        re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"comfort":', living_home, flags=re.MULTILINE)
-    )
+    living_home_object_count = len(re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"max_level":', living_home, flags=re.MULTILINE))
+    living_home_decoration_count = len(re.findall(r'^\s*"[^"]+":\s*\{"title":\s*"[^"]+",\s*"comfort":', living_home, flags=re.MULTILINE))
+    settlement_district_count = len(re.findall(r'^\s*"[^"]+":\s*\{\n\s*"label":\s*"[^"]+",\n\s*"position":', settlement, flags=re.MULTILINE))
+    settlement_citizen_count = len(re.findall(r'^\s*"[^"]+":\s*\{"name":\s*"[^"]+",\s*"role":', settlement, flags=re.MULTILINE))
+    settlement_secret_count = len(re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"district":\s*"[^"]+",\s*"stages":', settlement, flags=re.MULTILINE))
+    settlement_expedition_count = len(re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"rank":\s*\d+,\s*"steps":\s*\d+,\s*"technique":', settlement, flags=re.MULTILINE))
 
-    settlement_district_count = len(
-        re.findall(r'^\s*"[^"]+":\s*\{\n\s*"label":\s*"[^"]+",\n\s*"position":', settlement, flags=re.MULTILINE)
-    )
-    settlement_citizen_count = len(
-        re.findall(r'^\s*"[^"]+":\s*\{"name":\s*"[^"]+",\s*"role":', settlement, flags=re.MULTILINE)
-    )
-    settlement_secret_count = len(
-        re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"district":\s*"[^"]+",\s*"stages":', settlement, flags=re.MULTILINE)
-    )
-    settlement_expedition_count = len(
-        re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"rank":\s*\d+,\s*"steps":\s*\d+,\s*"technique":', settlement, flags=re.MULTILINE)
-    )
+    adventure_block = extract_block(learning, "ADVENTURES", "}")
+    learning_adventure_count = len(re.findall(r'^\s*"[^"]+":\s*\{', adventure_block, flags=re.MULTILINE))
+    learning_domain_count = len(set(re.findall(r'"domain":\s*"([^"]+)"', adventure_block)))
+    approach_block = extract_block(learning, "APPROACHES", "}")
+    learning_approach_count = len(re.findall(r'^\s*"[^"]+":\s*\{', approach_block, flags=re.MULTILINE))
 
     test_count = count_files(ROOT / "tests", (".gd",))
     values = {
@@ -160,6 +137,9 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
         "signal_settlement_citizen_count": settlement_citizen_count,
         "signal_settlement_secret_count": settlement_secret_count,
         "signal_settlement_expedition_count": settlement_expedition_count,
+        "learning_adventure_count": learning_adventure_count,
+        "learning_domain_count": learning_domain_count,
+        "learning_approach_count": learning_approach_count,
     }
     for metric, actual in values.items():
         target = int(floors.get(f"{metric}_min", 0))
@@ -187,7 +167,6 @@ def audit_code_health(report: dict[str, Any]) -> None:
 def audit_release_assets(manifest: dict[str, Any], report: dict[str, Any]) -> None:
     missing = [str(path) for path in manifest.get("release_assets", []) if not (ROOT / str(path)).is_file()]
     add_check(report, "authored_release_assets", not missing, missing, [])
-
     floors = manifest.get("release_content_floors", {})
     values = {
         "authored_music_tracks": count_files(ROOT / "assets" / "audio" / "music", (".ogg", ".wav", ".mp3")),
@@ -206,13 +185,7 @@ def main() -> int:
     parser.add_argument("--profile", choices=("development", "release"), default="development")
     parser.add_argument("--output", default="logs/aaa-production-gate.json")
     args = parser.parse_args()
-
-    report: dict[str, Any] = {
-        "profile": args.profile,
-        "checks": [],
-        "failures": [],
-        "release_blocked": False,
-    }
+    report: dict[str, Any] = {"profile": args.profile, "checks": [], "failures": [], "release_blocked": False}
     try:
         manifest = load_json(MANIFEST_PATH)
         audit_required_files(manifest, report)
@@ -223,13 +196,11 @@ def main() -> int:
             audit_release_assets(manifest, report)
     except (OSError, RuntimeError, UnicodeError) as exc:
         add_check(report, "gate_execution", False, str(exc), "successful audit")
-
     report["passed"] = not report["failures"]
     report["release_blocked"] = args.profile == "release" and not report["passed"]
     output = ROOT / args.output
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
     for check in report["checks"]:
         marker = "PASS" if check["passed"] else "FAIL"
         print(f"[AAA-GATE] {marker} {check['name']}: {check['actual']} / {check['target']}")
