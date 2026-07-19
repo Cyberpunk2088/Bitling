@@ -99,6 +99,7 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     evolution = read_text("scripts/core/evolution_matrix_service.gd")
     partner = read_text("scripts/core/partner_world_service.gd")
     settlement = read_text("scripts/core/signal_settlement_service.gd")
+    learning = read_text("scripts/core/learning_adventure_service.gd")
     living_home = read_text("scripts/core/living_home_service.gd")
     audio = read_text("scripts/audio/omni_audio_director.gd")
     assets = read_text("scripts/visual/production_asset_catalog.gd")
@@ -144,6 +145,18 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
         re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"rank":\s*\d+,\s*"steps":\s*\d+,\s*"technique":', settlement, flags=re.MULTILINE)
     )
 
+    adventure_block = extract_block(learning, "ADVENTURES", "}")
+    learning_adventure_count = len(
+        re.findall(r'^\s*"[^"]+"\s*:\s*\{"title":\s*"[^"]+"', adventure_block, flags=re.MULTILINE)
+    )
+    variants_block = extract_block(learning, "VARIANTS", "}")
+    learning_variant_count = len(re.findall(r'\{"prompt":\s*"', variants_block))
+    age_profile_block = extract_block(learning, "AGE_PROFILES", "}")
+    learning_age_profile_count = len(
+        re.findall(r'^\s*"(?:child|teen|adult|senior)"\s*:', age_profile_block, flags=re.MULTILINE)
+    )
+    learning_transfer_prompt_count = len(re.findall(r'"transfer_prompt"\s*:', adventure_block))
+
     test_count = count_files(ROOT / "tests", (".gd",))
     values = {
         "gdscript_test_files": test_count,
@@ -160,6 +173,10 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
         "signal_settlement_citizen_count": settlement_citizen_count,
         "signal_settlement_secret_count": settlement_secret_count,
         "signal_settlement_expedition_count": settlement_expedition_count,
+        "learning_adventure_count": learning_adventure_count,
+        "learning_variant_count": learning_variant_count,
+        "learning_age_profile_count": learning_age_profile_count,
+        "learning_transfer_prompt_count": learning_transfer_prompt_count,
     }
     for metric, actual in values.items():
         target = int(floors.get(f"{metric}_min", 0))
