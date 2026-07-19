@@ -14,6 +14,7 @@ func _run() -> void:
 	await _test_layout(Vector2i(1440, 900), 3, false, true, "laptop")
 	_test_production_asset_contract()
 	await _test_audio_and_dialogue_quality()
+	await _test_partner_world_overlay()
 	if failures.is_empty():
 		print("[CI-VISUAL] PASS: %d assertions" % assertions)
 		quit(0)
@@ -37,6 +38,8 @@ func _ensure_runtime_nodes() -> void:
 		["EvolutionService", "res://scripts/core/evolution_service.gd"],
 		["VitalityService", "res://scripts/core/vitality_service.gd"],
 		["ExplorationService", "res://scripts/core/exploration_service.gd"],
+		["PartnerWorld", "res://scripts/core/partner_world_runtime.gd"],
+		["EvolutionMatrix", "res://scripts/core/evolution_matrix_runtime.gd"],
 		["GameState", "res://scripts/core/game_state.gd"],
 		["DialogueDirector", "res://scripts/core/dialogue_director.gd"],
 		["OmniAudio", "res://scripts/audio/omni_audio_director.gd"]
@@ -169,6 +172,27 @@ func _test_audio_and_dialogue_quality() -> void:
 	var diversity: Dictionary = dialogue.call("get_diversity_status")
 	_assert(int(diversity.get("core_line_count", 0)) >= 60, "Dialogue bank contains at least sixty authored cores")
 	_assert(unique_lines.size() >= 28, "Context matrix produces broad non-repeating dialogue")
+
+func _test_partner_world_overlay() -> void:
+	root.size = Vector2i(390, 844)
+	var overlay := root.get_node_or_null("PartnerWorldOverlay")
+	_assert(overlay != null, "Partner-world overlay autoload exists")
+	if overlay == null:
+		return
+	_assert(overlay.has_method("open_partner_world"), "Partner-world overlay exposes an open action")
+	overlay.call("open_partner_world")
+	await process_frame
+	await process_frame
+	var backdrop := overlay.get("backdrop") as ColorRect
+	_assert(backdrop != null and backdrop.visible, "Partner-world overlay becomes visible")
+	_assert(overlay.find_child("PartnerWorldShell", true, false) is PanelContainer, "Partner-world overlay owns a responsive shell")
+	_assert(overlay.find_child("PartnerSummaryGrid", true, false) is GridContainer, "Partner-world overlay exposes life and care summary")
+	var evolution_grid := overlay.find_child("EvolutionForecastGrid", true, false) as GridContainer
+	_assert(evolution_grid != null and evolution_grid.get_child_count() >= 6, "Partner-world overlay renders six evolution routes")
+	_assert(overlay.find_child("TechniqueGrid", true, false) is GridContainer, "Partner-world overlay exposes techniques")
+	_assert(overlay.find_child("SettlementGrid", true, false) is GridContainer, "Partner-world overlay exposes settlement growth")
+	overlay.call("close_partner_world")
+	await process_frame
 
 func _assert(condition: bool, message: String) -> void:
 	assertions += 1
