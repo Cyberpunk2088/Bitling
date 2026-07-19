@@ -1,0 +1,97 @@
+name: Wave 2 Character Performance Gate
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/wave2-**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave2-character-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+jobs:
+  character-performance:
+    name: Expressions, touch, speech, audio and Xogot boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+
+      - name: Validate Wave 2 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          test -s scripts/core/character_performance_director.gd
+          test -s scripts/audio/omni_audio_director_v2.gd
+          test -s scripts/ui/production_bitling_stage_3d_v8.gd
+          test -s scripts/ui/metafinal_visual_director_v8.gd
+          test -s tests/wave2_character_performance_test.gd
+          grep -F 'config/version="0.6.0"' project.godot
+          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v2.gd"' project.godot
+          grep -F 'CharacterPerformance="*res://scripts/core/character_performance_director.gd"' project.godot
+          grep -F 'metafinal_visual_director_v8.gd' main.tscn
+
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import and parse performance runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave2-import.log
+          timeout 90 ./godot --headless --path . --script res://tests/wave2_character_performance_test.gd --check-only --log-file logs/wave2-parse.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave2-*.log; then
+            cat logs/wave2-*.log
+            exit 1
+          fi
+
+      - name: Boot premium main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/wave2-boot.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave2-boot.log; then
+            cat logs/wave2-boot.log
+            exit 1
+          fi
+
+      - name: Run character performance regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --script res://tests/wave2_character_performance_test.gd --log-file logs/wave2-tests.log
+          grep -F "[CI-WAVE2] PASS" logs/wave2-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave2-tests.log; then
+            cat logs/wave2-tests.log
+            exit 1
+          fi
+
+      - name: Upload Wave 2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave2-character-performance-evidence
+          path: logs
+          if-no-files-found: warn
+          retention-days: 14
