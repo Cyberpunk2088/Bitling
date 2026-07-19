@@ -56,20 +56,33 @@ func _test_story_hud_contract() -> void:
 	_assert(hud != null, "LegendaryStoryHUD autoload exists")
 	if director == null or hud == null:
 		return
+	var previous_size := root.size
+	root.size = Vector2i(390, 844)
+	await process_frame
+	hud.call("_apply_layout")
 	director.reset_state()
 	director.start_slice("Zumi", "ermutigend")
 	hud.call("_refresh")
+	await process_frame
 	await process_frame
 	var first_snapshot: Dictionary = hud.get_hud_snapshot()
 	_assert(bool(first_snapshot.get("visible", false)), "Story HUD is visible during an active slice")
 	_assert(str(first_snapshot.get("beat_id", "")) == "first_choice", "Story HUD tracks the authoritative current beat")
 	_assert(str(first_snapshot.get("continue_label", "")).contains("PFLEGE"), "Story HUD exposes a context-specific next action")
+	_assert(bool(first_snapshot.get("compact", false)), "390px physical width selects the compact story HUD")
+	var panel_size: Vector2 = first_snapshot.get("panel_size", Vector2.ZERO) as Vector2
+	_assert(panel_size.y <= 170.0, "Compact story HUD is height-capped and cannot cover the phone game view")
+	_assert(panel_size.x <= 390.0, "Compact story HUD remains within physical phone width")
+	_assert(int(first_snapshot.get("canvas_layer", 999)) < int(first_snapshot.get("modal_layer_ceiling", 0)), "Story HUD renders below Partner World and modal activities")
 	director.record_first_care("care")
 	hud.call("_refresh")
 	await process_frame
 	var rhythm_snapshot: Dictionary = hud.get_hud_snapshot()
 	_assert(str(rhythm_snapshot.get("beat_id", "")) == "shared_rhythm", "Story HUD advances with the story director")
 	_assert(str(rhythm_snapshot.get("continue_label", "")).contains("RESONANZ"), "Story HUD launches the matching activity")
+	root.size = previous_size
+	await process_frame
+	hud.call("_apply_layout")
 
 func _test_activity_presentation_contract() -> void:
 	var activities := root.get_node_or_null("LegendaryActivities")
