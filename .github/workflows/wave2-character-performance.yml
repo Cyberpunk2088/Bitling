@@ -36,6 +36,7 @@ jobs:
           test -s scripts/core/character_performance_director.gd
           test -s scripts/audio/omni_audio_director_v2.gd
           test -s scripts/audio/omni_audio_director_v3.gd
+          test -s scripts/audio/omni_audio_director_v4.gd
           test -s scripts/ui/production_bitling_stage_3d_v8.gd
           test -s scripts/ui/production_bitling_stage_3d_v9.gd
           test -s scripts/ui/production_bitling_stage_3d_v10.gd
@@ -43,9 +44,10 @@ jobs:
           test -s scripts/ui/metafinal_visual_director_v8.gd
           test -s scripts/ui/metafinal_visual_director_v9.gd
           test -s tests/wave2_character_performance_test.gd
-          grep -F 'config/version="0.8.0"' project.godot
-          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v3.gd"' project.godot
+          grep -F 'config/version="0.9.0"' project.godot
+          grep -F 'OmniAudio="*res://scripts/audio/omni_audio_director_v4.gd"' project.godot
           grep -F 'extends "res://scripts/audio/omni_audio_director_v2.gd"' scripts/audio/omni_audio_director_v3.gd
+          grep -F 'extends "res://scripts/audio/omni_audio_director_v3.gd"' scripts/audio/omni_audio_director_v4.gd
           grep -F 'CharacterPerformance="*res://scripts/core/character_performance_director.gd"' project.godot
           grep -F 'metafinal_visual_director_v9.gd' main.tscn
           grep -F 'ProductionStage3DV11' scripts/ui/metafinal_visual_director_v9.gd

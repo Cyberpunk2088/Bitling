@@ -60,6 +60,10 @@ func _run() -> void:
 			quit(1)
 			return
 
+		if not await _capture_learning_adventures(output_directory, str(capture.name)):
+			quit(1)
+			return
+
 		_prepare_rooftop_story_beat()
 		await _settle_frames(14, 0.35)
 		if not _save_capture(output_directory, "bitling-%s-rooftops.png" % capture.name, "%s rooftops" % capture.name):
@@ -182,6 +186,68 @@ func _capture_signal_settlement(output_directory: String, viewport_name: String)
 	settlement.call("import_state", settlement_backup)
 	await _settle_frames(4, 0.12)
 	return true
+
+func _capture_learning_adventures(output_directory: String, viewport_name: String) -> bool:
+	var learning := root.get_node_or_null("LearningAdventures")
+	var overlay := root.get_node_or_null("LearningAdventureOverlay")
+	if learning == null or overlay == null:
+		push_error("[VISUAL-CAPTURE] Learning Adventures runtime is unavailable")
+		return false
+	if not overlay.has_method("open_catalog") or not learning.has_method("start_adventure"):
+		push_error("[VISUAL-CAPTURE] Learning Adventures contract is incomplete")
+		return false
+	var backup: Dictionary = learning.call("export_state") as Dictionary
+	learning.call("reset_state")
+	overlay.call("open_catalog")
+	await _settle_frames(16, 0.38)
+	if not _save_capture(output_directory, "bitling-%s-learning-hub.png" % viewport_name, "%s Learning Hub" % viewport_name):
+		return false
+
+	overlay.call("open_adventure", "evidence_beacon")
+	await _settle_frames(12, 0.30)
+	if not _save_capture(output_directory, "bitling-%s-learning-choice.png" % viewport_name, "%s Evidence Adventure" % viewport_name):
+		return false
+	learning.call("abandon_session")
+	overlay.call("open_catalog")
+	await _settle_frames(4, 0.12)
+
+	overlay.call("open_adventure", "resonance_rhythm")
+	await _settle_frames(12, 0.30)
+	if not _save_capture(output_directory, "bitling-%s-learning-rhythm.png" % viewport_name, "%s Rhythm Adventure" % viewport_name):
+		return false
+	learning.call("abandon_session")
+
+	var started: Dictionary = learning.call("start_adventure", "emotion_mirror", 909) as Dictionary
+	if not bool(started.get("accepted", false)):
+		return false
+	var completion: Dictionary = {}
+	while not (learning.call("get_active_session") as Dictionary).is_empty():
+		var session: Dictionary = learning.call("get_active_session") as Dictionary
+		var round_data: Dictionary = session.get("current_round", {}) as Dictionary
+		var scores: Array = round_data.get("scores", []) as Array
+		var best_index: int = _best_score_index(scores)
+		var result: Dictionary = learning.call("submit_choice", best_index) as Dictionary
+		if bool(result.get("session_complete", false)):
+			completion = result.get("completion", {}) as Dictionary
+	overlay.call("_show_session")
+	overlay.call("_show_completion", completion)
+	await _settle_frames(14, 0.34)
+	if not _save_capture(output_directory, "bitling-%s-learning-transfer.png" % viewport_name, "%s Learning Transfer" % viewport_name):
+		return false
+	overlay.call("close_overlay")
+	learning.call("import_state", backup)
+	await _settle_frames(4, 0.12)
+	return true
+
+func _best_score_index(scores: Array) -> int:
+	var best_index: int = 0
+	var best_score: float = -1.0
+	for index: int in range(scores.size()):
+		var score: float = float(scores[index])
+		if score > best_score:
+			best_score = score
+			best_index = index
+	return best_index
 
 func _prepare_deterministic_story_state() -> void:
 	var onboarding := root.get_node_or_null("LegendaryOnboarding")
