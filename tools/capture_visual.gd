@@ -56,6 +56,10 @@ func _run() -> void:
 			overlay.call("close_partner_world")
 		await _settle_frames(4, 0.18)
 
+		if not await _capture_signal_settlement(output_directory, str(capture.name)):
+			quit(1)
+			return
+
 		_prepare_rooftop_story_beat()
 		await _settle_frames(14, 0.35)
 		if not _save_capture(output_directory, "bitling-%s-rooftops.png" % capture.name, "%s rooftops" % capture.name):
@@ -142,6 +146,40 @@ func _capture_living_home(output_directory: String, viewport_name: String) -> bo
 	if not _save_capture(output_directory, "bitling-%s-living-home-aurora.png" % viewport_name, "%s Living Home aurora" % viewport_name):
 		return false
 	overlay.call("close_home")
+	await _settle_frames(4, 0.12)
+	return true
+
+func _capture_signal_settlement(output_directory: String, viewport_name: String) -> bool:
+	var partner := root.get_node_or_null("PartnerWorld")
+	var settlement := root.get_node_or_null("SignalSettlement")
+	var overlay := root.get_node_or_null("SignalSettlementOverlay")
+	if partner == null or settlement == null or overlay == null:
+		push_error("[VISUAL-CAPTURE] Signal Settlement runtime is unavailable")
+		return false
+	if not overlay.has_method("open_world") or not settlement.has_method("travel_to"):
+		push_error("[VISUAL-CAPTURE] Signal Settlement contract is incomplete")
+		return false
+	var partner_backup: Dictionary = partner.call("export_state") as Dictionary
+	var settlement_backup: Dictionary = settlement.call("export_state") as Dictionary
+	partner.call("reset_state")
+	settlement.call("reset_state")
+	partner.call("add_settlement_xp", 360)
+	settlement.call("travel_to", "garden_terraces")
+	settlement.call("investigate_current_district")
+	overlay.call("open_world")
+	await _settle_frames(16, 0.38)
+	if not _save_capture(output_directory, "bitling-%s-signal-settlement.png" % viewport_name, "%s Signal Settlement" % viewport_name):
+		return false
+
+	settlement.call("travel_to", "expedition_gate")
+	settlement.call("start_expedition", "prismatic_rooftops")
+	settlement.call("advance_expedition", "observe")
+	await _settle_frames(16, 0.38)
+	if not _save_capture(output_directory, "bitling-%s-signal-expedition.png" % viewport_name, "%s Signal Expedition" % viewport_name):
+		return false
+	overlay.call("close_world")
+	partner.call("import_state", partner_backup)
+	settlement.call("import_state", settlement_backup)
 	await _settle_frames(4, 0.12)
 	return true
 
