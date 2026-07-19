@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://Bitling_Core.gd" id="1_u5x3v"]
+[ext_resource type="Script" path="res://scripts/ui/ultimate_dashboard.gd" id="1_dashboard"]
 
 [node name="Main" type="Node"]
-script = ExtResource("1_u5x3v")
+script = ExtResource("1_dashboard")
