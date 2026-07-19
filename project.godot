@@ -33,6 +33,8 @@ DialogueDirector="*res://scripts/core/dialogue_director.gd"
 OmniAudio="*res://scripts/audio/omni_audio_director.gd"
 GameState="*res://scripts/core/game_state.gd"
 PartnerWorldStore="*res://scripts/core/partner_world_store.gd"
+LegendarySlice="*res://scripts/core/legendary_slice_director.gd"
+LegendarySliceBridge="*res://scripts/core/legendary_slice_event_bridge.gd"
 HapticService="*res://scripts/platform/haptic_service.gd"
 DialogueToast="*res://scripts/ui/dialogue_toast.gd"
 LearningOverlay="*res://scripts/ui/learning_overlay.gd"
@@ -40,6 +42,9 @@ ExplorationOverlay="*res://scripts/ui/exploration_overlay.gd"
 EvolutionOverlay="*res://scripts/ui/evolution_overlay.gd"
 ProfileOverlay="*res://scripts/ui/profile_overlay.gd"
 PartnerWorldOverlay="*res://scripts/ui/partner_world_overlay_runtime.gd"
+LegendaryActivities="*res://scripts/ui/legendary_activity_overlay.gd"
+LegendaryOnboarding="*res://scripts/ui/legendary_onboarding_overlay.gd"
+LegendaryPromise="*res://scripts/ui/legendary_promise_overlay.gd"
 
 [audio]
 driver/enable_input=true
