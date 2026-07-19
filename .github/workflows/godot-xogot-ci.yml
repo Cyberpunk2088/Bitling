@@ -22,7 +22,7 @@ jobs:
   validate:
     name: Xogot 4.6 integrity, AAA budgets, exports and regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 36
+    timeout-minutes: 42
 
     steps:
       - name: Check out repository
@@ -77,8 +77,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for script in ci_smoke_test experience_systems_test development_profile_test partner_world_test wave4_partner_world_test aaa_production_test release_readiness_test visual_layout_test; do
-            timeout 60 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/parse-${script}.log"
+          for script in ci_smoke_test experience_systems_test development_profile_test partner_world_test wave4_partner_world_test wave5_learning_adventures_test aaa_production_test release_readiness_test visual_layout_test; do
+            timeout 90 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/parse-${script}.log"
           done
           if grep -E "SCRIPT ERROR|^ERROR:" logs/parse-*.log; then
             cat logs/parse-*.log
@@ -172,6 +172,17 @@ jobs:
             exit 1
           fi
           grep -F "[CI-WAVE4] PASS" logs/tests-wave4-partner-world.log
+
+      - name: Run Learning Adventures regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300 ./godot --headless --path . --script res://tests/wave5_learning_adventures_test.gd --log-file logs/tests-wave5-learning.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-wave5-learning.log; then
+            cat logs/tests-wave5-learning.log
+            exit 1
+          fi
+          grep -F "[CI-WAVE5] PASS" logs/tests-wave5-learning.log
 
       - name: Run AAA runtime budget regression tests
         shell: bash
