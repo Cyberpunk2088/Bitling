@@ -12,6 +12,7 @@ func _run() -> void:
 	await _test_layout(Vector2i(390, 844), 1, true, false, "phone")
 	await _test_layout(Vector2i(900, 1200), 2, false, false, "tablet")
 	await _test_layout(Vector2i(1440, 900), 3, false, true, "laptop")
+	_test_production_asset_contract()
 	if failures.is_empty():
 		print("[CI-VISUAL] PASS: %d assertions" % assertions)
 		quit(0)
@@ -57,6 +58,7 @@ func _test_layout(viewport_size: Vector2i, expected_columns: int, expect_mobile_
 	root.add_child(dashboard)
 	await process_frame
 	await process_frame
+	await process_frame
 
 	var main_grid := dashboard.get("main_grid") as GridContainer
 	var center_panel := dashboard.get("center_panel") as PanelContainer
@@ -86,12 +88,35 @@ func _test_layout(viewport_size: Vector2i, expected_columns: int, expect_mobile_
 	_assert(action_buttons.size() == 5, "%s exposes five primary actions" % label)
 	_assert(needs_bars.size() == 5, "%s exposes five live needs" % label)
 	if stage != null:
+		_assert(stage is SubViewportContainer, "%s uses a real 3D SubViewport stage" % label)
 		_assert(stage.has_method("set_mood"), "%s stage accepts mood state" % label)
 		_assert(stage.has_method("set_rarity"), "%s stage accepts rarity state" % label)
 		_assert(stage.custom_minimum_size.y >= 390.0, "%s stage preserves visual prominence" % label)
+		_assert(stage.find_child("Production3DViewport", true, false) is SubViewport, "%s stage owns a production 3D viewport" % label)
+		_assert(stage.find_child("ProductionPassportCard", true, false) is PanelContainer, "%s stage exposes the holographic passport" % label)
+
+	for key in action_buttons.keys():
+		var button := action_buttons[key] as Button
+		_assert(button != null, "%s action %s remains a button" % [label, key])
+		if button != null:
+			_assert(button.find_child("Glyph", true, false) != null, "%s action %s has a vector neon glyph" % [label, key])
+
+	var relationship_meter := dashboard.find_child("TrustRadialMeter", true, false)
+	_assert(relationship_meter != null, "%s displays the radial trust meter" % label)
 
 	dashboard.queue_free()
 	await process_frame
+
+func _test_production_asset_contract() -> void:
+	var catalog_script := load("res://scripts/visual/production_asset_catalog.gd") as Script
+	_assert(catalog_script != null, "Production asset catalog loads")
+	if catalog_script == null:
+		return
+	var manifest: Dictionary = catalog_script.production_manifest()
+	_assert(str(manifest.get("character_scene", "")).ends_with(".glb"), "Character contract targets GLB")
+	_assert(str(manifest.get("room_scene", "")).ends_with(".glb"), "Room contract targets GLB")
+	var animations: Array = manifest.get("required_animations", [])
+	_assert(animations.size() >= 12, "Production character contract defines the required animation set")
 
 func _assert(condition: bool, message: String) -> void:
 	assertions += 1
