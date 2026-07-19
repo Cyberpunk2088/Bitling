@@ -119,8 +119,8 @@ func _prepare_deterministic_story_state() -> void:
 	if hud != null and hud.has_method("_refresh"):
 		hud.call("_refresh")
 	var performance := root.get_node_or_null("CharacterPerformance")
-	if performance != null and performance.has_method("sync_state"):
-		performance.call("sync_state")
+	if performance != null and performance.has_method("_apply_idle"):
+		performance.call("_apply_idle", false)
 
 func _prepare_rooftop_story_beat() -> void:
 	var director := root.get_node_or_null("LegendarySlice")
