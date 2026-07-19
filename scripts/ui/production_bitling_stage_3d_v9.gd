@@ -4,7 +4,7 @@ extends "res://scripts/ui/production_bitling_stage_3d_v8.gd"
 
 func _ready() -> void:
 	super._ready()
-	.refine_speech_pulses()
+	_refine_speech_pulses()
 
 func get_character_life_snapshot() -> Dictionary:
 	var snapshot := super.get_character_life_snapshot()
@@ -29,7 +29,7 @@ func _apply_brows(value: float, gesture: String, t: float) -> void:
 
 func _refine_speech_pulses() -> void:
 	if _speech_root != null:
-		speech_root.position = Vector3(0.0, -0.53, 1.13)
+		_speech_root.position = Vector3(0.0, -0.53, 1.13)
 	for index in range(_speech_rings.size()):
 		var ring := _speech_rings[index] as MeshInstance3D
 		if ring == null:
