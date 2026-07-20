@@ -24,9 +24,8 @@ func get_mobile_readability_snapshot() -> Dictionary:
 			continue
 		answer_min_height = minf(answer_min_height, maxf(answer_button.size.y, answer_button.custom_minimum_size.y))
 		answer_min_font = mini(answer_min_font, answer_button.get_theme_font_size("font_size"))
-	var completion_button: Button = null
-	if _answer_box != null and _answer_box.get_child_count() == 1:
-		completion_button = _answer_box.get_child(0) as Button
+	var completion_button: Button = _completion_button()
+	var completion_button_count: int = _completion_button_count()
 	return {
 		"phone_layout": phone_layout,
 		"catalog_columns": _catalog_grid.columns if _catalog_grid != null else 0,
@@ -46,6 +45,8 @@ func get_mobile_readability_snapshot() -> Dictionary:
 		"mastery_height": maxf(_mastery.size.y, _mastery.custom_minimum_size.y),
 		"close_button_height": maxf(_close_button.size.y, _close_button.custom_minimum_size.y),
 		"completion_visible": completion_button != null and completion_button.text.find("WEITERE") >= 0,
+		"completion_button_count": completion_button_count,
+		"answer_box_children": _active_answer_box_child_count(),
 		"continue_button_height": maxf(completion_button.size.y, completion_button.custom_minimum_size.y) if completion_button != null else 0.0,
 		"reduced_motion": _reduce_motion_enabled()
 	}
@@ -103,7 +104,7 @@ func _show_completion(result: Dictionary) -> void:
 
 func _on_session_completed(result: Dictionary) -> void:
 	if is_open() and _session_panel != null and _session_panel.visible:
-		if _has_internal_answer_submission():
+		if _has_internal_answer_submission() or _completion_button_count() > 0:
 			return
 		_show_completion(result)
 	elif _approach_row != null:
@@ -147,9 +148,43 @@ func _estimated_approach_width(width: float, columns: int) -> float:
 
 func _has_internal_answer_submission() -> bool:
 	for answer_button: Button in _answer_buttons:
-		if is_instance_valid(answer_button) and answer_button.disabled:
+		if not is_instance_valid(answer_button) or answer_button.is_queued_for_deletion():
+			continue
+		if answer_button.disabled:
 			return true
 	return false
+
+func _completion_button() -> Button:
+	if _answer_box == null:
+		return null
+	for child: Node in _answer_box.get_children():
+		if not is_instance_valid(child) or child.is_queued_for_deletion():
+			continue
+		var button: Button = child as Button
+		if button != null and button.text.find("WEITERE") >= 0:
+			return button
+	return null
+
+func _completion_button_count() -> int:
+	if _answer_box == null:
+		return 0
+	var count: int = 0
+	for child: Node in _answer_box.get_children():
+		if not is_instance_valid(child) or child.is_queued_for_deletion():
+			continue
+		var button: Button = child as Button
+		if button != null and button.text.find("WEITERE") >= 0:
+			count += 1
+	return count
+
+func _active_answer_box_child_count() -> int:
+	if _answer_box == null:
+		return 0
+	var count: int = 0
+	for child: Node in _answer_box.get_children():
+		if is_instance_valid(child) and not child.is_queued_for_deletion():
+			count += 1
+	return count
 
 func _approach_label(approach_id: String, compact: bool) -> String:
 	if compact:

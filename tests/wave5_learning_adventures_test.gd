@@ -139,6 +139,7 @@ func _test_overlay(service: Node) -> void:
 			readable = overlay.call("get_mobile_readability_snapshot")
 			_check(int(readable.get("approach_columns", 0)) == 2, "phone Denkweg grid is restored after resize")
 			_check(int(readable.get("approach_grid_children", 0)) == 4, "phone Denkweg grid keeps four buttons after resize")
+			var completion_result: Dictionary = {}
 			for _round_index: int in range(3):
 				var active: Dictionary = (service.call("get_snapshot") as Dictionary).get("active_session", {}) as Dictionary
 				if active.is_empty():
@@ -147,11 +148,22 @@ func _test_overlay(service: Node) -> void:
 				var correct: Array = challenge.get("correct_indices", []) as Array
 				var round_result: Dictionary = service.call("submit_solution", int(correct[0]), "explain")
 				_check(bool(round_result.get("accepted", false)), "service-driven completion round is accepted")
+				if bool(round_result.get("completed", false)):
+					completion_result = round_result
 				await _settle(2)
+			_check(not completion_result.is_empty(), "service submissions reach completion state")
 			await _settle(2)
 			readable = overlay.call("get_mobile_readability_snapshot")
 			_check(bool(readable.get("completion_visible", false)), "completion state replaces answers with continue action")
+			_check(int(readable.get("completion_button_count", 0)) == 1, "completion state exposes one continue action")
+			_check(int(readable.get("answer_box_children", 0)) == 1, "completion state removes active answer buttons")
 			_check(float(readable.get("continue_button_height", 0.0)) >= 58.0, "completion continue button keeps touch height")
+			if not completion_result.is_empty():
+				service.emit_signal("session_completed", completion_result)
+				await _settle(2)
+				readable = overlay.call("get_mobile_readability_snapshot")
+				_check(int(readable.get("completion_button_count", 0)) == 1, "duplicate completion signal does not add continue actions")
+				_check(int(readable.get("answer_box_children", 0)) == 1, "duplicate completion signal keeps completion state stable")
 		overlay.call("close_adventures")
 	main.queue_free()
 	root.size = original_size

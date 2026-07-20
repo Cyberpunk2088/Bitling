@@ -53,6 +53,8 @@ def assert_mobile_overlay_contract() -> None:
     require("func get_mobile_readability_snapshot()" in overlay, "overlay exposes mobile readability snapshot")
     require('"approach_grid_children"' in overlay, "overlay snapshot reports mobile approach grid children")
     require('"approach_row_children"' in overlay, "overlay snapshot reports desktop approach row children")
+    require('"completion_button_count"' in overlay, "overlay snapshot reports completion button count")
+    require("_completion_button_count() > 0" in overlay, "completion signal handler is idempotent")
     require("GridContainer" in overlay and "columns = 2" in overlay, "phone approach buttons use a two-column grid")
     require(not re.search(r'font_size"\s*,\s*(?:[0-9]\b|1[01]\b)', overlay), "v3 overlay does not force sub-12px phone fonts")
     require("custom_minimum_size = Vector2(0, 62)" in overlay, "phone answers keep 62px minimum height")
@@ -121,6 +123,8 @@ def assert_runtime_test_contract() -> None:
     runtime_test = read("tests/wave5_learning_adventures_test.gd")
     visual_test = read("tests/wave5_learning_visual_polish_test.gd")
     require('call("_show_completion"' not in runtime_test, "runtime test reaches completion through service state, not private overlay methods")
+    require("service submissions reach completion state" in runtime_test, "runtime test proves completion through real service submissions")
+    require("duplicate completion signal does not add continue actions" in runtime_test, "runtime test protects idempotent completion signal handling")
     require("stops decorative processing under reduced motion" in visual_test, "visual runtime test verifies reduced-motion processing stops")
 
 
