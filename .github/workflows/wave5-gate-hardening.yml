@@ -1,0 +1,27 @@
+name: Wave 5 Gate Hardening
+
+on:
+  push:
+    branches:
+      - "agent/wave5-learning-adventures-v1"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate structural learning counters
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          python3 tools/aaa_production_gate.py --profile development --output logs/wave5-hardening.json | tee logs/wave5-hardening.log
+          grep -F "[AAA-GATE] PASS learning_adventure_count: 12 / 12" logs/wave5-hardening.log
+          grep -E "\[AAA-GATE\] PASS learning_domain_count: (1[0-9]|[2-9][0-9]+) / 10" logs/wave5-hardening.log
+          grep -F "[AAA-GATE] PASS learning_approach_count: 4 / 4" logs/wave5-hardening.log
+          grep -F "[AAA-GATE] PASS (development)" logs/wave5-hardening.log

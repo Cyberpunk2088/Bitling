@@ -16,6 +16,7 @@ var _session_stage: Control
 var _visual_card: PanelContainer
 var _decision_card: PanelContainer
 var _installed: bool = false
+var _last_reduced_motion: bool = false
 
 func _ready() -> void:
 	call_deferred("_install")
@@ -36,6 +37,7 @@ func _process(_delta: float) -> void:
 	var open_now := bool(_overlay.call("is_open")) if _overlay.has_method("is_open") else false
 	if _catalog_hero != null and _catalog_scroll != null:
 		_catalog_hero.visible = open_now and _catalog_scroll.visible
+	_sync_reduced_motion()
 
 func _install() -> void:
 	_overlay = get_node_or_null("/root/LearningAdventureOverlay")
@@ -52,6 +54,7 @@ func _install() -> void:
 	get_viewport().size_changed.connect(_apply_layout)
 	_installed = true
 	_apply_layout()
+	_sync_reduced_motion()
 
 func _install_catalog_hero(content: VBoxContainer) -> void:
 	_catalog_hero = PanelContainer.new()
@@ -204,14 +207,16 @@ func _apply_layout() -> void:
 	_decision_card.custom_minimum_size = Vector2(0, 300 if compact else 330 if stacked else 620)
 	var prompt := _overlay.get("_prompt") as Label
 	if prompt != null:
-		prompt.custom_minimum_size = Vector2(0, 68 if compact else 82)
-		prompt.add_theme_font_size_override("font_size", 17 if compact else 20)
+		prompt.custom_minimum_size = Vector2(0, 78 if compact else 88)
+		prompt.add_theme_font_size_override("font_size", 20 if compact else 21)
 	var approach_buttons := _overlay.get("_approach_buttons") as Dictionary
 	for approach_id_variant: Variant in approach_buttons.keys():
 		var approach_id := str(approach_id_variant)
 		var button := approach_buttons[approach_id] as Button
 		button.text = _approach_label(approach_id, compact)
-		button.add_theme_font_size_override("font_size", 7 if compact else 9)
+		button.add_theme_font_size_override("font_size", 12 if compact else 13)
+		button.custom_minimum_size = Vector2(0, 50 if compact else 48)
+	_sync_reduced_motion()
 
 func _domain_for_adventure(adventure_id: String) -> String:
 	var service := get_node_or_null("/root/LearningAdventures")
@@ -226,6 +231,23 @@ func _approach_label(approach_id: String, compact: bool) -> String:
 	if compact:
 		return {"observe": "SEHEN", "compare": "VERGLEICH", "experiment": "TESTEN", "explain": "ERKLÄREN"}.get(approach_id, approach_id.to_upper())
 	return {"observe": "BEOBACHTEN", "compare": "VERGLEICHEN", "experiment": "AUSPROBIEREN", "explain": "ERKLÄREN"}.get(approach_id, approach_id.to_upper())
+
+func _sync_reduced_motion() -> void:
+	var reduced_motion := _reduced_motion_enabled()
+	if reduced_motion == _last_reduced_motion and _installed:
+		return
+	_last_reduced_motion = reduced_motion
+	for stage_variant: Variant in [_catalog_stage, _session_stage]:
+		var stage: Control = stage_variant as Control
+		if stage != null and stage.has_method("set_reduced_motion"):
+			stage.call("set_reduced_motion", reduced_motion)
+
+func _reduced_motion_enabled() -> bool:
+	var state := get_node_or_null("/root/GameState")
+	if state == null:
+		return false
+	var settings := state.get("settings") as Dictionary
+	return bool(settings.get("reduce_motion", false))
 
 func _make_card(background: Color, border: Color) -> PanelContainer:
 	var card := PanelContainer.new()

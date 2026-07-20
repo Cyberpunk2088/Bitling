@@ -39,44 +39,15 @@ def extract_block(source: str, constant_name: str, closing: str) -> str:
     return match.group(2) if match else ""
 
 
-def extract_balanced_constant(source: str, constant_name: str, opener: str = "{", closer: str = "}") -> str:
-    """Return a complete nested GDScript constant body without stopping at the first child dictionary."""
-    assignment = re.search(rf"const\s+{re.escape(constant_name)}[^=]*=\s*{re.escape(opener)}", source)
-    if assignment is None:
+def extract_constant_section(source: str, constant_name: str, next_marker: str) -> str:
+    """Return the text between a named constant and the next stable declaration."""
+    start_match = re.search(rf"const\s+{re.escape(constant_name)}[^=]*=", source)
+    if start_match is None:
         return ""
-    start = assignment.end() - 1
-    depth = 0
-    in_string = False
-    escaped = False
-    in_comment = False
-    for index in range(start, len(source)):
-        character = source[index]
-        if in_comment:
-            if character == "\n":
-                in_comment = False
-            continue
-        if in_string:
-            if escaped:
-                escaped = False
-            elif character == "\\":
-                escaped = True
-            elif character == '"':
-                in_string = False
-            continue
-        if character == "#":
-            in_comment = True
-            continue
-        if character == '"':
-            in_string = True
-            continue
-        if character == opener:
-            depth += 1
-            continue
-        if character == closer:
-            depth -= 1
-            if depth == 0:
-                return source[start + 1:index]
-    return ""
+    end_index = source.find(next_marker, start_match.end())
+    if end_index < 0:
+        end_index = len(source)
+    return source[start_match.end():end_index]
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
@@ -155,11 +126,11 @@ def audit_content_floors(manifest: dict[str, Any], report: dict[str, Any]) -> No
     settlement_secret_count = len(re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"district":\s*"[^"]+",\s*"stages":', settlement, flags=re.MULTILINE))
     settlement_expedition_count = len(re.findall(r'^\s*"[^"]+":\s*\{"label":\s*"[^"]+",\s*"rank":\s*\d+,\s*"steps":\s*\d+,\s*"technique":', settlement, flags=re.MULTILINE))
 
-    adventure_block = extract_balanced_constant(learning, "ADVENTURES")
-    learning_adventure_count = len(re.findall(r'^\t"[^"]+":\s*\{', adventure_block, flags=re.MULTILINE))
-    learning_domain_count = len(set(re.findall(r'^\t\t"domain":\s*"([^"]+)"', adventure_block, flags=re.MULTILINE)))
-    approach_block = extract_balanced_constant(learning, "APPROACHES")
-    learning_approach_count = len(re.findall(r'^\t"[^"]+":\s*\{', approach_block, flags=re.MULTILINE))
+    adventure_section = extract_constant_section(learning, "ADVENTURES", "const APPROACHES")
+    approach_section = extract_constant_section(learning, "APPROACHES", "var profiles")
+    learning_adventure_count = len(re.findall(r'^\s*"title"\s*:', adventure_section, flags=re.MULTILINE))
+    learning_domain_count = len(set(re.findall(r'^\s*"domain"\s*:\s*"([^"]+)"', adventure_section, flags=re.MULTILINE)))
+    learning_approach_count = len(re.findall(r'^\s*"[^"]+"\s*:\s*\{"label"\s*:', approach_section, flags=re.MULTILINE))
 
     test_count = count_files(ROOT / "tests", (".gd",))
     values = {

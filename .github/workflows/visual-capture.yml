@@ -102,17 +102,35 @@ jobs:
             test -s "builds/visual/bitling-${viewport}-learning-session.png"
           done
 
+      - name: Stage focused Learning Adventure references
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf builds/learning-visuals
+          mkdir -p builds/learning-visuals
+          expected=(
+            bitling-phone-learning-catalog.png
+            bitling-phone-learning-session.png
+            bitling-tablet-learning-catalog.png
+            bitling-tablet-learning-session.png
+            bitling-laptop-learning-catalog.png
+            bitling-laptop-learning-session.png
+          )
+          for image in "${expected[@]}"; do
+            test -s "builds/visual/${image}"
+            cp "builds/visual/${image}" builds/learning-visuals/
+          done
+          actual_count="$(find builds/learning-visuals -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          test "${actual_count}" -eq "${#expected[@]}"
+
       - name: Upload focused Learning Adventure references
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bitling-learning-visuals
           path: |
-            builds/visual/bitling-phone-learning-*.png
-            builds/visual/bitling-tablet-learning-*.png
-            builds/visual/bitling-laptop-learning-*.png
-            logs/learning-capture.log
-          if-no-files-found: warn
+            builds/learning-visuals/*.png
+          if-no-files-found: error
           retention-days: 14
 
       - name: Upload rendered dashboard references
@@ -123,5 +141,5 @@ jobs:
           path: |
             builds/visual/*.png
             logs/*capture*.log
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14

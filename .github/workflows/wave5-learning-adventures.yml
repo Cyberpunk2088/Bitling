@@ -37,6 +37,7 @@ jobs:
           test -s scripts/core/learning_adventure_service_v2.gd
           test -s scripts/ui/learning_adventure_overlay.gd
           test -s scripts/ui/learning_adventure_overlay_v2.gd
+          test -s scripts/ui/learning_adventure_overlay_v3.gd
           test -s scripts/ui/learning_overlay_v2.gd
           test -s scripts/ui/learning_companion_stage.gd
           test -s scripts/ui/learning_adventure_visual_polish.gd
@@ -44,13 +45,14 @@ jobs:
           test -s tests/wave5_learning_visual_polish_test.gd
           grep -F 'config/version="0.9.0"' project.godot
           grep -F 'LearningAdventures="*res://scripts/core/learning_adventure_service_v2.gd"' project.godot
-          grep -F 'LearningAdventureOverlay="*res://scripts/ui/learning_adventure_overlay_v2.gd"' project.godot
+          grep -F 'LearningAdventureOverlay="*res://scripts/ui/learning_adventure_overlay_v3.gd"' project.godot
           grep -F 'LearningAdventureVisualPolish="*res://scripts/ui/learning_adventure_visual_polish.gd"' project.godot
           grep -F 'LearningOverlay="*res://scripts/ui/learning_overlay_v2.gd"' project.godot
           grep -F '"pattern_observatory"' scripts/core/learning_adventure_service.gd
           grep -F '"systems_lab"' scripts/core/learning_adventure_service.gd
           grep -F 'application/short_version="0.9.0"' export_presets.cfg
           grep -F 'version/code=9' export_presets.cfg
+          python3 tools/wave5_mobile_acceptance_gate.py | tee logs/wave5-mobile-acceptance.log
 
       - name: Install Godot 4.6.3
         shell: bash
