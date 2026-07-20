@@ -11,10 +11,12 @@ func _run() -> void:
 	var service := root.get_node_or_null("LearningAdventures")
 	var overlay := root.get_node_or_null("LearningAdventureOverlay")
 	var polish := root.get_node_or_null("LearningAdventureVisualPolish")
+	var context := root.get_node_or_null("LearningDecisionContextPolish")
 	_check(service != null, "learning service exists")
 	_check(overlay != null, "learning overlay exists")
 	_check(polish != null, "visual polish exists")
-	if service == null or overlay == null or polish == null:
+	_check(context != null, "decision context exists")
+	if service == null or overlay == null or polish == null or context == null:
 		_finish()
 		return
 	var backup: Dictionary = service.call("export_state") as Dictionary
@@ -25,14 +27,19 @@ func _run() -> void:
 	overlay.call("open_adventures")
 	await _settle(5)
 	var status: Dictionary = polish.call("get_status")
+	var context_status: Dictionary = context.call("get_status")
 	_check(bool(status.get("installed", false)), "polish installs")
 	_check(bool(status.get("catalog_hero", false)), "catalog hero is present")
+	_check(bool(context_status.get("installed", false)), "decision context installs")
+	_check(int(context_status.get("context_cards", 0)) == 4, "four useful context cards replace empty space")
 	var start: Dictionary = service.call("start_session", "emotion_compass", 905)
 	_check(bool(start.get("accepted", false)), "session starts")
 	await _settle(5)
 	status = polish.call("get_status")
+	context_status = context.call("get_status")
 	_check(int(status.get("session_columns", 0)) == 1, "phone layout is stacked")
 	_check(bool((status.get("companion_stage", {}) as Dictionary).get("bitling_visible", false)), "Bitling is visible in the session")
+	_check(str(context_status.get("active_adventure", "")) == "emotion_compass", "context follows the active adventure")
 	root.size = Vector2i(1440, 900)
 	await _settle(5)
 	status = polish.call("get_status")
