@@ -20,7 +20,7 @@ env:
 
 jobs:
   learning-adventures:
-    name: Twelve adventures, mastery, transfer, persistence and Xogot boot
+    name: Twelve adventures, mastery, Bitling visuals, persistence and Xogot boot
     runs-on: ubuntu-latest
     timeout-minutes: 24
 
@@ -38,10 +38,14 @@ jobs:
           test -s scripts/ui/learning_adventure_overlay.gd
           test -s scripts/ui/learning_adventure_overlay_v2.gd
           test -s scripts/ui/learning_overlay_v2.gd
+          test -s scripts/ui/learning_companion_stage.gd
+          test -s scripts/ui/learning_adventure_visual_polish.gd
           test -s tests/wave5_learning_adventures_test.gd
+          test -s tests/wave5_learning_visual_polish_test.gd
           grep -F 'config/version="0.9.0"' project.godot
           grep -F 'LearningAdventures="*res://scripts/core/learning_adventure_service_v2.gd"' project.godot
           grep -F 'LearningAdventureOverlay="*res://scripts/ui/learning_adventure_overlay_v2.gd"' project.godot
+          grep -F 'LearningAdventureVisualPolish="*res://scripts/ui/learning_adventure_visual_polish.gd"' project.godot
           grep -F 'LearningOverlay="*res://scripts/ui/learning_overlay_v2.gd"' project.godot
           grep -F '"pattern_observatory"' scripts/core/learning_adventure_service.gd
           grep -F '"systems_lab"' scripts/core/learning_adventure_service.gd
@@ -65,7 +69,9 @@ jobs:
         run: |
           set -euo pipefail
           timeout 180 ./godot --headless --path . --import --quit --log-file logs/wave5-import.log
-          timeout 90 ./godot --headless --path . --script res://tests/wave5_learning_adventures_test.gd --check-only --log-file logs/wave5-parse.log
+          for script in wave5_learning_adventures_test wave5_learning_visual_polish_test; do
+            timeout 90 ./godot --headless --path . --script "res://tests/${script}.gd" --check-only --log-file "logs/wave5-parse-${script}.log"
+          done
           if grep -E "SCRIPT ERROR|^ERROR:" logs/wave5-*.log; then
             cat logs/wave5-*.log
             exit 1
@@ -87,8 +93,10 @@ jobs:
           set -euo pipefail
           timeout 240 ./godot --headless --path . --script res://tests/wave5_learning_adventures_test.gd --log-file logs/wave5-tests.log
           grep -F "[CI-WAVE5] PASS" logs/wave5-tests.log
-          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave5-tests.log; then
-            cat logs/wave5-tests.log
+          timeout 180 ./godot --headless --path . --script res://tests/wave5_learning_visual_polish_test.gd --log-file logs/wave5-visual-tests.log
+          grep -F "[CI-WAVE5-VISUAL] PASS" logs/wave5-visual-tests.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/wave5-tests.log logs/wave5-visual-tests.log; then
+            cat logs/wave5-tests.log logs/wave5-visual-tests.log
             exit 1
           fi
 
