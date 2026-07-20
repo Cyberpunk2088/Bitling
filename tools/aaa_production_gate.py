@@ -41,7 +41,7 @@ def extract_block(source: str, constant_name: str, closing: str) -> str:
 
 def extract_balanced_constant(source: str, constant_name: str, opener: str = "{", closer: str = "}") -> str:
     """Return a complete nested GDScript constant body without stopping at the first child dictionary."""
-    assignment = re.search(rf"const\s+{re.escape(constant_name)}[^=]*=\s*\{re.escape(opener)}", source)
+    assignment = re.search(rf"const\s+{re.escape(constant_name)}[^=]*=\s*{re.escape(opener)}", source)
     if assignment is None:
         return ""
     start = assignment.end() - 1
