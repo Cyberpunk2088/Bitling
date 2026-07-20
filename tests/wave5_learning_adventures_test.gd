@@ -60,6 +60,7 @@ func _test_sessions(service: Node) -> void:
 	_check(int((service.call("get_snapshot") as Dictionary).get("total_sessions", 0)) == 4, "sessions are counted")
 
 func _test_challenge_signal_emits_once_per_next_round(service: Node) -> void:
+	var preserved_state: Dictionary = service.call("export_state") as Dictionary
 	service.call("reset_state")
 	var counter := SignalCounter.new()
 	root.add_child(counter)
@@ -74,7 +75,7 @@ func _test_challenge_signal_emits_once_per_next_round(service: Node) -> void:
 	_check(counter.count == 1, "next challenge emits exactly one challenge_changed signal")
 	service.disconnect("challenge_changed", Callable(counter, "record"))
 	counter.queue_free()
-	service.call("reset_state")
+	service.call("import_state", preserved_state)
 
 func _test_transfer(service: Node) -> void:
 	_check(float(service.call("get_expedition_bonus", "aurora_foundry")) > 0.0, "learning transfers into expeditions")
