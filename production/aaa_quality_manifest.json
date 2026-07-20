@@ -57,6 +57,8 @@
     "scripts/ui/learning_overlay_v2.gd",
     "scripts/ui/learning_adventure_overlay.gd",
     "scripts/ui/learning_adventure_overlay_v2.gd",
+    "scripts/ui/learning_companion_stage.gd",
+    "scripts/ui/learning_adventure_visual_polish.gd",
     "scripts/ui/legendary_activity_overlay.gd",
     "scripts/ui/legendary_activity_overlay_v2.gd",
     "scripts/ui/legendary_activity_backdrop.gd",
@@ -75,6 +77,7 @@
     "tests/wave3_fullscreen_home_test.gd",
     "tests/wave4_partner_world_test.gd",
     "tests/wave5_learning_adventures_test.gd",
+    "tests/wave5_learning_visual_polish_test.gd",
     "tests/visual_layout_test.gd"
   ],
   "runtime_budgets": {
@@ -113,7 +116,7 @@
     }
   },
   "development_floors": {
-    "gdscript_test_files_min": 13,
+    "gdscript_test_files_min": 14,
     "responsive_capture_count_min": 39,
     "audio_bus_count_min": 5,
     "primary_action_count_min": 5,
