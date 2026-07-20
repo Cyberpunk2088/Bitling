@@ -51,6 +51,8 @@ def assert_active_overlay() -> None:
 def assert_mobile_overlay_contract() -> None:
     overlay = read("scripts/ui/learning_adventure_overlay_v3.gd")
     require("func get_mobile_readability_snapshot()" in overlay, "overlay exposes mobile readability snapshot")
+    require('"approach_grid_children"' in overlay, "overlay snapshot reports mobile approach grid children")
+    require('"approach_row_children"' in overlay, "overlay snapshot reports desktop approach row children")
     require("GridContainer" in overlay and "columns = 2" in overlay, "phone approach buttons use a two-column grid")
     require(not re.search(r'font_size"\s*,\s*(?:[0-9]\b|1[01]\b)', overlay), "v3 overlay does not force sub-12px phone fonts")
     require("custom_minimum_size = Vector2(0, 62)" in overlay, "phone answers keep 62px minimum height")
@@ -60,10 +62,21 @@ def assert_visual_polish_contract() -> None:
     polish = read("scripts/ui/learning_adventure_visual_polish.gd")
     require('font_size", 7 if compact' not in polish, "visual polish does not shrink approach labels below readable size")
     require("set_reduced_motion" in polish, "visual polish propagates reduced motion to learning stage")
+    stage = read("scripts/ui/learning_companion_stage.gd")
+    require(
+        re.search(r"func _process\(delta: float\) -> void:\n\tif _reduced_motion:\n\t\treturn\n\t_pulse =", stage) is not None,
+        "learning stage stops decorative redraw work when reduced motion is enabled",
+    )
+    require("set_process(not enabled)" in stage, "learning stage disables decorative processing under reduced motion")
+    require('"processing": is_processing()' in stage, "learning stage exposes processing state to runtime regression")
     context = read("scripts/ui/learning_decision_context_polish.gd")
     require('font_size", 10 if width < 760.0 else 11' not in context, "decision context keeps phone transfer text readable")
     transfer = read("scripts/ui/learning_transfer_map.gd")
     require("func set_reduced_motion(enabled: bool)" in transfer, "transfer constellation supports reduced motion")
+    require("set_process(not enabled)" in transfer, "transfer constellation disables decorative processing under reduced motion")
+    require('"processing": is_processing()' in transfer, "transfer constellation exposes processing state to runtime regression")
+    transfer_polish = read("scripts/ui/learning_transfer_map_polish.gd")
+    require("_last_reduced_motion" in transfer_polish, "transfer polish synchronizes reduced motion by state change")
 
 
 def assert_service_signal_contract() -> None:
@@ -85,6 +98,14 @@ def assert_workflow_contract() -> None:
     for filename in sorted(EXPECTED_LEARNING_CAPTURES):
         require(filename in visual, f"visual workflow verifies focused capture {filename}")
     require("if-no-files-found: error" in visual, "visual artifacts fail when PNGs are missing")
+    focused_upload = re.search(
+        r"name: bitling-learning-visuals\s+path:\s+\|\n(?P<paths>(?:\s+.+\n)+?)\s+if-no-files-found: error",
+        visual,
+    )
+    require(focused_upload is not None, "focused learning artifact upload is explicit")
+    focused_paths = focused_upload.group("paths") if focused_upload is not None else ""
+    require("builds/learning-visuals/*.png" in focused_paths, "focused learning artifact uploads staged PNGs")
+    require("logs/" not in focused_paths, "focused learning artifact excludes logs")
 
 
 def assert_capture_script_contract() -> None:
@@ -96,6 +117,13 @@ def assert_capture_script_contract() -> None:
     require('learning-session.png" % str(capture.get("name", "device"))' in capture, "learning capture script saves session states")
 
 
+def assert_runtime_test_contract() -> None:
+    runtime_test = read("tests/wave5_learning_adventures_test.gd")
+    visual_test = read("tests/wave5_learning_visual_polish_test.gd")
+    require('call("_show_completion"' not in runtime_test, "runtime test reaches completion through service state, not private overlay methods")
+    require("stops decorative processing under reduced motion" in visual_test, "visual runtime test verifies reduced-motion processing stops")
+
+
 def main() -> int:
     assert_active_overlay()
     assert_mobile_overlay_contract()
@@ -103,6 +131,7 @@ def main() -> int:
     assert_service_signal_contract()
     assert_workflow_contract()
     assert_capture_script_contract()
+    assert_runtime_test_contract()
     print("[WAVE5-MOBILE] PASS")
     return 0
 

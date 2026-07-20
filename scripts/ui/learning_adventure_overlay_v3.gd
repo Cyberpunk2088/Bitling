@@ -31,6 +31,8 @@ func get_mobile_readability_snapshot() -> Dictionary:
 		"phone_layout": phone_layout,
 		"catalog_columns": _catalog_grid.columns if _catalog_grid != null else 0,
 		"approach_columns": approach_columns,
+		"approach_grid_children": _mobile_approach_grid.get_child_count() if _mobile_approach_grid != null and _mobile_approach_grid.get_parent() != null else 0,
+		"approach_row_children": _approach_row.get_child_count() if _approach_row != null else 0,
 		"approach_min_width": 0.0 if is_inf(approach_min_width) else approach_min_width,
 		"approach_min_height": 0.0 if is_inf(approach_min_height) else approach_min_height,
 		"approach_min_font": 0 if approach_min_font == 999 else approach_min_font,
@@ -99,6 +101,14 @@ func _show_completion(result: Dictionary) -> void:
 			continue_button.add_theme_font_size_override("font_size", 17)
 			continue_button.custom_minimum_size = Vector2(0, 62)
 
+func _on_session_completed(result: Dictionary) -> void:
+	if is_open() and _session_panel != null and _session_panel.visible:
+		if _has_internal_answer_submission():
+			return
+		_show_completion(result)
+	elif _approach_row != null:
+		_approach_row.visible = true
+
 func _set_mobile_approach_layout(enabled: bool) -> void:
 	if _approach_row == null:
 		return
@@ -134,6 +144,12 @@ func _estimated_approach_width(width: float, columns: int) -> float:
 	var resolved_columns: int = maxi(columns, 1)
 	var available: float = maxf(width - 70.0, 0.0)
 	return available / float(resolved_columns)
+
+func _has_internal_answer_submission() -> bool:
+	for answer_button: Button in _answer_buttons:
+		if is_instance_valid(answer_button) and answer_button.disabled:
+			return true
+	return false
 
 func _approach_label(approach_id: String, compact: bool) -> String:
 	if compact:

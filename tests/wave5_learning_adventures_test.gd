@@ -120,6 +120,7 @@ func _test_overlay(service: Node) -> void:
 			var readable: Dictionary = overlay.call("get_mobile_readability_snapshot")
 			_check(bool(readable.get("phone_layout", false)), "phone readability mode activates around 390px")
 			_check(int(readable.get("approach_columns", 0)) == 2, "phone Denkweg buttons wrap into two columns")
+			_check(int(readable.get("approach_grid_children", 0)) == 4, "phone Denkweg grid owns all four buttons")
 			_check(float(readable.get("approach_min_width", 0.0)) >= 140.0, "phone Denkweg buttons keep readable width")
 			_check(float(readable.get("approach_min_height", 0.0)) >= 44.0, "phone Denkweg buttons keep touch height")
 			_check(int(readable.get("approach_min_font", 0)) >= 12, "phone Denkweg labels stay readable")
@@ -128,15 +129,25 @@ func _test_overlay(service: Node) -> void:
 			_check(int(readable.get("prompt_font", 0)) >= 20, "phone task prompt stays visually dominant")
 			_check(int(readable.get("feedback_font", 0)) >= 13, "phone feedback remains readable")
 			_check(float(readable.get("close_button_height", 0.0)) >= 44.0, "phone close button keeps touch target")
-			overlay.call("_show_completion", {
-				"title": "Emotionskompass",
-				"mastery": 61.0,
-				"mastery_level": "SICHER",
-				"xp_reward": 32,
-				"expedition_bonus": 0.14,
-				"technique": "care_pulse",
-				"evolution_affinity": "HEART_BASTION"
-			})
+			root.size = Vector2i(900, 1200)
+			await _settle(4)
+			readable = overlay.call("get_mobile_readability_snapshot")
+			_check(int(readable.get("approach_columns", 0)) == 4, "tablet Denkweg buttons return to one wide row")
+			_check(int(readable.get("approach_row_children", 0)) == 4, "tablet Denkweg row owns all four buttons")
+			root.size = Vector2i(390, 844)
+			await _settle(4)
+			readable = overlay.call("get_mobile_readability_snapshot")
+			_check(int(readable.get("approach_columns", 0)) == 2, "phone Denkweg grid is restored after resize")
+			_check(int(readable.get("approach_grid_children", 0)) == 4, "phone Denkweg grid keeps four buttons after resize")
+			for _round_index: int in range(3):
+				var active: Dictionary = (service.call("get_snapshot") as Dictionary).get("active_session", {}) as Dictionary
+				if active.is_empty():
+					break
+				var challenge: Dictionary = active.get("challenge", {}) as Dictionary
+				var correct: Array = challenge.get("correct_indices", []) as Array
+				var round_result: Dictionary = service.call("submit_solution", int(correct[0]), "explain")
+				_check(bool(round_result.get("accepted", false)), "service-driven completion round is accepted")
+				await _settle(2)
 			await _settle(2)
 			readable = overlay.call("get_mobile_readability_snapshot")
 			_check(bool(readable.get("completion_visible", false)), "completion state replaces answers with continue action")

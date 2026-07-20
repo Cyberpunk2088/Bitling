@@ -51,7 +51,11 @@ func set_result(success: bool) -> void:
 	queue_redraw()
 
 func set_reduced_motion(enabled: bool) -> void:
+	if _reduced_motion == enabled:
+		return
 	_reduced_motion = enabled
+	set_process(not enabled)
+	queue_redraw()
 
 func get_visual_snapshot() -> Dictionary:
 	return {
@@ -61,12 +65,14 @@ func get_visual_snapshot() -> Dictionary:
 		"round": _round,
 		"result_state": _result_state,
 		"bitling_visible": true,
+		"processing": is_processing(),
 		"reduced_motion": _reduced_motion
 	}
 
 func _process(delta: float) -> void:
-	if not _reduced_motion:
-		_pulse = fmod(_pulse + maxf(delta, 0.0), TAU * 20.0)
+	if _reduced_motion:
+		return
+	_pulse = fmod(_pulse + maxf(delta, 0.0), TAU * 20.0)
 	queue_redraw()
 
 func _draw() -> void:

@@ -129,8 +129,7 @@ jobs:
         with:
           name: bitling-learning-visuals
           path: |
-            builds/learning-visuals/
-            logs/learning-capture.log
+            builds/learning-visuals/*.png
           if-no-files-found: error
           retention-days: 14
 

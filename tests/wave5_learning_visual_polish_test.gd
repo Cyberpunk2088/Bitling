@@ -51,10 +51,12 @@ func _run() -> void:
 	_check(int(status.get("session_columns", 0)) == 1, "phone layout is stacked")
 	_check(bool((status.get("companion_stage", {}) as Dictionary).get("bitling_visible", false)), "Bitling is visible in the session")
 	_check(bool((status.get("companion_stage", {}) as Dictionary).get("reduced_motion", false)), "learning stage respects reduced motion")
+	_check(not bool((status.get("companion_stage", {}) as Dictionary).get("processing", true)), "learning stage stops decorative processing under reduced motion")
 	_check(str(context_status.get("active_adventure", "")) == "emotion_compass", "context follows the active adventure")
 	_check(float(context_status.get("minimum_text_font", 0.0)) >= 12.0, "phone transfer context text stays readable")
 	_check(str((transfer_status.get("map", {}) as Dictionary).get("domain", "")) == "EMPATHY", "constellation follows the learning domain")
 	_check(bool((transfer_status.get("map", {}) as Dictionary).get("reduced_motion", false)), "transfer constellation respects reduced motion")
+	_check(not bool((transfer_status.get("map", {}) as Dictionary).get("processing", true)), "transfer constellation stops decorative processing under reduced motion")
 	if overlay.has_method("get_mobile_readability_snapshot"):
 		var readable: Dictionary = overlay.call("get_mobile_readability_snapshot")
 		_check(int(readable.get("approach_columns", 0)) == 2, "phone visual polish preserves two-column Denkweg layout")

@@ -33,7 +33,10 @@ func set_context(domain: String, technique: String, expedition: String, evolutio
 	queue_redraw()
 
 func set_reduced_motion(enabled: bool) -> void:
+	if _reduced_motion == enabled:
+		return
 	_reduced_motion = enabled
+	set_process(not enabled)
 	queue_redraw()
 
 func get_snapshot() -> Dictionary:
@@ -44,6 +47,7 @@ func get_snapshot() -> Dictionary:
 		"evolution": _evolution,
 		"approach": _approach,
 		"nodes": 4,
+		"processing": is_processing(),
 		"reduced_motion": _reduced_motion
 	}
 
