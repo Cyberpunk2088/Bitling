@@ -108,10 +108,20 @@ jobs:
           set -euo pipefail
           rm -rf builds/learning-visuals
           mkdir -p builds/learning-visuals
-          cp builds/visual/bitling-phone-learning-*.png builds/learning-visuals/
-          cp builds/visual/bitling-tablet-learning-*.png builds/learning-visuals/
-          cp builds/visual/bitling-laptop-learning-*.png builds/learning-visuals/
-          test "$(find builds/learning-visuals -maxdepth 1 -name '*.png' | wc -l)" -eq 6
+          expected=(
+            bitling-phone-learning-catalog.png
+            bitling-phone-learning-session.png
+            bitling-tablet-learning-catalog.png
+            bitling-tablet-learning-session.png
+            bitling-laptop-learning-catalog.png
+            bitling-laptop-learning-session.png
+          )
+          for image in "${expected[@]}"; do
+            test -s "builds/visual/${image}"
+            cp "builds/visual/${image}" builds/learning-visuals/
+          done
+          actual_count="$(find builds/learning-visuals -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          test "${actual_count}" -eq "${#expected[@]}"
 
       - name: Upload focused Learning Adventure references
         if: always()

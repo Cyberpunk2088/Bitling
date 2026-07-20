@@ -11,6 +11,7 @@ var _approach_label: Label
 var _transfer_label: Label
 var _evolution_label: Label
 var _adaptive_label: Label
+var _value_labels: Array[Label] = []
 var _active_adventure_id: String = ""
 var _last_approach: String = ""
 var _installed: bool = false
@@ -25,7 +26,8 @@ func get_status() -> Dictionary:
 		"context_cards": 4 if _installed else 0,
 		"active_adventure": _active_adventure_id,
 		"active_approach": _last_approach,
-		"decision_height": _decision_card.size.y if _decision_card != null else 0.0
+		"decision_height": _decision_card.size.y if _decision_card != null else 0.0,
+		"minimum_text_font": _minimum_value_font()
 	}
 
 func _process(_delta: float) -> void:
@@ -92,13 +94,14 @@ func _add_info_card(parent: VBoxContainer, heading: String, accent: Color) -> La
 	var kicker := Label.new()
 	kicker.text = heading
 	kicker.add_theme_color_override("font_color", accent)
-	kicker.add_theme_font_size_override("font_size", 9)
+	kicker.add_theme_font_size_override("font_size", 10)
 	column.add_child(kicker)
 	var value := Label.new()
 	value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	value.add_theme_color_override("font_color", Color("f4f7ff"))
-	value.add_theme_font_size_override("font_size", 11)
+	value.add_theme_font_size_override("font_size", 12)
 	column.add_child(value)
+	_value_labels.append(value)
 	return value
 
 func _connect_signals() -> void:
@@ -159,7 +162,14 @@ func _apply_layout() -> void:
 	_decision_card.custom_minimum_size = Vector2(0, 0 if stacked else 620)
 	_grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if stacked else Control.SIZE_EXPAND_FILL
 	for label: Label in [_approach_label, _transfer_label, _evolution_label, _adaptive_label]:
-		label.add_theme_font_size_override("font_size", 10 if width < 760.0 else 11)
+		label.add_theme_font_size_override("font_size", 12 if width < 760.0 else 11)
+
+func _minimum_value_font() -> int:
+	var minimum_font: int = 999
+	for label: Label in _value_labels:
+		if label != null:
+			minimum_font = mini(minimum_font, label.get_theme_font_size("font_size"))
+	return 0 if minimum_font == 999 else minimum_font
 
 func _adventure_data(adventure_id: String) -> Dictionary:
 	if adventure_id.is_empty() or not _service.has_method("get_catalog"):

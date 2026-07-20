@@ -19,6 +19,7 @@ func _run() -> void:
 	service.call("reset_state")
 	_test_catalog(service)
 	_test_sessions(service)
+	_test_challenge_signal_emits_once_per_next_round(service)
 	_test_transfer(service)
 	_test_persistence(service)
 	await _test_overlay(service)
@@ -58,6 +59,23 @@ func _test_sessions(service: Node) -> void:
 	_check(after > before, "success creates a mastery curve")
 	_check(int((service.call("get_snapshot") as Dictionary).get("total_sessions", 0)) == 4, "sessions are counted")
 
+func _test_challenge_signal_emits_once_per_next_round(service: Node) -> void:
+	service.call("reset_state")
+	var counter := SignalCounter.new()
+	root.add_child(counter)
+	service.connect("challenge_changed", Callable(counter, "record"))
+	var start: Dictionary = service.call("start_session", "pattern_observatory", 407)
+	_check(bool(start.get("accepted", false)), "single-emission signal test starts a session")
+	counter.count = 0
+	var challenge: Dictionary = ((service.call("get_snapshot") as Dictionary).get("active_session", {}) as Dictionary).get("challenge", {}) as Dictionary
+	var correct: Array = challenge.get("correct_indices", []) as Array
+	var result: Dictionary = service.call("submit_solution", int(correct[0]), "compare")
+	_check(bool(result.get("accepted", false)), "single-emission signal test accepts one solution")
+	_check(counter.count == 1, "next challenge emits exactly one challenge_changed signal")
+	service.disconnect("challenge_changed", Callable(counter, "record"))
+	counter.queue_free()
+	service.call("reset_state")
+
 func _test_transfer(service: Node) -> void:
 	_check(float(service.call("get_expedition_bonus", "aurora_foundry")) > 0.0, "learning transfers into expeditions")
 	_check(float(service.call("get_affinity_bonus", "LIGHT_SCHOLAR")) > 0.0, "learning transfers into evolution")
@@ -77,12 +95,15 @@ func _test_overlay(service: Node) -> void:
 	_check(packed != null, "main scene loads")
 	if packed == null:
 		return
+	var original_size := root.size
+	root.size = Vector2i(390, 844)
 	var main: Node = packed.instantiate()
 	root.add_child(main)
 	await _settle(8)
 	var overlay: Node = root.get_node_or_null("LearningAdventureOverlay")
 	_check(overlay != null, "learning overlay exists")
 	if overlay != null:
+		_check(str(overlay.get_script().resource_path).ends_with("learning_adventure_overlay_v3.gd"), "project uses active mobile-readable learning overlay v3")
 		overlay.call("open_adventures")
 		await _settle(4)
 		var layout: Dictionary = overlay.call("get_layout_snapshot")
@@ -94,8 +115,35 @@ func _test_overlay(service: Node) -> void:
 		layout = overlay.call("get_layout_snapshot")
 		_check(int(layout.get("approach_count", 0)) == 4, "overlay renders four approaches")
 		_check(int(layout.get("answer_count", 0)) == 3, "overlay renders three answers")
+		_check(overlay.has_method("get_mobile_readability_snapshot"), "overlay exposes mobile readability contract")
+		if overlay.has_method("get_mobile_readability_snapshot"):
+			var readable: Dictionary = overlay.call("get_mobile_readability_snapshot")
+			_check(bool(readable.get("phone_layout", false)), "phone readability mode activates around 390px")
+			_check(int(readable.get("approach_columns", 0)) == 2, "phone Denkweg buttons wrap into two columns")
+			_check(float(readable.get("approach_min_width", 0.0)) >= 140.0, "phone Denkweg buttons keep readable width")
+			_check(float(readable.get("approach_min_height", 0.0)) >= 44.0, "phone Denkweg buttons keep touch height")
+			_check(int(readable.get("approach_min_font", 0)) >= 12, "phone Denkweg labels stay readable")
+			_check(float(readable.get("answer_min_height", 0.0)) >= 58.0, "phone answer buttons keep touch height")
+			_check(int(readable.get("answer_min_font", 0)) >= 16, "phone answer labels stay readable")
+			_check(int(readable.get("prompt_font", 0)) >= 20, "phone task prompt stays visually dominant")
+			_check(int(readable.get("feedback_font", 0)) >= 13, "phone feedback remains readable")
+			_check(float(readable.get("close_button_height", 0.0)) >= 44.0, "phone close button keeps touch target")
+			overlay.call("_show_completion", {
+				"title": "Emotionskompass",
+				"mastery": 61.0,
+				"mastery_level": "SICHER",
+				"xp_reward": 32,
+				"expedition_bonus": 0.14,
+				"technique": "care_pulse",
+				"evolution_affinity": "HEART_BASTION"
+			})
+			await _settle(2)
+			readable = overlay.call("get_mobile_readability_snapshot")
+			_check(bool(readable.get("completion_visible", false)), "completion state replaces answers with continue action")
+			_check(float(readable.get("continue_button_height", 0.0)) >= 58.0, "completion continue button keeps touch height")
 		overlay.call("close_adventures")
 	main.queue_free()
+	root.size = original_size
 	await process_frame
 
 func _settle(count: int) -> void:
@@ -117,3 +165,11 @@ func _finish() -> void:
 	else:
 		print("[CI-WAVE5] BLOCKED: %d of %d assertions failed" % [failures.size(), assertions])
 		quit(1)
+
+class SignalCounter:
+	extends Node
+
+	var count: int = 0
+
+	func record(_challenge: Dictionary) -> void:
+		count += 1

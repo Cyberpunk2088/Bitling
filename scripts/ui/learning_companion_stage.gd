@@ -60,7 +60,8 @@ func get_visual_snapshot() -> Dictionary:
 		"approach": _approach,
 		"round": _round,
 		"result_state": _result_state,
-		"bitling_visible": true
+		"bitling_visible": true,
+		"reduced_motion": _reduced_motion
 	}
 
 func _process(delta: float) -> void:

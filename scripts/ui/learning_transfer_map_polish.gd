@@ -27,6 +27,8 @@ func _process(_delta: float) -> void:
 	if approach != _last_approach:
 		_last_approach = approach
 		_refresh()
+	elif _map != null and _map.has_method("set_reduced_motion"):
+		_map.call("set_reduced_motion", _reduced_motion_enabled())
 
 func _install() -> void:
 	_overlay = get_node_or_null("/root/LearningAdventureOverlay")
@@ -92,6 +94,8 @@ func _refresh() -> void:
 		return
 	var data := _adventure_data(_active_adventure_id)
 	_map.call("set_context", str(data.get("domain", "lernen")), str(data.get("technique", "technik")), str(data.get("expedition", "expedition")), str(data.get("evolution_affinity", "evolution")), _last_approach if not _last_approach.is_empty() else "observe")
+	if _map.has_method("set_reduced_motion"):
+		_map.call("set_reduced_motion", _reduced_motion_enabled())
 
 func _apply_layout() -> void:
 	if not _installed:
@@ -102,6 +106,8 @@ func _apply_layout() -> void:
 	var stacked := width < 1040.0
 	_map.custom_minimum_size = Vector2(0, 175 if width < 760.0 else 230 if stacked else 310)
 	_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if stacked else Control.SIZE_EXPAND_FILL
+	if _map.has_method("set_reduced_motion"):
+		_map.call("set_reduced_motion", _reduced_motion_enabled())
 
 func _adventure_data(adventure_id: String) -> Dictionary:
 	if adventure_id.is_empty() or not _service.has_method("get_catalog"):
@@ -110,3 +116,10 @@ func _adventure_data(adventure_id: String) -> Dictionary:
 		if entry_variant is Dictionary and str((entry_variant as Dictionary).get("id", "")) == adventure_id:
 			return (entry_variant as Dictionary).duplicate(true)
 	return {}
+
+func _reduced_motion_enabled() -> bool:
+	var state := get_node_or_null("/root/GameState")
+	if state == null:
+		return false
+	var settings := state.get("settings") as Dictionary
+	return bool(settings.get("reduce_motion", false))

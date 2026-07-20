@@ -23,6 +23,11 @@ func _run() -> void:
 		return
 	var backup: Dictionary = service.call("export_state") as Dictionary
 	var original_size := root.size
+	var state := root.get_node_or_null("GameState")
+	var original_reduce_motion: bool = false
+	if state != null:
+		original_reduce_motion = bool(state.settings.get("reduce_motion", false))
+		state.settings["reduce_motion"] = true
 	service.call("reset_state")
 	root.size = Vector2i(390, 844)
 	await _settle(5)
@@ -45,8 +50,15 @@ func _run() -> void:
 	transfer_status = transfer.call("get_status")
 	_check(int(status.get("session_columns", 0)) == 1, "phone layout is stacked")
 	_check(bool((status.get("companion_stage", {}) as Dictionary).get("bitling_visible", false)), "Bitling is visible in the session")
+	_check(bool((status.get("companion_stage", {}) as Dictionary).get("reduced_motion", false)), "learning stage respects reduced motion")
 	_check(str(context_status.get("active_adventure", "")) == "emotion_compass", "context follows the active adventure")
+	_check(float(context_status.get("minimum_text_font", 0.0)) >= 12.0, "phone transfer context text stays readable")
 	_check(str((transfer_status.get("map", {}) as Dictionary).get("domain", "")) == "EMPATHY", "constellation follows the learning domain")
+	_check(bool((transfer_status.get("map", {}) as Dictionary).get("reduced_motion", false)), "transfer constellation respects reduced motion")
+	if overlay.has_method("get_mobile_readability_snapshot"):
+		var readable: Dictionary = overlay.call("get_mobile_readability_snapshot")
+		_check(int(readable.get("approach_columns", 0)) == 2, "phone visual polish preserves two-column Denkweg layout")
+		_check(int(readable.get("approach_min_font", 0)) >= 12, "phone visual polish keeps Denkweg labels readable")
 	root.size = Vector2i(1440, 900)
 	await _settle(5)
 	status = polish.call("get_status")
@@ -54,6 +66,8 @@ func _run() -> void:
 	_check(int(status.get("session_columns", 0)) == 2, "laptop layout is two-column")
 	_check(float(transfer_status.get("minimum_height", 0.0)) >= 300.0, "desktop constellation fills the decision space")
 	overlay.call("close_adventures")
+	if state != null:
+		state.settings["reduce_motion"] = original_reduce_motion
 	service.call("import_state", backup)
 	service.call("save_state")
 	root.size = original_size

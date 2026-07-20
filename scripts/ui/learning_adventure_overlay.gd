@@ -44,11 +44,15 @@ func _ready() -> void:
 func open_adventures() -> void:
 	_show_catalog()
 	_backdrop.visible = true
-	_backdrop.modulate.a = 0.0
-	_shell.scale = Vector2(0.985, 0.985)
-	var tween: Tween = create_tween().set_parallel(true)
-	tween.tween_property(_backdrop, "modulate:a", 1.0, 0.18)
-	tween.tween_property(_shell, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	if _reduce_motion_enabled():
+		_backdrop.modulate.a = 1.0
+		_shell.scale = Vector2.ONE
+	else:
+		_backdrop.modulate.a = 0.0
+		_shell.scale = Vector2(0.985, 0.985)
+		var tween: Tween = create_tween().set_parallel(true)
+		tween.tween_property(_backdrop, "modulate:a", 1.0, 0.18)
+		tween.tween_property(_shell, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	_apply_responsive_layout()
 
 func close_adventures() -> void:
@@ -70,7 +74,8 @@ func get_layout_snapshot() -> Dictionary:
 		"catalog_cards": _catalog_grid.get_child_count() if _catalog_grid != null else 0,
 		"answer_count": _answer_buttons.size(),
 		"approach_count": _approach_buttons.size(),
-		"session_visible": _session_panel.visible if _session_panel != null else false
+		"session_visible": _session_panel.visible if _session_panel != null else false,
+		"reduced_motion": _reduce_motion_enabled()
 	}
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -196,12 +201,15 @@ func _connect_service() -> void:
 	var service: Node = get_node_or_null("/root/LearningAdventures")
 	if service == null:
 		return
-	if service.has_signal("catalog_changed"):
-		service.connect("catalog_changed", Callable(self, "_on_catalog_changed"))
-	if service.has_signal("challenge_changed"):
-		service.connect("challenge_changed", Callable(self, "_on_challenge_changed"))
-	if service.has_signal("session_completed"):
-		service.connect("session_completed", Callable(self, "_on_session_completed"))
+	for pair: Array in [
+		["catalog_changed", "_on_catalog_changed"],
+		["challenge_changed", "_on_challenge_changed"],
+		["session_completed", "_on_session_completed"]
+	]:
+		var signal_name: String = str(pair[0])
+		var callback: Callable = Callable(self, str(pair[1]))
+		if service.has_signal(signal_name) and not service.is_connected(signal_name, callback):
+			service.connect(signal_name, callback)
 
 func _show_catalog() -> void:
 	_catalog_scroll.visible = true
@@ -367,6 +375,13 @@ func _play_feedback(action: String, intensity: float) -> void:
 		audio.call("play_navigation")
 	elif audio.has_method("play_action"):
 		audio.call("play_action", action, intensity)
+
+func _reduce_motion_enabled() -> bool:
+	var state: Node = get_node_or_null("/root/GameState")
+	if state == null:
+		return false
+	var settings: Dictionary = state.get("settings") as Dictionary
+	return bool(settings.get("reduce_motion", false))
 
 func _panel_style(background: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
