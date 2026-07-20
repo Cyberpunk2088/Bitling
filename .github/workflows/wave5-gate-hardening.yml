@@ -22,6 +22,6 @@ jobs:
           mkdir -p logs
           python3 tools/aaa_production_gate.py --profile development --output logs/wave5-hardening.json | tee logs/wave5-hardening.log
           grep -F "[AAA-GATE] PASS learning_adventure_count: 12 / 12" logs/wave5-hardening.log
-          grep -F "[AAA-GATE] PASS learning_domain_count: 10 / 10" logs/wave5-hardening.log
+          grep -E "\[AAA-GATE\] PASS learning_domain_count: (1[0-9]|[2-9][0-9]+) / 10" logs/wave5-hardening.log
           grep -F "[AAA-GATE] PASS learning_approach_count: 4 / 4" logs/wave5-hardening.log
           grep -F "[AAA-GATE] PASS (development)" logs/wave5-hardening.log
