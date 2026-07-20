@@ -102,6 +102,19 @@ jobs:
             test -s "builds/visual/bitling-${viewport}-learning-session.png"
           done
 
+      - name: Upload focused Learning Adventure references
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitling-learning-visuals
+          path: |
+            builds/visual/bitling-phone-learning-*.png
+            builds/visual/bitling-tablet-learning-*.png
+            builds/visual/bitling-laptop-learning-*.png
+            logs/learning-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload rendered dashboard references
         if: always()
         uses: actions/upload-artifact@v4
