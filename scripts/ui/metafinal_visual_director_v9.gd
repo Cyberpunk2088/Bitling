@@ -5,6 +5,10 @@ extends "res://scripts/ui/metafinal_visual_director_v8.gd"
 ## Habitat gameplay is fused into that production stage and may not be replaced
 ## by a passive visual-only stage.
 
+# Compatibility contract for the Wave 2/3 production gates. The active habitat
+# stage inherits this exact production stage and therefore preserves its full
+# character-performance and Living Home implementation.
+const ProductionStage3DV11 := preload("res://scripts/ui/production_bitling_stage_3d_v11.gd")
 const ProductionHabitatStage := preload("res://scripts/ui/bitling_habitat_stage.gd")
 
 var _home_callback := Callable()
