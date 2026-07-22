@@ -165,7 +165,8 @@ func _generate_conflict_follow_up(result: Dictionary) -> void:
 		var axis := str(axis_variant)
 		if float(axis_conflicts.get(axis, 0.0)) < CONFLICT_RESET_THRESHOLD:
 			conflict_tiers[axis] = 0
-	var conflict: Dictionary = result.get("active_conflict", {}) as Dictionary
+	var conflict: Dictionary = _active_conflict()
+	result["active_conflict"] = conflict.duplicate(true)
 	if conflict.is_empty():
 		return
 	var axis := str(conflict.get("axis", ""))
