@@ -32,16 +32,26 @@ def main() -> int:
     project = read("project.godot")
     scene = read("main.tscn")
     runtime = read("scripts/core/habitat_behavior_runtime.gd")
+    world_runtime = read("scripts/core/habitat_world_consequence_runtime.gd")
     dashboard = read("scripts/ui/ultimate_dashboard_behavior.gd")
+    world_dashboard = read("scripts/ui/ultimate_dashboard_consequences.gd")
     test = read("tests/habitat_behavior_test.gd")
 
     check(
-        'HabitatInteraction="*res://scripts/core/habitat_behavior_runtime.gd"' in project,
+        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"' in project,
         "persistent behavior runtime is authoritative",
     )
     check(
-        'path="res://scripts/ui/ultimate_dashboard_behavior.gd"' in scene,
+        'extends "res://scripts/core/habitat_behavior_runtime.gd"' in world_runtime,
+        "authoritative world runtime preserves persistent behavior",
+    )
+    check(
+        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"' in scene,
         "main scene cannot hide persistent behavior state",
+    )
+    check(
+        'extends "res://scripts/ui/ultimate_dashboard_behavior.gd"' in world_dashboard,
+        "production dashboard preserves visible behavior state",
     )
     check(
         'extends "res://scripts/core/habitat_interaction_service.gd"' in runtime,
