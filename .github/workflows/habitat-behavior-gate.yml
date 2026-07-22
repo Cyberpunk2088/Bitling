@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - main
-      - agent/habitat-behavior-consequences
+      - "agent/habitat-**"
     paths:
       - "project.godot"
       - "main.tscn"
       - "scripts/core/habitat_behavior_runtime.gd"
+      - "scripts/core/habitat_world_consequence_runtime.gd"
       - "scripts/ui/ultimate_dashboard_behavior.gd"
+      - "scripts/ui/ultimate_dashboard_consequences.gd"
       - "tests/habitat_behavior_test.gd"
       - "tools/habitat_behavior_gate.py"
       - "tools/habitat_behavior_mutation_test.py"
@@ -19,7 +21,9 @@ on:
       - "project.godot"
       - "main.tscn"
       - "scripts/core/habitat_behavior_runtime.gd"
+      - "scripts/core/habitat_world_consequence_runtime.gd"
       - "scripts/ui/ultimate_dashboard_behavior.gd"
+      - "scripts/ui/ultimate_dashboard_consequences.gd"
       - "tests/habitat_behavior_test.gd"
       - "tools/habitat_behavior_gate.py"
       - "tools/habitat_behavior_mutation_test.py"
