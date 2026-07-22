@@ -188,7 +188,15 @@ func _build_world_event(event_type: String, manifestation: Dictionary, source_id
 	var title := str(manifestation.get("title", "Gemeinsame Folge"))
 	var description := str(manifestation.get("description", "Eine frühere Entscheidung ist im Habitat sichtbar geworden."))
 	var prompt := "Xogot hat diese Entwicklung selbst begonnen. Wie gehst du mit ihr weiter?" if event_type == "initiative" else "Die Reibung ist jetzt Teil des Raums. Wie lebt ihr mit ihr weiter?"
-	var cues: Array[String] = ["verstärken", "verändern", "umleiten"] if event_type == "initiative" else ["aushandeln", "Grenze halten", "anderen Zugang wählen"]
+	var cues: Array[String] = []
+	if event_type == "initiative":
+		cues.append("verstärken")
+		cues.append("verändern")
+		cues.append("umleiten")
+	else:
+		cues.append("aushandeln")
+		cues.append("Grenze halten")
+		cues.append("anderen Zugang wählen")
 	var event_id := "%s_%04d" % [event_type, world_event_counter]
 	return {
 		"id": event_id,
