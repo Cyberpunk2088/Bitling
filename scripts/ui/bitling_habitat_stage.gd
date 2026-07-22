@@ -106,7 +106,13 @@ func activate_live_action_choice(index: int) -> bool:
 func get_live_action_choice_regions() -> Array[Rect2]:
 	if _live_action_overlay == null or not _live_action_overlay.has_method("get_choice_regions"):
 		return []
-	return _live_action_overlay.call("get_choice_regions") as Array[Rect2]
+	var regions_variant: Variant = _live_action_overlay.call("get_choice_regions")
+	var regions: Array[Rect2] = []
+	if regions_variant is Array:
+		for region_variant in regions_variant as Array:
+			if region_variant is Rect2:
+				regions.append(region_variant as Rect2)
+	return regions
 
 func get_habitat_interaction_snapshot() -> Dictionary:
 	var world_visual: Dictionary = {}
@@ -188,7 +194,10 @@ func _apply_live_action_motion(delta: float) -> void:
 	var active := bool(live_action_snapshot.get("active", false))
 	var phase := str(live_action_snapshot.get("phase", "idle"))
 	var hotspot := str(live_action_snapshot.get("hotspot", "bitling"))
-	_live_target = LIVE_ACTION_WORLD_TARGETS.get(hotspot, LIVE_ACTION_WORLD_TARGETS["bitling"]) as Vector3 if active and phase != "aftermath" else LIVE_ACTION_WORLD_TARGETS["bitling"] as Vector3
+	if active and phase != "aftermath":
+		_live_target = LIVE_ACTION_WORLD_TARGETS.get(hotspot, LIVE_ACTION_WORLD_TARGETS["bitling"]) as Vector3
+	else:
+		_live_target = LIVE_ACTION_WORLD_TARGETS["bitling"] as Vector3
 	var speed := 8.5 if _reduce_motion_enabled() else 3.4 if phase == "approach" else 5.2 if phase == "aftermath" else 4.1
 	var blend := 1.0 - exp(-speed * delta)
 	_live_position = _live_position.lerp(_live_target, clampf(blend, 0.0, 1.0))
@@ -196,7 +205,9 @@ func _apply_live_action_motion(delta: float) -> void:
 	if not _reduce_motion_enabled() and phase in ["observe", "awaiting_choice", "perform"]:
 		phase_bob = sin(_elapsed * (3.1 if phase == "perform" else 1.8)) * (0.045 if phase == "perform" else 0.022)
 	_bitling.position = Vector3(_live_position.x, _live_position.y + phase_bob, _live_position.z)
-	var target_yaw := float(LIVE_ACTION_YAWS.get(hotspot, 0.0)) if active and phase != "aftermath" else 0.0
+	var target_yaw := 0.0
+	if active and phase != "aftermath":
+		target_yaw = float(LIVE_ACTION_YAWS.get(hotspot, 0.0))
 	_live_yaw = lerp_angle(_live_yaw, target_yaw, clampf(delta * 4.2, 0.0, 1.0))
 	_bitling.rotation.y = _live_yaw
 
