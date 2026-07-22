@@ -25,6 +25,7 @@ func _run() -> void:
 	_test_habit_manifestation(service)
 	_test_follow_up_resolution(service)
 	_test_conflict_returns_as_gameplay(service)
+	_test_repaired_conflict_does_not_requeue(service)
 	_test_world_persistence(service)
 	await _test_world_ui(service)
 	game_state.call("apply_save_data", game_backup)
@@ -92,6 +93,37 @@ func _test_conflict_returns_as_gameplay(service: Node) -> void:
 	_check(float(resolved.get("conflict_repair", 0.0)) > 0.0, "living through the event mechanically changes conflict")
 	_check(after < before, "resolved follow-up reduces persistent conflict")
 	_check(int((service.call("get_world_consequence_snapshot") as Dictionary).get("pending_event_count", -1)) == 0, "conflict event must be played through once")
+
+func _test_repaired_conflict_does_not_requeue(service: Node) -> void:
+	var orientations: Dictionary = service.get("axis_orientations") as Dictionary
+	var conflicts: Dictionary = service.get("axis_conflicts") as Dictionary
+	var tiers: Dictionary = service.get("conflict_tiers") as Dictionary
+	orientations["contact"] = -40.0
+	conflicts["contact"] = 0.0
+	conflicts["novelty"] = 38.0
+	tiers["novelty"] = 0
+	service.set("axis_orientations", orientations)
+	service.set("axis_conflicts", conflicts)
+	service.set("conflict_tiers", tiers)
+
+	var manifestation: Dictionary = service.call("_conflict_manifestation", "novelty", 1) as Dictionary
+	var event: Dictionary = service.call("_build_world_event", "conflict", manifestation, "stale-repair-test") as Dictionary
+	event["axis"] = "novelty"
+	event["conflict_strength"] = 38.0
+	event["tier"] = 1
+	var pending: Array = service.get("pending_world_events") as Array
+	pending.clear()
+	pending.append(event)
+	service.set("pending_world_events", pending)
+
+	service.call("select_lens", "care")
+	var preview: Dictionary = service.call("preview_choice", "check_in") as Dictionary
+	_check(str(preview.get("execution_mode", "")) == "negotiated", "repair scenario uses the negotiated conflict multiplier")
+	var resolved: Dictionary = service.call("resolve_choice", "check_in") as Dictionary
+	var novelty_after := float((service.get("axis_conflicts") as Dictionary).get("novelty", 0.0))
+	_check(is_equal_approx(float(resolved.get("conflict_repair", 0.0)), 26.0), "negotiated follow-up applies the stronger repair amount")
+	_check(novelty_after < 20.0, "negotiated repair lowers the source conflict below reset threshold")
+	_check(int((service.call("get_world_consequence_snapshot") as Dictionary).get("pending_event_count", -1)) == 0, "repaired conflict does not requeue from a stale result snapshot")
 
 func _test_world_persistence(service: Node) -> void:
 	var exported: Dictionary = service.call("export_state") as Dictionary
