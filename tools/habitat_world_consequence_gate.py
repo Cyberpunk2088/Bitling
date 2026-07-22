@@ -28,6 +28,11 @@ def read(relative: str) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else ""
 
 
+def const_block(source: str, name: str) -> str:
+    match = re.search(rf"const {re.escape(name)}[^=]*:=\s*\{{(.*?)\n\}}", source, re.S)
+    return match.group(1) if match else ""
+
+
 def main() -> int:
     project = read("project.godot")
     scene = read("main.tscn")
@@ -54,7 +59,8 @@ def main() -> int:
         "world dashboard preserves visible behavior and habitat gameplay",
     )
 
-    manifestations = set(re.findall(r'^\s*"([a-z_]+)": \{"hotspot":', runtime, re.M))
+    manifestation_block = const_block(runtime, "CHOICE_MANIFESTATIONS")
+    manifestations = set(re.findall(r'^\s*"([a-z_]+)":\s*\{"hotspot":', manifestation_block, re.M))
     expected = {
         "familiar_snack", "new_flavor", "let_choose", "follow_rule",
         "invent_together", "let_lead", "observe_first", "explain_connection",
@@ -62,6 +68,10 @@ def main() -> int:
         "quiet_story", "dream_archive",
     }
     check(manifestations == expected, "all fifteen choices have explicit room manifestations")
+
+    repair_block = const_block(runtime, "CONFLICT_REPAIR_AMOUNTS")
+    repair_values = [float(value) for value in re.findall(r':\s*([0-9]+(?:\.[0-9]+)?)', repair_block)]
+    check(len(repair_values) == 3 and all(value > 0.0 for value in repair_values), "playing through conflict changes its mechanics")
 
     for token, message in (
         ("var world_marks: Dictionary", "persistent room marks exist"),
@@ -72,14 +82,16 @@ def main() -> int:
         ("func _generate_habit_manifestation", "formed habits create room changes"),
         ("func _generate_conflict_follow_up", "conflict returns as a playable follow-up"),
         ("func _resolve_world_event", "follow-up events require a player response"),
-        ("CONFLICT_REPAIR_AMOUNTS", "playing through conflict changes its mechanics"),
         ('"world_event": true', "world moments declare their origin"),
         ('"no_correct_answer": true', "world consequences preserve open-ended agency"),
         ('data["world_marks"]', "room marks are persisted"),
         ('data["pending_world_events"]', "open follow-ups are persisted"),
         ('data["resolved_world_events"]', "resolved follow-ups are persisted"),
-        ("generated_habit_events", "formed habits cannot spam duplicate manifestations"),
-        ("conflict_tiers", "conflict follow-ups are threshold-gated"),
+        ("generated_habit_events[choice_id] = true", "formed habits cannot spam duplicate manifestations"),
+        ("if choice_id.is_empty() or generated_habit_events.has(choice_id):", "duplicate manifestations are rejected before creation"),
+        ("if tier <= int(conflict_tiers.get(axis, 0)):", "conflict follow-ups are threshold-gated"),
+        ("pending_world_events.append(event)", "world consequences enter a playable queue"),
+        ("pending_world_events.pop_front()", "played consequences leave the active queue"),
     ):
         check(token in runtime, message)
 
