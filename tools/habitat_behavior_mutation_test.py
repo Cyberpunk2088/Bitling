@@ -70,8 +70,8 @@ MUTATIONS = (
     Mutation(
         "allow_same_session_farming",
         Path("scripts/core/habitat_behavior_runtime.gd"),
-        "session_choice_ids.clear()",
-        "pass # session history not cleared",
+        "session_index += 1\n\tsession_choice_ids.clear()",
+        "session_index += 1\n\tpass # session history not cleared",
         "same-session habit farming is blocked",
     ),
     Mutation(
