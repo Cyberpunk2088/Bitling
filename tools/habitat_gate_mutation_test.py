@@ -110,6 +110,20 @@ MUTATIONS = (
         "phone decision availability not checked",
         "runtime test protects phone gameplay parity",
     ),
+    Mutation(
+        "reintroduce_correct_answer",
+        Path("scripts/core/habitat_interaction_service.gd"),
+        '"cues": ["Nähe", "Abstand", "Neugier"]',
+        '"recommended_lens": "care"',
+        "service cannot prescribe a correct lens",
+    ),
+    Mutation(
+        "restore_repeat_farming",
+        Path("scripts/core/habitat_interaction_service.gd"),
+        "[1.0, 0.35, 0.0]",
+        "[1.0, 1.0, 1.0]",
+        "repeated choices lose XP and eventually reach zero",
+    ),
 )
 
 
