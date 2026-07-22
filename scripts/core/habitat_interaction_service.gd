@@ -126,8 +126,8 @@ func resolve_choice(choice_id: String) -> Dictionary:
 		return {"accepted": false, "reason": "unknown_choice"}
 	var moment := get_current_moment()
 	var aligned := selected_lens == str(moment.get("recommended_lens", ""))
-	var trait := str(option.get("trait", "curiosity"))
-	var trait_value := _trait_value(trait)
+	var trait_id := str(option.get("trait", "curiosity"))
+	var trait_value := _trait_value(trait_id)
 	var xp := int(option.get("xp", 0)) + (4 if aligned else 0)
 	var tags: Array[String] = ["habitat", selected_lens, choice_id, str(moment.get("id", "")), "aligned" if aligned else "self_directed"]
 	var state := _game_state()
@@ -135,15 +135,15 @@ func resolve_choice(choice_id: String) -> Dictionary:
 		state.call("perform_interaction", str(option.get("interaction", selected_lens)), (option.get("effects", {}) as Dictionary).duplicate(true), xp, tags)
 	var brain := _brain()
 	if brain != null:
-		brain.call("nudge_trait", trait, float(option.get("trait_delta", 0.0)))
+		brain.call("nudge_trait", trait_id, float(option.get("trait_delta", 0.0)))
 	resolved_count += 1
 	var result := {
 		"accepted": true, "lens": selected_lens, "choice_id": choice_id,
 		"choice_title": str(option.get("title", choice_id)), "moment_id": str(moment.get("id", "")),
 		"hotspot": focused_hotspot, "aligned": aligned, "resonant": aligned or trait_value >= 60.0,
-		"trait": trait, "trait_value": trait_value, "xp_reward": xp,
+		"trait": trait_id, "trait_value": trait_value, "xp_reward": xp,
 		"response": str(option.get("response", "Xogot reagiert aufmerksam.")),
-		"consequence": _consequence(aligned, trait_value >= 60.0, trait)
+		"consequence": _consequence(aligned, trait_value >= 60.0, trait_id)
 	}
 	_store_outcome(result)
 	_create_memory_when_meaningful(result)
@@ -230,8 +230,8 @@ func _build_options() -> Dictionary:
 			_o("dream_archive", "Traumarchiv öffnen", "Erlebnisse gemeinsam ordnen", "rest", {"energy": 13.0, "happiness": 6.0, "curiosity": 5.0}, 11, "creativity", 0.25, "Vielleicht ist ein Traum eine Erinnerung in anderer Form.")]
 	}
 
-func _o(id: String, title: String, detail: String, interaction: String, effects: Dictionary, xp: int, trait: String, trait_delta: float, response: String) -> Dictionary:
-	return {"id": id, "title": title, "detail": detail, "interaction": interaction, "effects": effects, "xp": xp, "trait": trait, "trait_delta": trait_delta, "response": response}
+func _o(id: String, title: String, detail: String, interaction: String, effects: Dictionary, xp: int, trait_id: String, trait_delta: float, response: String) -> Dictionary:
+	return {"id": id, "title": title, "detail": detail, "interaction": interaction, "effects": effects, "xp": xp, "trait": trait_id, "trait_delta": trait_delta, "response": response}
 
 func _moment_for_state() -> String:
 	var state := _game_state()
@@ -254,20 +254,20 @@ func _find_option(lens_id: String, choice_id: String) -> Dictionary:
 			return (item as Dictionary).duplicate(true)
 	return {}
 
-func _trait_value(trait: String) -> float:
+func _trait_value(trait_id: String) -> float:
 	var brain := _brain()
 	if brain == null: return 50.0
 	var personality: Variant = brain.get("personality")
-	return float((personality as Dictionary).get(trait, 50.0)) if personality is Dictionary else 50.0
+	return float((personality as Dictionary).get(trait_id, 50.0)) if personality is Dictionary else 50.0
 
-func _consequence(aligned: bool, resonant: bool, trait: String) -> String:
-	if aligned and resonant: return "Die Handlung passt zum Moment und stärkt %s sichtbar." % _trait_name(trait)
+func _consequence(aligned: bool, resonant: bool, trait_id: String) -> String:
+	if aligned and resonant: return "Die Handlung passt zum Moment und stärkt %s sichtbar." % _trait_name(trait_id)
 	if aligned: return "Du hast den aktuellen Bedarf erkannt; Xogot verarbeitet ihn auf eigene Weise."
-	if resonant: return "Nicht der naheliegende Weg, aber passend zu Xogots %s." % _trait_name(trait)
+	if resonant: return "Nicht der naheliegende Weg, aber passend zu Xogots %s." % _trait_name(trait_id)
 	return "Eine gültige Entscheidung mit eigenem Ton. Der Moment bleibt Teil eurer Geschichte."
 
-func _trait_name(trait: String) -> String:
-	return str({"curiosity": "Neugier", "empathy": "Empathie", "order": "Ordnungssinn", "creativity": "Kreativität", "independence": "Eigenständigkeit"}.get(trait, trait))
+func _trait_name(trait_id: String) -> String:
+	return str({"curiosity": "Neugier", "empathy": "Empathie", "order": "Ordnungssinn", "creativity": "Kreativität", "independence": "Eigenständigkeit"}.get(trait_id, trait_id))
 
 func _store_outcome(result: Dictionary) -> void:
 	var stored := result.duplicate(true)
