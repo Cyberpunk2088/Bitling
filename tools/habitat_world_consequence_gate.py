@@ -102,7 +102,8 @@ def main() -> int:
     check("set_world_consequence_snapshot" in dashboard, "dashboard sends consequences into the playable stage")
     check("get_world_consequence_ui_snapshot" in dashboard, "world UI exposes a testable contract")
 
-    check("HabitatWorldConsequenceOverlay" in stage, "production stage owns the world consequence visual layer")
+    check('const HabitatWorldConsequenceOverlay := preload("res://scripts/ui/habitat_world_consequence_overlay.gd")' in stage, "production stage owns the world consequence visual layer")
+    check("HabitatWorldConsequenceOverlay.new()" in stage, "production stage instantiates the world consequence visual layer")
     check("set_world_consequence_snapshot" in stage, "stage accepts authoritative world snapshots")
     check("world_consequence_overlay_ready" in stage, "stage exposes world-layer diagnostics")
     check("mouse_filter = Control.MOUSE_FILTER_IGNORE" in overlay, "world visuals can never steal habitat input")
