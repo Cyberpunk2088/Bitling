@@ -2,8 +2,10 @@ extends "res://scripts/ui/metafinal_visual_director_v8.gd"
 
 ## Wave 3 integration layer. It installs the Living Home stage and keeps the
 ## persistent room simulation synchronized with story, performance and audio.
+## Habitat gameplay is fused into that production stage and may not be replaced
+## by a passive visual-only stage.
 
-const ProductionStage3DV11 := preload("res://scripts/ui/production_bitling_stage_3d_v11.gd")
+const ProductionHabitatStage := preload("res://scripts/ui/bitling_habitat_stage.gd")
 
 var _home_callback := Callable()
 var _last_home_snapshot: Dictionary = {}
@@ -18,31 +20,50 @@ func _install_production_stage() -> void:
 	if not previous_variant is Control:
 		return
 	var previous := previous_variant as Control
+	var previous_script := previous.get_script()
+	if previous_script != null and str(previous_script.resource_path).ends_with("bitling_habitat_stage.gd"):
+		_stage = previous
+		_wire_habitat_stage()
+		return
 	var parent := previous.get_parent()
 	if parent == null:
 		return
 	var child_index := previous.get_index()
-	_stage = ProductionStage3DV11.new()
-	_stage.name = "LegendaryWave3LivingHomeStage3D"
+	_stage = ProductionHabitatStage.new()
+	_stage.name = "LegendaryLivingHabitatStage3D"
 	_stage.custom_minimum_size = previous.custom_minimum_size
 	_stage.size_flags_horizontal = previous.size_flags_horizontal
 	_stage.size_flags_vertical = previous.size_flags_vertical
 	parent.add_child(_stage)
 	parent.move_child(_stage, child_index)
+	_wire_habitat_stage()
+	previous.queue_free()
+
+func _wire_habitat_stage() -> void:
+	if _stage == null:
+		return
 	if _stage.has_signal("bitling_pressed") and _dashboard.has_method("_on_stage_pressed"):
-		_stage.connect("bitling_pressed", Callable(_dashboard, "_on_stage_pressed"))
+		var bitling_callback := Callable(_dashboard, "_on_stage_pressed")
+		if not _stage.is_connected("bitling_pressed", bitling_callback):
+			_stage.connect("bitling_pressed", bitling_callback)
+	if _stage.has_signal("hotspot_pressed") and _dashboard.has_method("_on_hotspot_pressed"):
+		var hotspot_callback := Callable(_dashboard, "_on_hotspot_pressed")
+		if not _stage.is_connected("hotspot_pressed", hotspot_callback):
+			_stage.connect("hotspot_pressed", hotspot_callback)
 	if _stage.has_signal("touch_zone_pressed"):
 		_touch_callback = Callable(self, "_on_touch_zone_pressed")
 		if not _stage.is_connected("touch_zone_pressed", _touch_callback):
 			_stage.connect("touch_zone_pressed", _touch_callback)
 	_dashboard.set("stage", _stage)
-	previous.queue_free()
 
 func get_wave3_status() -> Dictionary:
 	var parent_status := get_wave2_status()
 	var stage_home: Dictionary = {}
 	if _stage != null and _stage.has_method("get_living_home_visual_snapshot"):
 		stage_home = _stage.call("get_living_home_visual_snapshot") as Dictionary
+	var habitat: Dictionary = {}
+	if _stage != null and _stage.has_method("get_habitat_interaction_snapshot"):
+		habitat = _stage.call("get_habitat_interaction_snapshot") as Dictionary
 	var overlay_snapshot: Dictionary = {}
 	var overlay := get_node_or_null("/root/LivingHomeOverlay")
 	if overlay != null and overlay.has_method("get_overlay_snapshot"):
@@ -51,6 +72,7 @@ func get_wave3_status() -> Dictionary:
 		"wave2": parent_status,
 		"home": _last_home_snapshot.duplicate(true),
 		"stage_home": stage_home,
+		"habitat": habitat,
 		"overlay": overlay_snapshot
 	}
 
