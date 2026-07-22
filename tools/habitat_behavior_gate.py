@@ -90,7 +90,10 @@ def main() -> int:
     check("behavior_label" in dashboard, "each choice exposes anticipated behavior")
     check("habit_strength" in dashboard and "friction" in dashboard, "habit and friction are visible before commitment")
     check("PersistentBehaviorCard" in dashboard, "persistent patterns have a dedicated in-product surface")
-    check("XOGOT:" in dashboard, "choice buttons disclose Xogot's response state")
+    check(
+        'button.text += "\\nXOGOT: %s · MUSTER %d · REIBUNG %d"' in dashboard,
+        "choice buttons disclose Xogot's response state",
+    )
 
     for phrase, message in (
         ("habit requires three distinct sessions", "runtime test proves cross-session formation"),
