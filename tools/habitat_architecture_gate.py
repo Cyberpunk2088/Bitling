@@ -34,6 +34,8 @@ def main() -> int:
     service = read("scripts/core/habitat_interaction_service.gd")
     dashboard = read("scripts/ui/ultimate_dashboard_habitat.gd")
     stage = read("scripts/ui/bitling_habitat_stage.gd")
+    marker_overlay = read("scripts/ui/habitat_hotspot_overlay.gd")
+    visual_director = read("scripts/ui/metafinal_visual_director_v9.gd")
     runtime_test = read("tests/habitat_gameplay_test.gd")
 
     check(
@@ -67,7 +69,24 @@ def main() -> int:
         check(f'"{hotspot}"' in stage, f"{hotspot} remains clickable in the central habitat")
         check(f'"{hotspot}"' in service, f"{hotspot} remains connected to gameplay context")
 
+    check(
+        'extends "res://scripts/ui/production_bitling_stage_3d_v11.gd"' in stage,
+        "habitat interaction is fused into the production 3D Living Home stage",
+    )
     check("signal hotspot_pressed" in stage, "stage emits in-world interactions")
+    check("HabitatHotspotOverlay" in stage, "production stage renders non-blocking room markers")
+    check("mouse_filter = Control.MOUSE_FILTER_IGNORE" in marker_overlay, "hotspot markers can never steal stage input")
+    check("hotspot_count\": 6" in stage or '"hotspot_count": 6' in stage, "stage diagnostics expose all six room hotspots")
+
+    check(
+        'preload("res://scripts/ui/bitling_habitat_stage.gd")' in visual_director,
+        "visual director installs the habitat-capable production stage",
+    )
+    check("_wire_habitat_stage" in visual_director, "visual director explicitly wires habitat signals")
+    check("hotspot_pressed" in visual_director, "visual director forwards room-level agency")
+    check("_stage = ProductionStage3DV11.new()" not in visual_director, "visual director cannot silently restore a passive stage")
+    check("LEGACY_STAGE_NAME" in visual_director, "legacy Wave diagnostics remain compatible without changing behavior")
+
     check("HabitatChoices" in dashboard, "dashboard renders contextual decisions in the center")
     check("range(3)" in dashboard, "dashboard reserves three simultaneous approaches")
     check("_run_interaction(" not in dashboard, "habitat UI cannot directly grant stat rewards")
