@@ -18,9 +18,9 @@ func _run() -> void:
 	overlay.position = Vector2.ZERO
 	overlay.call("set_snapshot", _awaiting_snapshot())
 	await process_frame
-	_test_phone_stack(overlay)
-	_test_tablet_row(overlay)
-	_test_laptop_row(overlay)
+	await _test_phone_stack(overlay)
+	await _test_tablet_row(overlay)
+	await _test_laptop_row(overlay)
 	overlay.queue_free()
 	await process_frame
 	_finish()
