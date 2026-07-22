@@ -71,6 +71,7 @@ def main() -> int:
     moment_hotspots = set(re.findall(r'"hotspot"\s*:\s*"([a-z_]+)"', moment_block.group(1))) if moment_block else set()
     check(len(moments) >= 9, "needs, intentions and room events create at least nine situations")
     check({"quiet", "window", "hologram", "parts", "plant", "lightball", "rest", "hungry", "recovery"}.issubset(set(moments)), "required habitat situations remain present")
+    check(service.count('"cues": [') >= 9, "every habitat situation exposes multiple readable cues")
 
     hotspots = {"bitling", "window", "workbench", "plant", "platform", "sleep"}
     room_hotspots = hotspots - {"bitling"}
@@ -115,9 +116,21 @@ def main() -> int:
     check("open_expedition" in dashboard and "open_adventures" in dashboard, "deep activities remain integrated overlays")
     check("center_is_game" in dashboard, "dashboard exposes a testable center-is-game contract")
 
+    check('"recommended_lens"' not in service, "service cannot prescribe a correct lens")
+    check('"recommended_lens"' not in dashboard and "Empfohlen:" not in dashboard, "dashboard cannot display a correct-answer recommendation")
+    check('"aligned"' not in service, "resolver cannot hide a correctness bonus behind alignment")
+    check("REPEAT_XP_MULTIPLIERS" in service and "[1.0, 0.35, 0.0]" in service, "repeated choices lose XP and eventually reach zero")
+    check("REPEAT_EFFECT_MULTIPLIERS" in service and "_scaled_effects" in service, "repetition decay preserves bounded practical utility")
+    check('if key == "quest_event":' in service and "if repeat_count == 0:" in service, "repetition cannot farm quest events")
+    check('"no_correct_answer": true' in service, "service publishes the no-correct-answer contract")
+    check("KEIN RICHTIGER KNOPF" in dashboard, "dashboard states the open-ended agency rule")
+    check("_progression_label" in dashboard and "anti_grind_visible" in dashboard, "dashboard exposes novelty decay before commitment")
+
     check("five intentional lenses replace direct stat buttons" in runtime_test, "runtime test guards the design diagnosis")
     check("interactive habitat stage replaces passive portrait" in runtime_test, "runtime test rejects passive center regressions")
     check("all contextual decisions remain available on phone" in runtime_test, "runtime test protects phone gameplay parity")
+    check("routine cannot farm XP" in runtime_test, "runtime test enforces the hard XP stop")
+    check("phone UI refuses to recommend one correct lens" in runtime_test, "runtime test protects open-ended mobile agency")
 
     if FAILURES:
         print(f"[HABITAT-ARCH] BLOCKED: {len(FAILURES)} of {ASSERTIONS} checks failed", file=sys.stderr)

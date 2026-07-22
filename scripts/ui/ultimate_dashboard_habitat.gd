@@ -2,6 +2,8 @@ extends "res://scripts/ui/ultimate_dashboard.gd"
 
 ## Enforces the product promise: the dashboard is not a launcher around the
 ## game. The visible home is the game, and every primary action is contextual.
+## The interface never marks a correct answer and exposes repetition decay
+## before the player commits to a choice.
 
 const HabitatStage := preload("res://scripts/ui/bitling_habitat_stage.gd")
 
@@ -86,7 +88,7 @@ func _build_center_panel() -> PanelContainer:
 	choice_column.add_theme_constant_override("separation", 8)
 	choice_card.add_child(choice_column)
 	var choice_title := Label.new()
-	choice_title.text = "DEINE HALTUNG — XOGOTS REAKTION BLEIBT EIGENSTÄNDIG"
+	choice_title.text = "DEINE HALTUNG — KEIN RICHTIGER KNOPF, KEIN ENDLOSES GRINDING"
 	choice_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	choice_title.add_theme_color_override("font_color", COLOR_MUTED)
 	choice_title.add_theme_font_size_override("font_size", 11)
@@ -111,7 +113,7 @@ func _build_center_panel() -> PanelContainer:
 		habitat_choice_grid.add_child(choice_button)
 		habitat_choice_buttons.append(choice_button)
 	habitat_consequence_label = Label.new()
-	habitat_consequence_label.text = "Wähle zuerst eine Haltung. Keine Auswahl ist bloß ein Status-Button."
+	habitat_consequence_label.text = "Neue Erfahrungen erzeugen Fortschritt. Routinen bleiben nützlich, aber nicht farmbar."
 	habitat_consequence_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	habitat_consequence_label.add_theme_color_override("font_color", COLOR_MUTED)
 	habitat_consequence_label.add_theme_font_size_override("font_size", 12)
@@ -139,7 +141,7 @@ func _build_right_panel() -> PanelContainer:
 	habitat_status_label.add_theme_font_size_override("font_size", 13)
 	situation_column.add_child(habitat_status_label)
 	var rule := Label.new()
-	rule.text = "Du kontrollierst den Kontext. Xogot kontrolliert seine Reaktion."
+	rule.text = "Du kontrollierst den Kontext. Xogot kontrolliert seine Reaktion. Das System bewertet keine Haltung als moralisch richtig."
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rule.add_theme_color_override("font_color", COLOR_CYAN)
 	rule.add_theme_font_size_override("font_size", 11)
@@ -203,7 +205,7 @@ func _apply_moment(moment: Dictionary) -> void:
 	var hotspot := str(moment.get("hotspot", "bitling"))
 	habitat_location_label.text = _hotspot_label(hotspot)
 	if habitat_status_label != null:
-		habitat_status_label.text = "%s\nEmpfohlen: %s" % [habitat_moment_title.text, _lens_label(str(moment.get("recommended_lens", "care")))]
+		habitat_status_label.text = "%s\nSignale: %s\nAlle fünf Haltungen bleiben offen." % [habitat_moment_title.text, _cue_text(moment)]
 	if stage != null:
 		stage.call("set_focused_hotspot", hotspot)
 		stage.call("set_moment_title", habitat_moment_title.text)
@@ -222,8 +224,11 @@ func _apply_lens(lens_id: String, options: Array) -> void:
 		button.disabled = index >= options.size()
 		if index < options.size():
 			var option := options[index] as Dictionary
+			var progression_state := str(option.get("progression_state", "fresh"))
+			var progress_label := _progression_label(progression_state)
 			button.set_meta("choice_id", str(option.get("id", "")))
-			button.text = "%s\n%s" % [str(option.get("title", "Wählen")).to_upper(), str(option.get("detail", ""))]
+			button.text = "%s  [%s]\n%s" % [str(option.get("title", "Wählen")).to_upper(), progress_label, str(option.get("detail", ""))]
+			button.tooltip_text = _progression_tooltip(progression_state)
 			button.add_theme_stylebox_override("normal", _button_style(Color(accent, 0.09), Color(accent, 0.72), 14))
 			button.add_theme_stylebox_override("pressed", _button_style(Color(accent, 0.28), accent, 14))
 	_update_action_button_states(lens_id)
@@ -232,10 +237,13 @@ func _apply_last_result() -> void:
 	if _last_habitat_result.is_empty():
 		return
 	if habitat_consequence_label != null:
-		habitat_consequence_label.text = "%s  •  +%d XP" % [str(_last_habitat_result.get("consequence", "Der Moment wurde gespeichert.")), int(_last_habitat_result.get("xp_reward", 0))]
-		habitat_consequence_label.add_theme_color_override("font_color", COLOR_GREEN if bool(_last_habitat_result.get("resonant", false)) else COLOR_CYAN)
+		var xp_reward := int(_last_habitat_result.get("xp_reward", 0))
+		var progression_state := str(_last_habitat_result.get("progression_state", "fresh"))
+		var xp_text := "+%d XP" % xp_reward if xp_reward > 0 else "kein neuer XP-Fortschritt"
+		habitat_consequence_label.text = "%s  •  %s" % [str(_last_habitat_result.get("consequence", "Der Moment wurde gespeichert.")), xp_text]
+		habitat_consequence_label.add_theme_color_override("font_color", COLOR_YELLOW if progression_state == "stale" else (COLOR_GREEN if bool(_last_habitat_result.get("resonant", false)) else COLOR_CYAN))
 	if habitat_memory_label != null:
-		habitat_memory_label.text = "%s\n%s" % [str(_last_habitat_result.get("choice_title", "Entscheidung")), str(_last_habitat_result.get("response", ""))]
+		habitat_memory_label.text = "%s  [%s]\n%s" % [str(_last_habitat_result.get("choice_title", "Entscheidung")), _progression_label(str(_last_habitat_result.get("progression_state", "fresh"))), str(_last_habitat_result.get("response", ""))]
 
 func _select_lens(lens_id: String) -> void:
 	var service := _habitat()
@@ -243,7 +251,7 @@ func _select_lens(lens_id: String) -> void:
 		return
 	var options: Array = service.call("select_lens", lens_id) as Array
 	_apply_lens(lens_id, options)
-	message_label.text = "%s ist jetzt deine Haltung. Wähle eine konkrete Form, statt einen Wert direkt zu füllen." % _lens_label(lens_id)
+	message_label.text = "%s ist jetzt deine Haltung. Kein Zugang wird automatisch als richtig behandelt." % _lens_label(lens_id)
 	stage.call("play_reaction")
 
 func _on_habitat_choice_index(index: int) -> void:
@@ -263,6 +271,9 @@ func _on_habitat_choice_resolved(result: Dictionary) -> void:
 	message_label.text = str(result.get("response", "Xogot reagiert."))
 	stage.call("play_reaction")
 	_apply_last_result()
+	var service := _habitat()
+	if service != null:
+		_apply_lens(str(service.get("selected_lens")), service.call("get_lens_options") as Array)
 
 func _on_habitat_moment_changed(moment: Dictionary) -> void:
 	_apply_moment(moment)
@@ -279,9 +290,8 @@ func _on_hotspot_pressed(hotspot_id: String) -> void:
 	if service == null:
 		return
 	var moment: Dictionary = service.call("focus_hotspot", hotspot_id) as Dictionary
-	var recommended := str(moment.get("recommended_lens", "care"))
-	service.call("select_lens", recommended)
-	message_label.text = "%s ist jetzt Teil der Situation. Xogot zeigt dir einen möglichen Zugang — die Entscheidung bleibt bei dir." % _hotspot_label(hotspot_id)
+	_apply_moment(moment)
+	message_label.text = "%s verändert den Kontext. Deine aktuelle Haltung bleibt bestehen; das System wählt nichts für dich vor." % _hotspot_label(hotspot_id)
 
 func _on_stage_pressed() -> void:
 	_on_hotspot_pressed("bitling")
@@ -314,7 +324,7 @@ func _on_navigation_pressed(destination: String) -> void:
 		"PFLEGE":
 			_select_lens("care")
 		"QUESTS":
-			message_label.text = "Quests dokumentieren gemeinsame Folgen; sie ersetzen nicht den Habitat-Moment."
+			message_label.text = "Quests dokumentieren gemeinsame Folgen; Wiederholung erzeugt keinen endlosen Fortschritt."
 		"FREUNDE":
 			message_label.text = "Begegnungen starten nur mit Freigabe und erscheinen anschließend als Situation im Habitat."
 		"MEHR":
@@ -339,7 +349,9 @@ func get_habitat_ui_snapshot() -> Dictionary:
 		"active_lens": str(_habitat().get("selected_lens")) if _habitat() != null else "",
 		"moment_title": habitat_moment_title.text if habitat_moment_title != null else "",
 		"compact": _compact,
-		"center_is_game": stage != null and habitat_choice_grid != null
+		"center_is_game": stage != null and habitat_choice_grid != null,
+		"no_correct_answer": habitat_status_label != null and "Alle fünf Haltungen bleiben offen." in habitat_status_label.text,
+		"anti_grind_visible": habitat_choice_buttons.all(func(button: Button) -> bool: return "[" in button.text)
 	}
 
 func _update_action_button_states(active_lens: String) -> void:
@@ -350,6 +362,22 @@ func _update_action_button_states(active_lens: String) -> void:
 		var active := lens == active_lens
 		button.add_theme_stylebox_override("normal", _button_style(Color(accent, 0.24 if active else 0.07), accent if active else Color(accent, 0.48), 15))
 		button.add_theme_color_override("font_color", Color.WHITE if active else COLOR_TEXT)
+
+func _cue_text(moment: Dictionary) -> String:
+	var labels: Array[String] = []
+	for cue_variant in moment.get("cues", []) as Array:
+		labels.append(str(cue_variant))
+	return " • ".join(labels) if not labels.is_empty() else "offen"
+
+func _progression_label(state: String) -> String:
+	return str({"fresh": "NEU", "familiar": "VERTRAUT", "stale": "ROUTINE"}.get(state, "OFFEN"))
+
+func _progression_tooltip(state: String) -> String:
+	return str({
+		"fresh": "Neue Erfahrung: voller Fortschritt.",
+		"familiar": "Bereits kürzlich gewählt: reduzierter Fortschritt.",
+		"stale": "Routine: praktische Wirkung bleibt, kein neuer XP-Fortschritt."
+	}.get(state, "Diese Haltung bleibt verfügbar."))
 
 func _lens_label(lens_id: String) -> String:
 	return str({"feed": "ANBIETEN", "play": "IMPULS", "learn": "FRAGEN", "care": "BEGLEITEN", "rest": "BERUHIGEN"}.get(lens_id, lens_id.to_upper()))

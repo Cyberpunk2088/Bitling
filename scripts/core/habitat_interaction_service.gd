@@ -2,28 +2,34 @@ extends Node
 
 ## Authoritative loop for the playable home. The UI selects an approach;
 ## this service resolves context, personality, progression and persistence.
+## No moment exposes a correct answer. Repetition preserves care utility but
+## cannot be converted into infinite XP, quest progress or relationship growth.
 
 signal moment_changed(moment: Dictionary)
 signal lens_changed(lens_id: String, options: Array)
 signal choice_resolved(result: Dictionary)
 signal hotspot_focused(hotspot_id: String)
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 const SAVE_PATH := "user://bitling_habitat_state.json"
 const TEMP_PATH := "user://bitling_habitat_state.tmp"
 const MAX_OUTCOMES := 12
+const NOVELTY_WINDOW := 6
 const LENS_ORDER: Array[String] = ["feed", "play", "learn", "care", "rest"]
+const REPEAT_XP_MULTIPLIERS: Array[float] = [1.0, 0.35, 0.0]
+const REPEAT_EFFECT_MULTIPLIERS: Array[float] = [1.0, 0.70, 0.45]
+const NEED_EFFECTS: Array[String] = ["hunger", "energy", "health"]
 
 const MOMENTS := {
-	"quiet": {"title": "Ein stiller Moment", "description": "Xogot beobachtet dich und wartet auf deine Haltung, nicht auf einen Befehl.", "prompt": "Wie möchtest du den Kontakt beginnen?", "hotspot": "bitling", "recommended_lens": "care"},
-	"window": {"title": "Signal am Fenster", "description": "Zwischen den Neonlichtern pulsiert ein unbekanntes Muster. Xogot hat es ebenfalls bemerkt.", "prompt": "Untersucht ihr es, spielt ihr damit oder lasst ihr es zunächst bestehen?", "hotspot": "window", "recommended_lens": "learn"},
-	"hologram": {"title": "Unfertiges Hologramm", "description": "Auf der Werkbank schwebt eine Form, die Xogot begonnen und dann verworfen hat.", "prompt": "Wie unterstützt du eine Idee, die noch keinen Namen hat?", "hotspot": "workbench", "recommended_lens": "play"},
-	"parts": {"title": "Verstreute Bauteile", "description": "Xogots Ordnung folgt offenbar einer eigenen Logik.", "prompt": "Übernimmst du, fragst du nach oder lässt du Xogot das System erklären?", "hotspot": "workbench", "recommended_lens": "learn"},
-	"plant": {"title": "Die Pflanze antwortet", "description": "Die Blätter leuchten im Rhythmus von Xogots Stimmung.", "prompt": "Pflegt ihr sie, untersucht ihr das Muster oder erfindet ihr ein Ritual?", "hotspot": "plant", "recommended_lens": "care"},
-	"lightball": {"title": "Lichtball-Einladung", "description": "Die Plattform erzeugt einen Lichtball. Xogot wartet, ob du seine neue Regel erkennst.", "prompt": "Spielst du sicher, kreativ oder überlässt du Xogot die Führung?", "hotspot": "platform", "recommended_lens": "play"},
-	"rest": {"title": "Zu viel Neon", "description": "Xogots Bewegungen werden langsamer. Weniger Reize wären jetzt sinnvoll.", "prompt": "Welches Ruhe-Ritual passt zu diesem Moment?", "hotspot": "sleep", "recommended_lens": "rest"},
-	"hungry": {"title": "Hunger mit Meinung", "description": "Xogot ist hungrig, reagiert aber deutlich auf die angebotenen Optionen.", "prompt": "Gibst du Sicherheit, Abwechslung oder echte Wahlfreiheit?", "hotspot": "bitling", "recommended_lens": "feed"},
-	"recovery": {"title": "Erholung statt Optimierung", "description": "Xogot wirkt weniger belastbar. Aufmerksamkeit ist wichtiger als Leistung.", "prompt": "Wie zeigst du Fürsorge, ohne zu bevormunden?", "hotspot": "bitling", "recommended_lens": "care"}
+	"quiet": {"title": "Ein stiller Moment", "description": "Xogot beobachtet dich und wartet auf deine Haltung, nicht auf einen Befehl.", "prompt": "Wie möchtest du den Kontakt beginnen?", "hotspot": "bitling", "cues": ["Nähe", "Abstand", "Neugier"]},
+	"window": {"title": "Signal am Fenster", "description": "Zwischen den Neonlichtern pulsiert ein unbekanntes Muster. Xogot hat es ebenfalls bemerkt.", "prompt": "Untersucht ihr es, spielt ihr damit oder lasst ihr es zunächst bestehen?", "hotspot": "window", "cues": ["Beobachtung", "Spiel", "Vorsicht"]},
+	"hologram": {"title": "Unfertiges Hologramm", "description": "Auf der Werkbank schwebt eine Form, die Xogot begonnen und dann verworfen hat.", "prompt": "Wie unterstützt du eine Idee, die noch keinen Namen hat?", "hotspot": "workbench", "cues": ["Kreativität", "Geduld", "Struktur"]},
+	"parts": {"title": "Verstreute Bauteile", "description": "Xogots Ordnung folgt offenbar einer eigenen Logik.", "prompt": "Übernimmst du, fragst du nach oder lässt du Xogot das System erklären?", "hotspot": "workbench", "cues": ["Ordnung", "Autonomie", "Verstehen"]},
+	"plant": {"title": "Die Pflanze antwortet", "description": "Die Blätter leuchten im Rhythmus von Xogots Stimmung.", "prompt": "Pflegt ihr sie, untersucht ihr das Muster oder erfindet ihr ein Ritual?", "hotspot": "plant", "cues": ["Fürsorge", "Muster", "Ritual"]},
+	"lightball": {"title": "Lichtball-Einladung", "description": "Die Plattform erzeugt einen Lichtball. Xogot wartet, ob du seine neue Regel erkennst.", "prompt": "Spielst du sicher, kreativ oder überlässt du Xogot die Führung?", "hotspot": "platform", "cues": ["Regel", "Erfindung", "Vertrauen"]},
+	"rest": {"title": "Zu viel Neon", "description": "Xogots Bewegungen werden langsamer. Weniger Reize wären jetzt sinnvoll.", "prompt": "Welches Ruhe-Ritual passt zu diesem Moment?", "hotspot": "sleep", "cues": ["Ruhe", "Erinnerung", "Reizreduktion"]},
+	"hungry": {"title": "Hunger mit Meinung", "description": "Xogot ist hungrig, reagiert aber deutlich auf die angebotenen Optionen.", "prompt": "Gibst du Sicherheit, Abwechslung oder echte Wahlfreiheit?", "hotspot": "bitling", "cues": ["Bedürfnis", "Vorliebe", "Wahlfreiheit"]},
+	"recovery": {"title": "Erholung statt Optimierung", "description": "Xogot wirkt weniger belastbar. Aufmerksamkeit ist wichtiger als Leistung.", "prompt": "Wie zeigst du Fürsorge, ohne zu bevormunden?", "hotspot": "bitling", "cues": ["Erholung", "Grenzen", "Fürsorge"]}
 }
 
 const HOTSPOT_MOMENTS := {
@@ -68,11 +74,24 @@ func get_lens_ids() -> Array[String]:
 	return LENS_ORDER.duplicate()
 
 func get_lens_options(lens_id: String = selected_lens) -> Array:
-	return (_options.get(lens_id, []) as Array).duplicate(true)
+	var source: Array = _options.get(lens_id, []) as Array
+	var annotated: Array = []
+	for item_variant in source:
+		if not item_variant is Dictionary:
+			continue
+		var option := (item_variant as Dictionary).duplicate(true)
+		var choice_id := str(option.get("id", ""))
+		var repeat_count := _repeat_count(choice_id)
+		option["repeat_count"] = repeat_count
+		option["progression_state"] = _progression_state(repeat_count)
+		option["progression_multiplier"] = _xp_multiplier(repeat_count)
+		annotated.append(option)
+	return annotated
 
 func get_current_moment() -> Dictionary:
 	var result: Dictionary = (MOMENTS.get(active_moment_id, MOMENTS["quiet"]) as Dictionary).duplicate(true)
 	result["id"] = active_moment_id
+	result["no_correct_answer"] = true
 	return result
 
 func get_snapshot() -> Dictionary:
@@ -83,7 +102,12 @@ func get_snapshot() -> Dictionary:
 		"resolved_count": resolved_count,
 		"recent_outcomes": recent_outcomes.duplicate(true),
 		"lens_count": LENS_ORDER.size(),
-		"option_count": get_lens_options().size()
+		"option_count": get_lens_options().size(),
+		"agency_contract": {
+			"no_correct_answer": true,
+			"anti_grind": true,
+			"novelty_window": NOVELTY_WINDOW
+		}
 	}
 
 func select_lens(lens_id: String) -> Array:
@@ -125,25 +149,42 @@ func resolve_choice(choice_id: String) -> Dictionary:
 	if option.is_empty():
 		return {"accepted": false, "reason": "unknown_choice"}
 	var moment := get_current_moment()
-	var aligned := selected_lens == str(moment.get("recommended_lens", ""))
+	var repeat_count := _repeat_count(choice_id)
+	var progression_state := _progression_state(repeat_count)
+	var xp_multiplier := _xp_multiplier(repeat_count)
+	var effect_multiplier := _effect_multiplier(repeat_count)
 	var trait_id := str(option.get("trait", "curiosity"))
 	var trait_value := _trait_value(trait_id)
-	var xp := int(option.get("xp", 0)) + (4 if aligned else 0)
-	var tags: Array[String] = ["habitat", selected_lens, choice_id, str(moment.get("id", "")), "aligned" if aligned else "self_directed"]
+	var resonant := trait_value >= 60.0
+	var xp := roundi(float(option.get("xp", 0)) * xp_multiplier)
+	var effects := _scaled_effects(option.get("effects", {}) as Dictionary, repeat_count)
+	var tags: Array[String] = ["habitat", selected_lens, choice_id, str(moment.get("id", "")), progression_state, "no_correct_answer"]
 	var state := _game_state()
 	if state != null:
-		state.call("perform_interaction", str(option.get("interaction", selected_lens)), (option.get("effects", {}) as Dictionary).duplicate(true), xp, tags)
+		state.call("perform_interaction", str(option.get("interaction", selected_lens)), effects, xp, tags)
 	var brain := _brain()
 	if brain != null:
-		brain.call("nudge_trait", trait_id, float(option.get("trait_delta", 0.0)))
+		brain.call("nudge_trait", trait_id, float(option.get("trait_delta", 0.0)) * xp_multiplier)
 	resolved_count += 1
 	var result := {
-		"accepted": true, "lens": selected_lens, "choice_id": choice_id,
-		"choice_title": str(option.get("title", choice_id)), "moment_id": str(moment.get("id", "")),
-		"hotspot": focused_hotspot, "aligned": aligned, "resonant": aligned or trait_value >= 60.0,
-		"trait": trait_id, "trait_value": trait_value, "xp_reward": xp,
-		"response": str(option.get("response", "Xogot reagiert aufmerksam.")),
-		"consequence": _consequence(aligned, trait_value >= 60.0, trait_id)
+		"accepted": true,
+		"lens": selected_lens,
+		"choice_id": choice_id,
+		"choice_title": str(option.get("title", choice_id)),
+		"moment_id": str(moment.get("id", "")),
+		"hotspot": focused_hotspot,
+		"resonant": resonant,
+		"novel": repeat_count == 0,
+		"repeat_count": repeat_count,
+		"progression_state": progression_state,
+		"xp_multiplier": xp_multiplier,
+		"effect_multiplier": effect_multiplier,
+		"trait": trait_id,
+		"trait_value": trait_value,
+		"xp_reward": xp,
+		"no_correct_answer": true,
+		"response": _response_for_repeat(str(option.get("response", "Xogot reagiert aufmerksam.")), repeat_count),
+		"consequence": _consequence_for(repeat_count, resonant, trait_id)
 	}
 	_store_outcome(result)
 	_create_memory_when_meaningful(result)
@@ -153,7 +194,14 @@ func resolve_choice(choice_id: String) -> Dictionary:
 	return result
 
 func export_state() -> Dictionary:
-	return {"version": SAVE_VERSION, "selected_lens": selected_lens, "active_moment_id": active_moment_id, "focused_hotspot": focused_hotspot, "resolved_count": resolved_count, "recent_outcomes": recent_outcomes.duplicate(true)}
+	return {
+		"version": SAVE_VERSION,
+		"selected_lens": selected_lens,
+		"active_moment_id": active_moment_id,
+		"focused_hotspot": focused_hotspot,
+		"resolved_count": resolved_count,
+		"recent_outcomes": recent_outcomes.duplicate(true)
+	}
 
 func import_state(data: Dictionary) -> void:
 	selected_lens = str(data.get("selected_lens", "care")) if _options.has(str(data.get("selected_lens", "care"))) else "care"
@@ -161,9 +209,9 @@ func import_state(data: Dictionary) -> void:
 	focused_hotspot = str(data.get("focused_hotspot", (MOMENTS[active_moment_id] as Dictionary).get("hotspot", "bitling")))
 	resolved_count = maxi(int(data.get("resolved_count", 0)), 0)
 	recent_outcomes.clear()
-	for item in data.get("recent_outcomes", []):
-		if item is Dictionary:
-			recent_outcomes.append((item as Dictionary).duplicate(true))
+	for item_variant in data.get("recent_outcomes", []):
+		if item_variant is Dictionary:
+			recent_outcomes.append((item_variant as Dictionary).duplicate(true))
 	while recent_outcomes.size() > MAX_OUTCOMES:
 		recent_outcomes.pop_front()
 	moment_changed.emit(get_current_moment())
@@ -249,10 +297,57 @@ func _moment_for_state() -> String:
 		_: return "quiet"
 
 func _find_option(lens_id: String, choice_id: String) -> Dictionary:
-	for item in get_lens_options(lens_id):
-		if item is Dictionary and str((item as Dictionary).get("id", "")) == choice_id:
-			return (item as Dictionary).duplicate(true)
+	for item_variant in _options.get(lens_id, []) as Array:
+		if item_variant is Dictionary and str((item_variant as Dictionary).get("id", "")) == choice_id:
+			return (item_variant as Dictionary).duplicate(true)
 	return {}
+
+func _repeat_count(choice_id: String) -> int:
+	if choice_id.is_empty() or recent_outcomes.is_empty():
+		return 0
+	var count := 0
+	var inspected := 0
+	for index in range(recent_outcomes.size() - 1, -1, -1):
+		if inspected >= NOVELTY_WINDOW:
+			break
+		var outcome := recent_outcomes[index]
+		if str(outcome.get("choice_id", "")) == choice_id:
+			count += 1
+		inspected += 1
+	return count
+
+func _xp_multiplier(repeat_count: int) -> float:
+	return REPEAT_XP_MULTIPLIERS[mini(repeat_count, REPEAT_XP_MULTIPLIERS.size() - 1)]
+
+func _effect_multiplier(repeat_count: int) -> float:
+	return REPEAT_EFFECT_MULTIPLIERS[mini(repeat_count, REPEAT_EFFECT_MULTIPLIERS.size() - 1)]
+
+func _progression_state(repeat_count: int) -> String:
+	if repeat_count <= 0: return "fresh"
+	if repeat_count == 1: return "familiar"
+	return "stale"
+
+func _scaled_effects(effects: Dictionary, repeat_count: int) -> Dictionary:
+	var multiplier := _effect_multiplier(repeat_count)
+	var scaled: Dictionary = {}
+	for key_variant in effects.keys():
+		var key := str(key_variant)
+		var value: Variant = effects[key_variant]
+		if key == "quest_event":
+			if repeat_count == 0:
+				scaled[key] = value
+			continue
+		if value is int or value is float:
+			var numeric := float(value)
+			if numeric < 0.0:
+				scaled[key] = numeric * maxf(multiplier, 0.85)
+			elif key in NEED_EFFECTS:
+				scaled[key] = numeric * maxf(multiplier, 0.55)
+			else:
+				scaled[key] = numeric * multiplier
+		else:
+			scaled[key] = value
+	return scaled
 
 func _trait_value(trait_id: String) -> float:
 	var brain := _brain()
@@ -260,11 +355,21 @@ func _trait_value(trait_id: String) -> float:
 	var personality: Variant = brain.get("personality")
 	return float((personality as Dictionary).get(trait_id, 50.0)) if personality is Dictionary else 50.0
 
-func _consequence(aligned: bool, resonant: bool, trait_id: String) -> String:
-	if aligned and resonant: return "Die Handlung passt zum Moment und stärkt %s sichtbar." % _trait_name(trait_id)
-	if aligned: return "Du hast den aktuellen Bedarf erkannt; Xogot verarbeitet ihn auf eigene Weise."
-	if resonant: return "Nicht der naheliegende Weg, aber passend zu Xogots %s." % _trait_name(trait_id)
-	return "Eine gültige Entscheidung mit eigenem Ton. Der Moment bleibt Teil eurer Geschichte."
+func _consequence_for(repeat_count: int, resonant: bool, trait_id: String) -> String:
+	if repeat_count >= 2:
+		return "Die Routine versorgt Xogot weiterhin, erzeugt aber keinen neuen Beziehungsfortschritt."
+	if repeat_count == 1:
+		return "Vertraute Handlung: ihre praktische Wirkung bleibt, ihr Fortschrittswert sinkt deutlich."
+	if resonant:
+		return "Eine neue Erfahrung resoniert mit Xogots %s — ohne dadurch die richtige Lösung zu werden." % _trait_name(trait_id)
+	return "Eine neue Erfahrung mit eigener Folge. Keine andere Haltung wird dadurch falsch."
+
+func _response_for_repeat(base_response: String, repeat_count: int) -> String:
+	if repeat_count >= 2:
+		return "Ich kenne diesen Ablauf. Er hilft noch, aber er verändert uns gerade nicht mehr."
+	if repeat_count == 1:
+		return "%s Es fühlt sich bereits vertraut an." % base_response
+	return base_response
 
 func _trait_name(trait_id: String) -> String:
 	return str({"curiosity": "Neugier", "empathy": "Empathie", "order": "Ordnungssinn", "creativity": "Kreativität", "independence": "Eigenständigkeit"}.get(trait_id, trait_id))
@@ -273,12 +378,17 @@ func _store_outcome(result: Dictionary) -> void:
 	var stored := result.duplicate(true)
 	stored["timestamp"] = int(Time.get_unix_time_from_system())
 	recent_outcomes.append(stored)
-	while recent_outcomes.size() > MAX_OUTCOMES: recent_outcomes.pop_front()
+	while recent_outcomes.size() > MAX_OUTCOMES:
+		recent_outcomes.pop_front()
 
 func _create_memory_when_meaningful(result: Dictionary) -> void:
-	if resolved_count % 3 != 0 and not bool(result.get("aligned", false)): return
+	if int(result.get("repeat_count", 0)) > 0:
+		return
+	if resolved_count % 3 != 0 and not bool(result.get("resonant", false)):
+		return
 	var state := _game_state()
-	if state != null: state.call("add_memory", "habitat_choice", "%s: %s" % [result.get("choice_title", "Entscheidung"), result.get("response", "")])
+	if state != null:
+		state.call("add_memory", "habitat_choice", "%s: %s" % [result.get("choice_title", "Entscheidung"), result.get("response", "")])
 
 func _needs_bootstrap(state: Node) -> bool:
 	if state == null: return not FileAccess.file_exists(SAVE_PATH)
