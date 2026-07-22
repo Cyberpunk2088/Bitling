@@ -6,19 +6,27 @@ extends "res://scripts/ui/production_bitling_stage_3d_v11.gd"
 signal hotspot_pressed(hotspot_id: String)
 
 const HabitatHotspotOverlay := preload("res://scripts/ui/habitat_hotspot_overlay.gd")
+const HabitatWorldConsequenceOverlay := preload("res://scripts/ui/habitat_world_consequence_overlay.gd")
 
 var focused_hotspot := "bitling"
 var activity_lens := "care"
 var moment_title := ""
+var world_consequence_snapshot: Dictionary = {}
 var _habitat_overlay: Control
+var _world_consequence_overlay: Control
 
 func _ready() -> void:
 	super._ready()
 	_habitat_overlay = HabitatHotspotOverlay.new()
 	_habitat_overlay.name = "HabitatHotspotOverlay"
 	add_child(_habitat_overlay)
+	_world_consequence_overlay = HabitatWorldConsequenceOverlay.new()
+	_world_consequence_overlay.name = "HabitatWorldConsequenceOverlay"
+	add_child(_world_consequence_overlay)
 	move_child(_habitat_overlay, get_child_count() - 1)
+	move_child(_world_consequence_overlay, get_child_count() - 1)
 	_sync_habitat_overlay()
+	_sync_world_consequences()
 
 func set_focused_hotspot(hotspot_id: String) -> void:
 	focused_hotspot = hotspot_id
@@ -35,14 +43,23 @@ func set_moment_title(value: String) -> void:
 	if _habitat_overlay != null:
 		_habitat_overlay.call("set_title", value)
 
+func set_world_consequence_snapshot(value: Dictionary) -> void:
+	world_consequence_snapshot = value.duplicate(true)
+	_sync_world_consequences()
+
 func get_habitat_interaction_snapshot() -> Dictionary:
+	var world_visual: Dictionary = {}
+	if _world_consequence_overlay != null and _world_consequence_overlay.has_method("get_visual_snapshot"):
+		world_visual = _world_consequence_overlay.call("get_visual_snapshot") as Dictionary
 	return {
 		"habitat_capable": true,
 		"focused_hotspot": focused_hotspot,
 		"activity_lens": activity_lens,
 		"moment_title": moment_title,
 		"hotspot_count": 6,
-		"overlay_ready": _habitat_overlay != null
+		"overlay_ready": _habitat_overlay != null,
+		"world_consequence_overlay_ready": _world_consequence_overlay != null,
+		"world_consequence_visual": world_visual
 	}
 
 func _gui_input(event: InputEvent) -> void:
@@ -87,3 +104,7 @@ func _habitat_hotspot_at(position: Vector2) -> String:
 func _sync_habitat_overlay() -> void:
 	if _habitat_overlay != null:
 		_habitat_overlay.call("set_context", focused_hotspot, activity_lens, moment_title)
+
+func _sync_world_consequences() -> void:
+	if _world_consequence_overlay != null:
+		_world_consequence_overlay.call("set_snapshot", world_consequence_snapshot)

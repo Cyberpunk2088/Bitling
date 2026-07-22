@@ -1,44 +1,44 @@
-name: Habitat Behavior Gate
+name: Habitat World Consequence Gate
 
 on:
   push:
     branches:
       - main
-      - "agent/habitat-**"
+      - agent/habitat-world-consequences
     paths:
       - "project.godot"
       - "main.tscn"
-      - "scripts/core/habitat_behavior_runtime.gd"
       - "scripts/core/habitat_world_consequence_runtime.gd"
-      - "scripts/ui/ultimate_dashboard_behavior.gd"
       - "scripts/ui/ultimate_dashboard_consequences.gd"
-      - "tests/habitat_behavior_test.gd"
-      - "tools/habitat_behavior_gate.py"
-      - "tools/habitat_behavior_mutation_test.py"
-      - ".github/workflows/habitat-behavior-gate.yml"
+      - "scripts/ui/bitling_habitat_stage.gd"
+      - "scripts/ui/habitat_world_consequence_overlay.gd"
+      - "tests/habitat_world_consequence_test.gd"
+      - "tools/habitat_world_consequence_gate.py"
+      - "tools/habitat_world_consequence_mutation_test.py"
+      - ".github/workflows/habitat-world-consequence-gate.yml"
   pull_request:
     paths:
       - "project.godot"
       - "main.tscn"
-      - "scripts/core/habitat_behavior_runtime.gd"
       - "scripts/core/habitat_world_consequence_runtime.gd"
-      - "scripts/ui/ultimate_dashboard_behavior.gd"
       - "scripts/ui/ultimate_dashboard_consequences.gd"
-      - "tests/habitat_behavior_test.gd"
-      - "tools/habitat_behavior_gate.py"
-      - "tools/habitat_behavior_mutation_test.py"
-      - ".github/workflows/habitat-behavior-gate.yml"
+      - "scripts/ui/bitling_habitat_stage.gd"
+      - "scripts/ui/habitat_world_consequence_overlay.gd"
+      - "tests/habitat_world_consequence_test.gd"
+      - "tools/habitat_world_consequence_gate.py"
+      - "tools/habitat_world_consequence_mutation_test.py"
+      - ".github/workflows/habitat-world-consequence-gate.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: habitat-behavior-${{ github.ref }}
+  group: habitat-world-consequence-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   architecture:
-    name: Enforce persistent behavioral consequences
+    name: Enforce persistent playable world consequences
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -46,11 +46,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Reject cosmetic or stateless behavior
-        run: python3 tools/habitat_behavior_gate.py
+      - name: Reject cosmetic or stateless room changes
+        run: python3 tools/habitat_world_consequence_gate.py
 
   mutation:
-    name: Attack habit and conflict invariants
+    name: Attack world consequence invariants
     needs: architecture
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -59,11 +59,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Prove sabotage is rejected
-        run: python3 tools/habitat_behavior_mutation_test.py
+      - name: Prove world sabotage is rejected
+        run: python3 tools/habitat_world_consequence_mutation_test.py
 
   runtime:
-    name: Exercise cross-session habits and visible conflict
+    name: Exercise persistent room changes and follow-up events
     needs: mutation
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -85,19 +85,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p logs
-          godot --headless --path . --editor --quit 2>&1 | tee logs/behavior-import.log
-      - name: Prove persistent behavioral consequences
+          godot --headless --path . --editor --quit 2>&1 | tee logs/world-import.log
+      - name: Prove room consequences remain playable and persistent
         shell: bash
         run: |
           set -euo pipefail
-          godot --headless --path . --script tests/habitat_behavior_test.gd 2>&1 | tee logs/behavior-runtime.log
-          grep -F "[BEHAVIOR-GATE] PASS:" logs/behavior-runtime.log
-          ! grep -F "[BEHAVIOR-GATE] BLOCKED:" logs/behavior-runtime.log
-      - name: Preserve behavior gate logs
+          godot --headless --path . --script tests/habitat_world_consequence_test.gd 2>&1 | tee logs/world-runtime.log
+          grep -F "[WORLD-GATE] PASS:" logs/world-runtime.log
+          ! grep -F "[WORLD-GATE] BLOCKED:" logs/world-runtime.log
+      - name: Preserve world consequence logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: habitat-behavior-gate-logs
+          name: habitat-world-consequence-gate-logs
           path: logs/*.log
           if-no-files-found: error
           retention-days: 14

@@ -22,8 +22,10 @@ PROTECTED_FILES = (
     Path("main.tscn"),
     Path("scripts/core/habitat_interaction_service.gd"),
     Path("scripts/core/habitat_behavior_runtime.gd"),
+    Path("scripts/core/habitat_world_consequence_runtime.gd"),
     Path("scripts/ui/ultimate_dashboard_habitat.gd"),
     Path("scripts/ui/ultimate_dashboard_behavior.gd"),
+    Path("scripts/ui/ultimate_dashboard_consequences.gd"),
     Path("scripts/ui/bitling_habitat_stage.gd"),
     Path("scripts/ui/habitat_hotspot_overlay.gd"),
     Path("scripts/ui/metafinal_visual_director_v9.gd"),
@@ -45,9 +47,16 @@ MUTATIONS = (
     Mutation(
         "passive_dashboard_entrypoint",
         Path("main.tscn"),
-        'path="res://scripts/ui/ultimate_dashboard_behavior.gd"',
+        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"',
         'path="res://scripts/ui/ultimate_dashboard.gd"',
         "main scene cannot fall back to the passive dashboard",
+    ),
+    Mutation(
+        "break_world_runtime_inheritance",
+        Path("scripts/core/habitat_world_consequence_runtime.gd"),
+        'extends "res://scripts/core/habitat_behavior_runtime.gd"',
+        'extends Node',
+        "authoritative world runtime preserves persistent behavior",
     ),
     Mutation(
         "break_behavior_runtime_inheritance",
@@ -55,6 +64,13 @@ MUTATIONS = (
         'extends "res://scripts/core/habitat_interaction_service.gd"',
         'extends Node',
         "authoritative behavior runtime preserves the habitat resolver",
+    ),
+    Mutation(
+        "break_world_dashboard_inheritance",
+        Path("scripts/ui/ultimate_dashboard_consequences.gd"),
+        'extends "res://scripts/ui/ultimate_dashboard_behavior.gd"',
+        'extends "res://scripts/ui/ultimate_dashboard.gd"',
+        "production world dashboard preserves visible behavior",
     ),
     Mutation(
         "break_behavior_dashboard_inheritance",

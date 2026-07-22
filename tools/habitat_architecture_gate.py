@@ -40,24 +40,34 @@ def main() -> int:
     scene = read("main.tscn")
     service = read("scripts/core/habitat_interaction_service.gd")
     behavior_runtime = read("scripts/core/habitat_behavior_runtime.gd")
+    world_runtime = read("scripts/core/habitat_world_consequence_runtime.gd")
     dashboard = read("scripts/ui/ultimate_dashboard_habitat.gd")
     behavior_dashboard = read("scripts/ui/ultimate_dashboard_behavior.gd")
+    world_dashboard = read("scripts/ui/ultimate_dashboard_consequences.gd")
     stage = read("scripts/ui/bitling_habitat_stage.gd")
     marker_overlay = read("scripts/ui/habitat_hotspot_overlay.gd")
     visual_director = read("scripts/ui/metafinal_visual_director_v9.gd")
     runtime_test = read("tests/habitat_gameplay_test.gd")
 
     check(
-        'HabitatInteraction="*res://scripts/core/habitat_behavior_runtime.gd"' in project,
+        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"' in project,
         "habitat service is an authoritative autoload",
+    )
+    check(
+        'extends "res://scripts/core/habitat_behavior_runtime.gd"' in world_runtime,
+        "authoritative world runtime preserves persistent behavior",
     )
     check(
         'extends "res://scripts/core/habitat_interaction_service.gd"' in behavior_runtime,
         "authoritative behavior runtime preserves the habitat resolver",
     )
     check(
-        'path="res://scripts/ui/ultimate_dashboard_behavior.gd"' in scene,
+        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"' in scene,
         "main scene cannot fall back to the passive dashboard",
+    )
+    check(
+        'extends "res://scripts/ui/ultimate_dashboard_behavior.gd"' in world_dashboard,
+        "production world dashboard preserves visible behavior",
     )
     check(
         'extends "res://scripts/ui/ultimate_dashboard_habitat.gd"' in behavior_dashboard,
