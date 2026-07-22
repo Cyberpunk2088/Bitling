@@ -70,6 +70,13 @@ MUTATIONS = (
         "playing through conflict changes its mechanics",
     ),
     Mutation(
+        "requeue_repaired_conflict_from_stale_snapshot",
+        Path("scripts/core/habitat_world_consequence_runtime.gd"),
+        "var conflict: Dictionary = _active_conflict()",
+        'var conflict: Dictionary = result.get("active_conflict", {}) as Dictionary',
+        "conflict follow-ups use repaired current state",
+    ),
+    Mutation(
         "remove_world_persistence",
         Path("scripts/core/habitat_world_consequence_runtime.gd"),
         'data["world_marks"] = world_marks.duplicate(true)',
