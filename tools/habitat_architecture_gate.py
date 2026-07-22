@@ -41,17 +41,23 @@ def main() -> int:
     service = read("scripts/core/habitat_interaction_service.gd")
     behavior_runtime = read("scripts/core/habitat_behavior_runtime.gd")
     world_runtime = read("scripts/core/habitat_world_consequence_runtime.gd")
+    live_runtime = read("scripts/core/habitat_live_action_runtime.gd")
     dashboard = read("scripts/ui/ultimate_dashboard_habitat.gd")
     behavior_dashboard = read("scripts/ui/ultimate_dashboard_behavior.gd")
     world_dashboard = read("scripts/ui/ultimate_dashboard_consequences.gd")
+    live_dashboard = read("scripts/ui/ultimate_dashboard_live_action.gd")
     stage = read("scripts/ui/bitling_habitat_stage.gd")
     marker_overlay = read("scripts/ui/habitat_hotspot_overlay.gd")
     visual_director = read("scripts/ui/metafinal_visual_director_v9.gd")
     runtime_test = read("tests/habitat_gameplay_test.gd")
 
     check(
-        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"' in project,
+        'HabitatInteraction="*res://scripts/core/habitat_live_action_runtime.gd"' in project,
         "habitat service is an authoritative autoload",
+    )
+    check(
+        'extends "res://scripts/core/habitat_world_consequence_runtime.gd"' in live_runtime,
+        "authoritative live runtime preserves world consequences",
     )
     check(
         'extends "res://scripts/core/habitat_behavior_runtime.gd"' in world_runtime,
@@ -62,8 +68,12 @@ def main() -> int:
         "authoritative behavior runtime preserves the habitat resolver",
     )
     check(
-        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"' in scene,
+        'path="res://scripts/ui/ultimate_dashboard_live_action.gd"' in scene,
         "main scene cannot fall back to the passive dashboard",
+    )
+    check(
+        'extends "res://scripts/ui/ultimate_dashboard_consequences.gd"' in live_dashboard,
+        "production live dashboard preserves world consequences",
     )
     check(
         'extends "res://scripts/ui/ultimate_dashboard_behavior.gd"' in world_dashboard,
@@ -128,13 +138,15 @@ def main() -> int:
     check("_stage = ProductionStage3DV11.new()" not in visual_director, "visual director cannot silently restore a passive stage")
     check("LEGACY_STAGE_NAME" in visual_director, "legacy Wave diagnostics remain compatible without changing behavior")
 
-    check("HabitatChoices" in dashboard, "dashboard renders contextual decisions in the center")
+    check("HabitatChoices" in dashboard, "dashboard preserves three contextual compatibility choices")
     check("range(3)" in dashboard, "dashboard reserves three simultaneous approaches")
     check("_run_interaction(" not in dashboard, "habitat UI cannot directly grant stat rewards")
-    check('service.call("resolve_choice", choice_id)' in dashboard, "all center choices pass through the authoritative resolver")
+    check('service.call("resolve_choice", choice_id)' in dashboard, "compatibility choices pass through the authoritative resolver")
     check('service.call("perform_interaction"' not in dashboard, "dashboard cannot bypass the authoritative habitat service")
     check("open_expedition" in dashboard and "open_adventures" in dashboard, "deep activities remain integrated overlays")
     check("center_is_game" in dashboard, "dashboard exposes a testable center-is-game contract")
+    check('_choice_card.visible = false' in live_dashboard, "production hides compatibility choice cards from the primary loop")
+    check('service.call("begin_choice_sequence", choice_id)' in live_dashboard, "production choices use the visible action sequence")
 
     check('"recommended_lens"' not in service, "service cannot prescribe a correct lens")
     check('"recommended_lens"' not in dashboard and "Empfohlen:" not in dashboard, "dashboard cannot display a correct-answer recommendation")

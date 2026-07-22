@@ -33,21 +33,31 @@ def main() -> int:
     scene = read("main.tscn")
     runtime = read("scripts/core/habitat_behavior_runtime.gd")
     world_runtime = read("scripts/core/habitat_world_consequence_runtime.gd")
+    live_runtime = read("scripts/core/habitat_live_action_runtime.gd")
     dashboard = read("scripts/ui/ultimate_dashboard_behavior.gd")
     world_dashboard = read("scripts/ui/ultimate_dashboard_consequences.gd")
+    live_dashboard = read("scripts/ui/ultimate_dashboard_live_action.gd")
     test = read("tests/habitat_behavior_test.gd")
 
     check(
-        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"' in project,
+        'HabitatInteraction="*res://scripts/core/habitat_live_action_runtime.gd"' in project,
         "persistent behavior runtime is authoritative",
+    )
+    check(
+        'extends "res://scripts/core/habitat_world_consequence_runtime.gd"' in live_runtime,
+        "authoritative live runtime preserves world and behavior state",
     )
     check(
         'extends "res://scripts/core/habitat_behavior_runtime.gd"' in world_runtime,
         "authoritative world runtime preserves persistent behavior",
     )
     check(
-        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"' in scene,
+        'path="res://scripts/ui/ultimate_dashboard_live_action.gd"' in scene,
         "main scene cannot hide persistent behavior state",
+    )
+    check(
+        'extends "res://scripts/ui/ultimate_dashboard_consequences.gd"' in live_dashboard,
+        "production live dashboard preserves world consequence state",
     )
     check(
         'extends "res://scripts/ui/ultimate_dashboard_behavior.gd"' in world_dashboard,
@@ -104,6 +114,7 @@ def main() -> int:
         'button.text += "\\nXOGOT: %s · MUSTER %d · REIBUNG %d"' in dashboard,
         "choice buttons disclose Xogot's response state",
     )
+    check('service.call("begin_choice_sequence", choice_id)' in live_dashboard, "visible behavior preview remains connected to deferred live action")
 
     for phrase, message in (
         ("habit requires three distinct sessions", "runtime test proves cross-session formation"),

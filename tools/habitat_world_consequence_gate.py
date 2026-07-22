@@ -37,18 +37,28 @@ def main() -> int:
     project = read("project.godot")
     scene = read("main.tscn")
     runtime = read("scripts/core/habitat_world_consequence_runtime.gd")
+    live_runtime = read("scripts/core/habitat_live_action_runtime.gd")
     dashboard = read("scripts/ui/ultimate_dashboard_consequences.gd")
+    live_dashboard = read("scripts/ui/ultimate_dashboard_live_action.gd")
     stage = read("scripts/ui/bitling_habitat_stage.gd")
     overlay = read("scripts/ui/habitat_world_consequence_overlay.gd")
     test = read("tests/habitat_world_consequence_test.gd")
 
     check(
-        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"' in project,
+        'HabitatInteraction="*res://scripts/core/habitat_live_action_runtime.gd"' in project,
         "world consequence runtime is authoritative",
     )
     check(
-        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"' in scene,
+        'extends "res://scripts/core/habitat_world_consequence_runtime.gd"' in live_runtime,
+        "live action runtime preserves world consequences",
+    )
+    check(
+        'path="res://scripts/ui/ultimate_dashboard_live_action.gd"' in scene,
         "main scene cannot hide world consequences",
+    )
+    check(
+        'extends "res://scripts/ui/ultimate_dashboard_consequences.gd"' in live_dashboard,
+        "live dashboard preserves world consequence surfaces",
     )
     check(
         'extends "res://scripts/core/habitat_behavior_runtime.gd"' in runtime,
@@ -102,6 +112,7 @@ def main() -> int:
     check("world_consequences_changed" in dashboard, "dashboard follows authoritative world state")
     check("set_world_consequence_snapshot" in dashboard, "dashboard sends consequences into the playable stage")
     check("get_world_consequence_ui_snapshot" in dashboard, "world UI exposes a testable contract")
+    check('service.call("begin_choice_sequence", choice_id)' in live_dashboard, "world events resolve through visible live action")
 
     check('const HabitatWorldConsequenceOverlay := preload("res://scripts/ui/habitat_world_consequence_overlay.gd")' in stage, "production stage owns the world consequence visual layer")
     check("HabitatWorldConsequenceOverlay.new()" in stage, "production stage instantiates the world consequence visual layer")

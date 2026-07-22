@@ -1,0 +1,112 @@
+name: Habitat Live Action Gate
+
+on:
+  push:
+    branches:
+      - main
+      - agent/habitat-live-action-loop
+    paths:
+      - "project.godot"
+      - "main.tscn"
+      - "scripts/core/habitat_live_action_runtime.gd"
+      - "scripts/ui/ultimate_dashboard_live_action.gd"
+      - "scripts/ui/bitling_habitat_stage.gd"
+      - "scripts/ui/habitat_live_action_overlay.gd"
+      - "tests/habitat_live_action_test.gd"
+      - "tests/habitat_live_action_layout_test.gd"
+      - "tools/habitat_live_action_gate.py"
+      - "tools/habitat_live_action_mutation_test.py"
+      - ".github/workflows/habitat-live-action-gate.yml"
+  pull_request:
+    paths:
+      - "project.godot"
+      - "main.tscn"
+      - "scripts/core/habitat_live_action_runtime.gd"
+      - "scripts/ui/ultimate_dashboard_live_action.gd"
+      - "scripts/ui/bitling_habitat_stage.gd"
+      - "scripts/ui/habitat_live_action_overlay.gd"
+      - "tests/habitat_live_action_test.gd"
+      - "tests/habitat_live_action_layout_test.gd"
+      - "tools/habitat_live_action_gate.py"
+      - "tools/habitat_live_action_mutation_test.py"
+      - ".github/workflows/habitat-live-action-gate.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: habitat-live-action-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  architecture:
+    name: Enforce stage-first live habitat gameplay
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reject card-first, instant or cosmetic interaction
+        run: python3 tools/habitat_live_action_gate.py
+
+  mutation:
+    name: Attack live-action invariants
+    needs: architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prove live-action sabotage is rejected
+        run: python3 tools/habitat_live_action_mutation_test.py
+
+  runtime:
+    name: Exercise physical approach, in-world choice and deferred commit
+    needs: mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output godot.zip \
+            https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mkdir -p "$HOME/.local/bin"
+          mv Godot_v4.6.3-stable_linux.x86_64 "$HOME/.local/bin/godot"
+          chmod +x "$HOME/.local/bin/godot"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          godot --headless --path . --editor --quit 2>&1 | tee logs/live-action-import.log
+      - name: Prove stage-first gameplay and deferred consequence commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script tests/habitat_live_action_test.gd 2>&1 | tee logs/live-action-runtime.log
+          grep -F "[LIVE-ACTION-GATE] PASS:" logs/live-action-runtime.log
+          ! grep -F "[LIVE-ACTION-GATE] BLOCKED:" logs/live-action-runtime.log
+      - name: Prove phone tablet and laptop choice geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script tests/habitat_live_action_layout_test.gd 2>&1 | tee logs/live-action-layout.log
+          grep -F "[LIVE-LAYOUT-GATE] PASS:" logs/live-action-layout.log
+          ! grep -F "[LIVE-LAYOUT-GATE] BLOCKED:" logs/live-action-layout.log
+      - name: Preserve live-action gate logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: habitat-live-action-gate-logs
+          path: logs/*.log
+          if-no-files-found: error
+          retention-days: 14

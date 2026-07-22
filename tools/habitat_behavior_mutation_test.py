@@ -17,8 +17,10 @@ PROTECTED_FILES = (
     Path("main.tscn"),
     Path("scripts/core/habitat_behavior_runtime.gd"),
     Path("scripts/core/habitat_world_consequence_runtime.gd"),
+    Path("scripts/core/habitat_live_action_runtime.gd"),
     Path("scripts/ui/ultimate_dashboard_behavior.gd"),
     Path("scripts/ui/ultimate_dashboard_consequences.gd"),
+    Path("scripts/ui/ultimate_dashboard_live_action.gd"),
     Path("tests/habitat_behavior_test.gd"),
     GATE,
 )
@@ -37,16 +39,23 @@ MUTATIONS = (
     Mutation(
         "restore_stateless_runtime",
         Path("project.godot"),
-        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"',
+        'HabitatInteraction="*res://scripts/core/habitat_live_action_runtime.gd"',
         'HabitatInteraction="*res://scripts/core/habitat_interaction_service.gd"',
         "persistent behavior runtime is authoritative",
     ),
     Mutation(
         "hide_behavior_dashboard",
         Path("main.tscn"),
-        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"',
+        'path="res://scripts/ui/ultimate_dashboard_live_action.gd"',
         'path="res://scripts/ui/ultimate_dashboard_habitat.gd"',
         "main scene cannot hide persistent behavior state",
+    ),
+    Mutation(
+        "break_live_world_inheritance",
+        Path("scripts/core/habitat_live_action_runtime.gd"),
+        'extends "res://scripts/core/habitat_world_consequence_runtime.gd"',
+        'extends "res://scripts/core/habitat_interaction_service.gd"',
+        "authoritative live runtime preserves world and behavior state",
     ),
     Mutation(
         "break_world_behavior_inheritance",
@@ -54,6 +63,13 @@ MUTATIONS = (
         'extends "res://scripts/core/habitat_behavior_runtime.gd"',
         'extends "res://scripts/core/habitat_interaction_service.gd"',
         "authoritative world runtime preserves persistent behavior",
+    ),
+    Mutation(
+        "break_live_dashboard_inheritance",
+        Path("scripts/ui/ultimate_dashboard_live_action.gd"),
+        'extends "res://scripts/ui/ultimate_dashboard_consequences.gd"',
+        'extends "res://scripts/ui/ultimate_dashboard_habitat.gd"',
+        "production live dashboard preserves world consequence state",
     ),
     Mutation(
         "break_world_dashboard_behavior_inheritance",
@@ -110,6 +126,13 @@ MUTATIONS = (
         'button.text += "\\nXOGOT: %s · MUSTER %d · REIBUNG %d"',
         'button.tooltip_text = "hidden behavior" #',
         "choice buttons disclose Xogot's response state",
+    ),
+    Mutation(
+        "disconnect_preview_from_live_action",
+        Path("scripts/ui/ultimate_dashboard_live_action.gd"),
+        'service.call("begin_choice_sequence", choice_id)',
+        'service.call("resolve_choice", choice_id)',
+        "visible behavior preview remains connected to deferred live action",
     ),
     Mutation(
         "reintroduce_hidden_randomness",
