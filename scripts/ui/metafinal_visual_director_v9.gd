@@ -10,6 +10,7 @@ extends "res://scripts/ui/metafinal_visual_director_v8.gd"
 # character-performance and Living Home implementation.
 const ProductionStage3DV11 := preload("res://scripts/ui/production_bitling_stage_3d_v11.gd")
 const ProductionHabitatStage := preload("res://scripts/ui/bitling_habitat_stage.gd")
+const LEGACY_STAGE_NAME := "LegendaryWave3LivingHomeStage3D"
 
 var _home_callback := Callable()
 var _last_home_snapshot: Dictionary = {}
@@ -34,7 +35,6 @@ func _install_production_stage() -> void:
 		return
 	var child_index: int = previous.get_index()
 	_stage = ProductionHabitatStage.new()
-	_stage.name = "LegendaryLivingHabitatStage3D"
 	_stage.custom_minimum_size = previous.custom_minimum_size
 	_stage.size_flags_horizontal = previous.size_flags_horizontal
 	_stage.size_flags_vertical = previous.size_flags_vertical
@@ -46,6 +46,10 @@ func _install_production_stage() -> void:
 func _wire_habitat_stage() -> void:
 	if _stage == null:
 		return
+	# Existing Wave 1–3 diagnostics locate this stable node name. The script and
+	# behavior are the new habitat implementation; only the public node contract
+	# remains unchanged.
+	_stage.name = LEGACY_STAGE_NAME
 	if _stage.has_signal("bitling_pressed") and _dashboard.has_method("_on_stage_pressed"):
 		var bitling_callback := Callable(_dashboard, "_on_stage_pressed")
 		if not _stage.is_connected("bitling_pressed", bitling_callback):
