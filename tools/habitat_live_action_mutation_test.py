@@ -20,6 +20,7 @@ PROTECTED_FILES = (
     Path("scripts/ui/bitling_habitat_stage.gd"),
     Path("scripts/ui/habitat_live_action_overlay.gd"),
     Path("tests/habitat_live_action_test.gd"),
+    Path("tests/habitat_live_action_layout_test.gd"),
     GATE,
 )
 
@@ -119,6 +120,20 @@ MUTATIONS = (
         "live visual overlay cannot steal habitat input",
     ),
     Mutation(
+        "break_tablet_row_threshold",
+        Path("scripts/ui/habitat_live_action_overlay.gd"),
+        "ROW_LAYOUT_MIN_WIDTH := 430.0",
+        "ROW_LAYOUT_MIN_WIDTH := 900.0",
+        "tablet row threshold protects medium-width stages",
+    ),
+    Mutation(
+        "hide_choice_layout_diagnostics",
+        Path("scripts/ui/habitat_live_action_overlay.gd"),
+        '"choice_layout": _choice_layout(),',
+        '"deleted_choice_layout": _choice_layout(),',
+        "overlay publishes responsive choice-layout diagnostics",
+    ),
+    Mutation(
         "show_dashboard_choice_card",
         Path("scripts/ui/ultimate_dashboard_live_action.gd"),
         "_choice_card.visible = false",
@@ -145,6 +160,13 @@ MUTATIONS = (
         "phone presents decisions inside the stage",
         "phone in-world decisions not checked",
         "runtime test protects phone in-world choices",
+    ),
+    Mutation(
+        "erase_tablet_layout_acceptance",
+        Path("tests/habitat_live_action_layout_test.gd"),
+        "tablet reflows in-world choices into a horizontal row",
+        "tablet row not checked",
+        "layout test protects tablet readability",
     ),
 )
 
