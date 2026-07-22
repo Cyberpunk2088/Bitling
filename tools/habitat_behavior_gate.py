@@ -74,7 +74,7 @@ def main() -> int:
         ("CONFLICT_RESIST_THRESHOLD := 74.0", "resistance has an explicit threshold"),
         ('"resisted": 0.38', "resistance changes mechanical execution"),
         ("session_index += 1", "every process session advances behavior history"),
-        ("session_choice_ids.clear()", "same-session habit farming is blocked"),
+        ("session_index += 1\n\tsession_choice_ids.clear()", "same-session habit farming is blocked"),
         ("func preview_choice", "behavior is previewable before commitment"),
         ("func resolve_choice", "behavior participates in authoritative resolution"),
         ("_apply_execution_to_effects", "execution mode changes non-essential effects"),
