@@ -13,6 +13,7 @@ on:
       - "scripts/ui/bitling_habitat_stage.gd"
       - "scripts/ui/habitat_live_action_overlay.gd"
       - "tests/habitat_live_action_test.gd"
+      - "tests/habitat_live_action_layout_test.gd"
       - "tools/habitat_live_action_gate.py"
       - "tools/habitat_live_action_mutation_test.py"
       - ".github/workflows/habitat-live-action-gate.yml"
@@ -25,6 +26,7 @@ on:
       - "scripts/ui/bitling_habitat_stage.gd"
       - "scripts/ui/habitat_live_action_overlay.gd"
       - "tests/habitat_live_action_test.gd"
+      - "tests/habitat_live_action_layout_test.gd"
       - "tools/habitat_live_action_gate.py"
       - "tools/habitat_live_action_mutation_test.py"
       - ".github/workflows/habitat-live-action-gate.yml"
@@ -93,6 +95,13 @@ jobs:
           godot --headless --path . --script tests/habitat_live_action_test.gd 2>&1 | tee logs/live-action-runtime.log
           grep -F "[LIVE-ACTION-GATE] PASS:" logs/live-action-runtime.log
           ! grep -F "[LIVE-ACTION-GATE] BLOCKED:" logs/live-action-runtime.log
+      - name: Prove phone tablet and laptop choice geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script tests/habitat_live_action_layout_test.gd 2>&1 | tee logs/live-action-layout.log
+          grep -F "[LIVE-LAYOUT-GATE] PASS:" logs/live-action-layout.log
+          ! grep -F "[LIVE-LAYOUT-GATE] BLOCKED:" logs/live-action-layout.log
       - name: Preserve live-action gate logs
         if: always()
         uses: actions/upload-artifact@v4
