@@ -16,7 +16,9 @@ PROTECTED_FILES = (
     Path("project.godot"),
     Path("main.tscn"),
     Path("scripts/core/habitat_behavior_runtime.gd"),
+    Path("scripts/core/habitat_world_consequence_runtime.gd"),
     Path("scripts/ui/ultimate_dashboard_behavior.gd"),
+    Path("scripts/ui/ultimate_dashboard_consequences.gd"),
     Path("tests/habitat_behavior_test.gd"),
     GATE,
 )
@@ -35,16 +37,30 @@ MUTATIONS = (
     Mutation(
         "restore_stateless_runtime",
         Path("project.godot"),
-        'HabitatInteraction="*res://scripts/core/habitat_behavior_runtime.gd"',
+        'HabitatInteraction="*res://scripts/core/habitat_world_consequence_runtime.gd"',
         'HabitatInteraction="*res://scripts/core/habitat_interaction_service.gd"',
         "persistent behavior runtime is authoritative",
     ),
     Mutation(
         "hide_behavior_dashboard",
         Path("main.tscn"),
-        'path="res://scripts/ui/ultimate_dashboard_behavior.gd"',
+        'path="res://scripts/ui/ultimate_dashboard_consequences.gd"',
         'path="res://scripts/ui/ultimate_dashboard_habitat.gd"',
         "main scene cannot hide persistent behavior state",
+    ),
+    Mutation(
+        "break_world_behavior_inheritance",
+        Path("scripts/core/habitat_world_consequence_runtime.gd"),
+        'extends "res://scripts/core/habitat_behavior_runtime.gd"',
+        'extends "res://scripts/core/habitat_interaction_service.gd"',
+        "authoritative world runtime preserves persistent behavior",
+    ),
+    Mutation(
+        "break_world_dashboard_behavior_inheritance",
+        Path("scripts/ui/ultimate_dashboard_consequences.gd"),
+        'extends "res://scripts/ui/ultimate_dashboard_behavior.gd"',
+        'extends "res://scripts/ui/ultimate_dashboard_habitat.gd"',
+        "production dashboard preserves visible behavior state",
     ),
     Mutation(
         "remove_cross_session_requirement",
