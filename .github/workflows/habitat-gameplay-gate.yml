@@ -4,15 +4,18 @@ on:
   push:
     branches:
       - main
-      - agent/habitat-gameplay-v1
+      - "agent/habitat-**"
     paths:
       - "project.godot"
       - "main.tscn"
       - "scripts/core/habitat_interaction_service.gd"
       - "scripts/ui/ultimate_dashboard_habitat.gd"
       - "scripts/ui/bitling_habitat_stage.gd"
+      - "scripts/ui/habitat_hotspot_overlay.gd"
+      - "scripts/ui/metafinal_visual_director_v9.gd"
       - "tests/habitat_gameplay_test.gd"
       - "tools/habitat_architecture_gate.py"
+      - "tools/habitat_gate_mutation_test.py"
       - ".github/workflows/habitat-gameplay-gate.yml"
   pull_request:
     paths:
@@ -21,8 +24,11 @@ on:
       - "scripts/core/habitat_interaction_service.gd"
       - "scripts/ui/ultimate_dashboard_habitat.gd"
       - "scripts/ui/bitling_habitat_stage.gd"
+      - "scripts/ui/habitat_hotspot_overlay.gd"
+      - "scripts/ui/metafinal_visual_director_v9.gd"
       - "tests/habitat_gameplay_test.gd"
       - "tools/habitat_architecture_gate.py"
+      - "tools/habitat_gate_mutation_test.py"
       - ".github/workflows/habitat-gameplay-gate.yml"
 
 permissions:
@@ -45,9 +51,24 @@ jobs:
       - name: Reject dashboard-only regressions
         run: python3 tools/habitat_architecture_gate.py
 
+  mutation-resistance:
+    name: Prove the gate detects sabotage
+    needs: architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Attack every protected invariant
+        run: python3 tools/habitat_gate_mutation_test.py
+
   runtime:
     name: Parse, boot and exercise habitat loop
-    needs: architecture
+    needs:
+      - architecture
+      - mutation-resistance
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

@@ -28,6 +28,13 @@ def read(relative: str) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else ""
 
 
+def dictionary_keys(source: str, declaration: str) -> set[str]:
+    match = re.search(rf"{re.escape(declaration)}\s*\{{(.*?)\n\s*\}}", source, re.S)
+    if match is None:
+        return set()
+    return set(re.findall(r'"([a-z_]+)"\s*:', match.group(1)))
+
+
 def main() -> int:
     project = read("project.godot")
     scene = read("main.tscn")
@@ -61,13 +68,26 @@ def main() -> int:
 
     moment_block = re.search(r"const MOMENTS := \{(.*?)\n\}", service, re.S)
     moments = re.findall(r'^\s*"([a-z_]+)":\s*\{', moment_block.group(1), re.M) if moment_block else []
+    moment_hotspots = set(re.findall(r'"hotspot"\s*:\s*"([a-z_]+)"', moment_block.group(1))) if moment_block else set()
     check(len(moments) >= 9, "needs, intentions and room events create at least nine situations")
     check({"quiet", "window", "hologram", "parts", "plant", "lightball", "rest", "hungry", "recovery"}.issubset(set(moments)), "required habitat situations remain present")
 
     hotspots = {"bitling", "window", "workbench", "plant", "platform", "sleep"}
+    room_hotspots = hotspots - {"bitling"}
+    service_hotspots = dictionary_keys(service, "const HOTSPOT_MOMENTS :=")
+    stage_zones = dictionary_keys(stage, "var zones :=")
+    marker_hotspots = dictionary_keys(marker_overlay, "var markers :=")
+    traversal_match = re.search(r"for hotspot_variant in \[(.*?)\]:", stage, re.S)
+    traversal_hotspots = set(re.findall(r'"([a-z_]+)"', traversal_match.group(1))) if traversal_match else set()
+
+    check(service_hotspots == hotspots, "service maps exactly six canonical habitat hotspots")
+    check(stage_zones == hotspots, "stage exposes exactly six canonical hotspot zones")
+    check(traversal_hotspots == hotspots, "stage hit testing traverses exactly six canonical hotspots")
+    check(marker_hotspots == room_hotspots, "overlay marks every room hotspot and only room hotspots")
+    check(moment_hotspots.issubset(hotspots), "all moments point to canonical habitat hotspots")
     for hotspot in sorted(hotspots):
-        check(f'"{hotspot}"' in stage, f"{hotspot} remains clickable in the central habitat")
-        check(f'"{hotspot}"' in service, f"{hotspot} remains connected to gameplay context")
+        check(hotspot in stage_zones, f"{hotspot} remains clickable in the central habitat")
+        check(hotspot in service_hotspots, f"{hotspot} remains connected to gameplay context")
 
     check(
         'extends "res://scripts/ui/production_bitling_stage_3d_v11.gd"' in stage,
@@ -76,7 +96,7 @@ def main() -> int:
     check("signal hotspot_pressed" in stage, "stage emits in-world interactions")
     check("HabitatHotspotOverlay" in stage, "production stage renders non-blocking room markers")
     check("mouse_filter = Control.MOUSE_FILTER_IGNORE" in marker_overlay, "hotspot markers can never steal stage input")
-    check("hotspot_count\": 6" in stage or '"hotspot_count": 6' in stage, "stage diagnostics expose all six room hotspots")
+    check('"hotspot_count": 6' in stage, "stage diagnostics expose all six room hotspots")
 
     check(
         'preload("res://scripts/ui/bitling_habitat_stage.gd")' in visual_director,
@@ -90,7 +110,8 @@ def main() -> int:
     check("HabitatChoices" in dashboard, "dashboard renders contextual decisions in the center")
     check("range(3)" in dashboard, "dashboard reserves three simultaneous approaches")
     check("_run_interaction(" not in dashboard, "habitat UI cannot directly grant stat rewards")
-    check("resolve_choice" in dashboard, "all center choices pass through the authoritative resolver")
+    check('service.call("resolve_choice", choice_id)' in dashboard, "all center choices pass through the authoritative resolver")
+    check('service.call("perform_interaction"' not in dashboard, "dashboard cannot bypass the authoritative habitat service")
     check("open_expedition" in dashboard and "open_adventures" in dashboard, "deep activities remain integrated overlays")
     check("center_is_game" in dashboard, "dashboard exposes a testable center-is-game contract")
 
