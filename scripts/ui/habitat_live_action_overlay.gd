@@ -10,6 +10,7 @@ const MAGENTA := Color("f044d4")
 const VIOLET := Color("a855f7")
 const GREEN := Color("64e6a2")
 const YELLOW := Color("ffc85a")
+const ROW_LAYOUT_MIN_WIDTH := 430.0
 
 var snapshot: Dictionary = {}
 var _elapsed := 0.0
@@ -43,6 +44,7 @@ func get_visual_snapshot() -> Dictionary:
 		"phase": str(snapshot.get("phase", "idle")),
 		"source": str(snapshot.get("source", "none")),
 		"choice_tokens_visible": get_choice_regions().size(),
+		"choice_layout": _choice_layout(),
 		"in_world_choice_surface": get_choice_regions().size() == 3,
 		"input_passthrough": mouse_filter == Control.MOUSE_FILTER_IGNORE
 	}
@@ -140,12 +142,14 @@ func _draw_aftermath_feedback(point: Vector2, accent: Color) -> void:
 
 func _choice_centers(hotspot: String) -> Array[Vector2]:
 	var center := _hotspot_point(hotspot)
-	var horizontal := size.x >= 560.0
-	if horizontal:
+	if _choice_layout() == "row":
 		var y := clampf(center.y + size.y * 0.20, size.y * 0.58, size.y * 0.82)
 		return [Vector2(size.x * 0.22, y), Vector2(size.x * 0.50, y), Vector2(size.x * 0.78, y)]
 	var base_y := clampf(center.y + size.y * 0.18, size.y * 0.50, size.y * 0.70)
 	return [Vector2(size.x * 0.50, base_y), Vector2(size.x * 0.50, base_y + size.y * 0.115), Vector2(size.x * 0.50, base_y + size.y * 0.230)]
+
+func _choice_layout() -> String:
+	return "row" if size.x >= ROW_LAYOUT_MIN_WIDTH else "stack"
 
 func _hotspot_point(hotspot: String) -> Vector2:
 	return {
