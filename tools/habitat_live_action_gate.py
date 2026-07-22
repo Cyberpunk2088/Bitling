@@ -45,6 +45,7 @@ def main() -> int:
     stage = read("scripts/ui/bitling_habitat_stage.gd")
     overlay = read("scripts/ui/habitat_live_action_overlay.gd")
     test = read("tests/habitat_live_action_test.gd")
+    layout_test = read("tests/habitat_live_action_layout_test.gd")
 
     check(
         'HabitatInteraction="*res://scripts/core/habitat_live_action_runtime.gd"' in project,
@@ -116,6 +117,9 @@ def main() -> int:
     check("func get_choice_regions" in overlay, "in-world tokens expose physical hit regions")
     check('str(snapshot.get("phase", "")) != "awaiting_choice"' in overlay, "choice tokens only exist at the decision phase")
     check("choice_tokens_visible" in overlay and "in_world_choice_surface" in overlay, "overlay publishes in-world choice diagnostics")
+    check('"choice_layout": _choice_layout()' in overlay, "overlay publishes responsive choice-layout diagnostics")
+    check("ROW_LAYOUT_MIN_WIDTH := 430.0" in overlay, "tablet row threshold protects medium-width stages")
+    check('return "row" if size.x >= ROW_LAYOUT_MIN_WIDTH else "stack"' in overlay, "phone and tablet use explicit layout modes")
     check("WÄHLE IM RAUM" in overlay, "stage language identifies the physical decision surface")
 
     check('_moment_card.visible = false' in dashboard, "central moment card is hidden")
@@ -136,6 +140,14 @@ def main() -> int:
         ("desktop cannot regress to card-first gameplay", "runtime test protects desktop stage-first gameplay"),
     ):
         check(phrase in test, message)
+
+    for phrase, message in (
+        ("phone keeps choices in a bounded vertical stack", "layout test protects compact phone geometry"),
+        ("tablet reflows in-world choices into a horizontal row", "layout test protects tablet readability"),
+        ("tablet choice row has distinct hit targets", "layout test protects tablet input geometry"),
+        ("laptop choices share one readable baseline", "layout test protects laptop row alignment"),
+    ):
+        check(phrase in layout_test, message)
 
     if FAILURES:
         print(f"[LIVE-ACTION-ARCH] BLOCKED: {len(FAILURES)} of {ASSERTIONS} checks failed", file=sys.stderr)
