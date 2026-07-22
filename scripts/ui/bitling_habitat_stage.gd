@@ -1,114 +1,82 @@
-extends "res://scripts/ui/bitling_stage.gd"
+extends "res://scripts/ui/production_bitling_stage_3d_v11.gd"
 
-## The home is a playable surface. Every visible zone can become context for
-## a relationship decision; the Bitling remains the actor, not a menu avatar.
+## Production 3D stage with room-level agency. Clicks outside the companion are
+## resolved as habitat context; clicks on Xogot retain the full character rig.
 
 signal hotspot_pressed(hotspot_id: String)
 
-const HOTSPOT_COLOR := Color("77efff")
-const HOTSPOT_ACTIVE := Color("ff62dc")
+const HabitatHotspotOverlay := preload("res://scripts/ui/habitat_hotspot_overlay.gd")
 
 var focused_hotspot := "bitling"
 var activity_lens := "care"
 var moment_title := ""
-var _hotspot_flash := 0.0
+var _habitat_overlay: Control
+
+func _ready() -> void:
+	super._ready()
+	_habitat_overlay = HabitatHotspotOverlay.new()
+	_habitat_overlay.name = "HabitatHotspotOverlay"
+	add_child(_habitat_overlay)
+	move_child(_habitat_overlay, get_child_count() - 1)
+	_sync_habitat_overlay()
 
 func set_focused_hotspot(hotspot_id: String) -> void:
 	focused_hotspot = hotspot_id
-	_hotspot_flash = 1.0
-	queue_redraw()
+	if _habitat_overlay != null:
+		_habitat_overlay.call("set_hotspot", hotspot_id)
 
 func set_activity_lens(lens_id: String) -> void:
 	activity_lens = lens_id
-	queue_redraw()
+	if _habitat_overlay != null:
+		_habitat_overlay.call("set_lens", lens_id)
 
 func set_moment_title(value: String) -> void:
 	moment_title = value
-	queue_redraw()
+	if _habitat_overlay != null:
+		_habitat_overlay.call("set_title", value)
 
-func _process(delta: float) -> void:
-	super._process(delta)
-	_hotspot_flash = move_toward(_hotspot_flash, 0.0, delta * 1.8)
+func get_habitat_interaction_snapshot() -> Dictionary:
+	return {
+		"habitat_capable": true,
+		"focused_hotspot": focused_hotspot,
+		"activity_lens": activity_lens,
+		"moment_title": moment_title,
+		"hotspot_count": 6,
+		"overlay_ready": _habitat_overlay != null
+	}
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion:
-		super._gui_input(event)
-		return
+	var pressed := false
+	var position := Vector2.ZERO
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
-		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:
-			var hotspot := _hotspot_at(mouse_event.position)
-			if not hotspot.is_empty() and hotspot != "bitling":
-				focused_hotspot = hotspot
-				_hotspot_flash = 1.0
-				play_reaction()
-				hotspot_pressed.emit(hotspot)
-				accept_event()
-				queue_redraw()
-				return
-	if event is InputEventScreenTouch:
+		pressed = mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT
+		position = mouse_event.position
+	elif event is InputEventScreenTouch:
 		var touch_event := event as InputEventScreenTouch
-		if touch_event.pressed:
-			var hotspot := _hotspot_at(touch_event.position)
-			if not hotspot.is_empty() and hotspot != "bitling":
-				focused_hotspot = hotspot
-				_hotspot_flash = 1.0
-				play_reaction()
-				hotspot_pressed.emit(hotspot)
-				accept_event()
-				queue_redraw()
-				return
+		pressed = touch_event.pressed
+		position = touch_event.position
+	if pressed:
+		var hotspot := _habitat_hotspot_at(position)
+		if not hotspot.is_empty() and hotspot != "bitling":
+			focused_hotspot = hotspot
+			_sync_habitat_overlay()
+			_request_touch_performance(position)
+			hotspot_pressed.emit(hotspot)
+			accept_event()
+			return
 	super._gui_input(event)
 
-func _draw() -> void:
-	super._draw()
-	_draw_sleep_pod()
-	_draw_habitat_markers()
-	_draw_context_ribbon()
-
-func _draw_sleep_pod() -> void:
-	var pod := Rect2(size.x * 0.73, size.y * 0.72, size.x * 0.21, size.y * 0.10)
-	draw_rect(pod, Color("10172f"), true)
-	draw_rect(pod, Color(CYAN, 0.22), false, 2.0)
-	draw_arc(Vector2(pod.position.x + pod.size.x * 0.50, pod.position.y), pod.size.x * 0.42, PI, TAU, 32, Color(VIOLET, 0.45), 3.0, true)
-	draw_line(pod.position + Vector2(12.0, pod.size.y * 0.70), pod.end - Vector2(12.0, pod.size.y * 0.30), Color(MAGENTA, 0.24), 3.0, true)
-
-func _draw_habitat_markers() -> void:
-	var markers := {
-		"window": Vector2(size.x * 0.80, size.y * 0.20),
-		"workbench": Vector2(size.x * 0.17, size.y * 0.47),
-		"plant": Vector2(size.x * 0.90, size.y * 0.47),
-		"platform": Vector2(size.x * 0.25, size.y * 0.82),
-		"sleep": Vector2(size.x * 0.83, size.y * 0.77)
-	}
-	for hotspot_variant in markers.keys():
-		var hotspot := str(hotspot_variant)
-		var point: Vector2 = markers[hotspot]
-		var active := hotspot == focused_hotspot
-		var pulse := 1.0 + 0.16 * sin(_elapsed * 3.0 + point.x * 0.01)
-		var radius := (10.0 + 5.0 * _hotspot_flash if active else 8.0) * pulse
-		var color := HOTSPOT_ACTIVE if active else HOTSPOT_COLOR
-		draw_circle(point, radius + 7.0, Color(color, 0.08 if not active else 0.18))
-		draw_arc(point, radius, 0.0, TAU, 28, Color(color, 0.76 if active else 0.42), 2.0, true)
-		draw_circle(point, 2.5, color)
-
-func _draw_context_ribbon() -> void:
-	if moment_title.is_empty():
-		return
-	var ribbon := Rect2(size.x * 0.05, size.y * 0.025, size.x * 0.90, 34.0)
-	draw_rect(ribbon, Color("071326d9"), true)
-	draw_rect(ribbon, Color(HOTSPOT_COLOR, 0.30), false, 1.0)
-	var label := "%s  •  %s" % [_hotspot_label(focused_hotspot), moment_title]
-	draw_string(ThemeDB.fallback_font, ribbon.position + Vector2(12.0, 22.0), label, HORIZONTAL_ALIGNMENT_LEFT, ribbon.size.x - 24.0, 12, Color("eafaff"))
-
-func _hotspot_at(position: Vector2) -> String:
+func _habitat_hotspot_at(position: Vector2) -> String:
+	if size.x <= 1.0 or size.y <= 1.0:
+		return ""
 	var zones := {
-		"bitling": Rect2(size.x * 0.29, size.y * 0.31, size.x * 0.42, size.y * 0.43),
-		"window": Rect2(size.x * 0.58, size.y * 0.10, size.x * 0.33, size.y * 0.29),
-		"workbench": Rect2(size.x * 0.02, size.y * 0.34, size.x * 0.31, size.y * 0.25),
-		"plant": Rect2(size.x * 0.78, size.y * 0.33, size.x * 0.21, size.y * 0.27),
-		"platform": Rect2(size.x * 0.04, size.y * 0.70, size.x * 0.49, size.y * 0.28),
-		"sleep": Rect2(size.x * 0.66, size.y * 0.66, size.x * 0.33, size.y * 0.30)
+		"bitling": Rect2(size.x * 0.29, size.y * 0.22, size.x * 0.42, size.y * 0.64),
+		"window": Rect2(size.x * 0.24, size.y * 0.03, size.x * 0.52, size.y * 0.19),
+		"workbench": Rect2(size.x * 0.70, size.y * 0.25, size.x * 0.29, size.y * 0.39),
+		"plant": Rect2(size.x * 0.01, size.y * 0.24, size.x * 0.25, size.y * 0.45),
+		"platform": Rect2(size.x * 0.64, size.y * 0.64, size.x * 0.35, size.y * 0.35),
+		"sleep": Rect2(size.x * 0.01, size.y * 0.67, size.x * 0.34, size.y * 0.32)
 	}
 	for hotspot_variant in ["bitling", "window", "workbench", "plant", "platform", "sleep"]:
 		var hotspot := str(hotspot_variant)
@@ -116,12 +84,6 @@ func _hotspot_at(position: Vector2) -> String:
 			return hotspot
 	return ""
 
-func _hotspot_label(hotspot_id: String) -> String:
-	return str({
-		"bitling": "XOGOT",
-		"window": "FENSTER-SIGNAL",
-		"workbench": "WERKBANK",
-		"plant": "RESONANZPFLANZE",
-		"platform": "SPIELPLATTFORM",
-		"sleep": "RUHEPOD"
-	}.get(hotspot_id, hotspot_id.to_upper()))
+func _sync_habitat_overlay() -> void:
+	if _habitat_overlay != null:
+		_habitat_overlay.call("set_context", focused_hotspot, activity_lens, moment_title)
