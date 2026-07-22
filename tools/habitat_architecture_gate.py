@@ -32,7 +32,7 @@ def dictionary_keys(source: str, declaration: str) -> set[str]:
     match = re.search(rf"{re.escape(declaration)}\s*\{{(.*?)\n\s*\}}", source, re.S)
     if match is None:
         return set()
-    return set(re.findall(r'^\s*"([a-z_]+)"\s*:', match.group(1), re.M))
+    return set(re.findall(r'"([a-z_]+)"\s*:', match.group(1)))
 
 
 def main() -> int:
