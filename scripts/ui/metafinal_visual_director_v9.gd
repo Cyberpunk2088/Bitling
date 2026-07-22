@@ -19,16 +19,16 @@ func _install_production_stage() -> void:
 	var previous_variant: Variant = _dashboard.get("stage")
 	if not previous_variant is Control:
 		return
-	var previous := previous_variant as Control
-	var previous_script := previous.get_script()
+	var previous: Control = previous_variant as Control
+	var previous_script: Script = previous.get_script() as Script
 	if previous_script != null and str(previous_script.resource_path).ends_with("bitling_habitat_stage.gd"):
 		_stage = previous
 		_wire_habitat_stage()
 		return
-	var parent := previous.get_parent()
+	var parent: Node = previous.get_parent()
 	if parent == null:
 		return
-	var child_index := previous.get_index()
+	var child_index: int = previous.get_index()
 	_stage = ProductionHabitatStage.new()
 	_stage.name = "LegendaryLivingHabitatStage3D"
 	_stage.custom_minimum_size = previous.custom_minimum_size
