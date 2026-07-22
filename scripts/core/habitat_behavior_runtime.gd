@@ -139,6 +139,7 @@ func resolve_choice(choice_id: String) -> Dictionary:
 	var repeat_count := _repeat_count(choice_id)
 	var progression_state := _progression_state(repeat_count)
 	var xp_multiplier := _xp_multiplier(repeat_count)
+	var effect_multiplier := _effect_multiplier(repeat_count)
 	var execution_mode := str(_pending_preview.get("execution_mode", "embraced"))
 	var execution_multiplier := float(_pending_preview.get("execution_multiplier", 1.0))
 	var trait_id := str(option.get("trait", "curiosity"))
@@ -167,6 +168,7 @@ func resolve_choice(choice_id: String) -> Dictionary:
 		"repeat_count": repeat_count,
 		"progression_state": progression_state,
 		"xp_multiplier": xp_multiplier,
+		"effect_multiplier": effect_multiplier,
 		"execution_mode": execution_mode,
 		"execution_multiplier": execution_multiplier,
 		"friction_before": float(_pending_preview.get("friction", 0.0)),
