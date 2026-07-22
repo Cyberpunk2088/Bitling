@@ -1,6 +1,6 @@
 [gd_scene load_steps=9 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/ultimate_dashboard_habitat.gd" id="1_dashboard"]
+[ext_resource type="Script" path="res://scripts/ui/ultimate_dashboard_behavior.gd" id="1_dashboard"]
 [ext_resource type="Script" path="res://scripts/ui/profile_launcher_guard.gd" id="2_guard"]
 [ext_resource type="Script" path="res://scripts/ui/visual_layout_enhancer.gd" id="3_enhancer"]
 [ext_resource type="Script" path="res://scripts/ui/production_stage_identity_badge.gd" id="4_badge"]
