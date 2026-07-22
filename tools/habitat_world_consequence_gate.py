@@ -81,6 +81,7 @@ def main() -> int:
         ("func refresh_moment", "world events take precedence over random rotation"),
         ("func _generate_habit_manifestation", "formed habits create room changes"),
         ("func _generate_conflict_follow_up", "conflict returns as a playable follow-up"),
+        ("var conflict: Dictionary = _active_conflict()", "conflict follow-ups use repaired current state"),
         ("func _resolve_world_event", "follow-up events require a player response"),
         ('"world_event": true', "world moments declare their origin"),
         ('"no_correct_answer": true', "world consequences preserve open-ended agency"),
@@ -116,6 +117,7 @@ def main() -> int:
         ("reinforcement visibly upgrades the room mark", "runtime test proves persistent room evolution"),
         ("conflict returns as gameplay instead of remaining a hidden meter", "runtime test proves playable conflict"),
         ("living through the event mechanically changes conflict", "runtime test proves mechanical conflict resolution"),
+        ("repaired conflict does not requeue from a stale result snapshot", "runtime test rejects stale conflict requeue"),
         ("room marks survive import", "runtime test proves world persistence"),
         ("persistent room change is rendered on the stage", "runtime test proves in-world visualization"),
     ):
