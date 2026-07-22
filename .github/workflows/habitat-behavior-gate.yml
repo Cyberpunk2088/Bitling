@@ -1,0 +1,99 @@
+name: Habitat Behavior Gate
+
+on:
+  push:
+    branches:
+      - main
+      - agent/habitat-behavior-consequences
+    paths:
+      - "project.godot"
+      - "main.tscn"
+      - "scripts/core/habitat_behavior_runtime.gd"
+      - "scripts/ui/ultimate_dashboard_behavior.gd"
+      - "tests/habitat_behavior_test.gd"
+      - "tools/habitat_behavior_gate.py"
+      - "tools/habitat_behavior_mutation_test.py"
+      - ".github/workflows/habitat-behavior-gate.yml"
+  pull_request:
+    paths:
+      - "project.godot"
+      - "main.tscn"
+      - "scripts/core/habitat_behavior_runtime.gd"
+      - "scripts/ui/ultimate_dashboard_behavior.gd"
+      - "tests/habitat_behavior_test.gd"
+      - "tools/habitat_behavior_gate.py"
+      - "tools/habitat_behavior_mutation_test.py"
+      - ".github/workflows/habitat-behavior-gate.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: habitat-behavior-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  architecture:
+    name: Enforce persistent behavioral consequences
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reject cosmetic or stateless behavior
+        run: python3 tools/habitat_behavior_gate.py
+
+  mutation:
+    name: Attack habit and conflict invariants
+    needs: architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prove sabotage is rejected
+        run: python3 tools/habitat_behavior_mutation_test.py
+
+  runtime:
+    name: Exercise cross-session habits and visible conflict
+    needs: mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output godot.zip \
+            https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mkdir -p "$HOME/.local/bin"
+          mv Godot_v4.6.3-stable_linux.x86_64 "$HOME/.local/bin/godot"
+          chmod +x "$HOME/.local/bin/godot"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          godot --headless --path . --editor --quit 2>&1 | tee logs/behavior-import.log
+      - name: Prove persistent behavioral consequences
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script tests/habitat_behavior_test.gd 2>&1 | tee logs/behavior-runtime.log
+          grep -F "[BEHAVIOR-GATE] PASS:" logs/behavior-runtime.log
+          ! grep -F "[BEHAVIOR-GATE] BLOCKED:" logs/behavior-runtime.log
+      - name: Preserve behavior gate logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: habitat-behavior-gate-logs
+          path: logs/*.log
+          if-no-files-found: error
+          retention-days: 14
