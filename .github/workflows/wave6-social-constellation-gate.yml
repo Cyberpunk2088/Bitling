@@ -1,0 +1,90 @@
+name: Wave 6 Social Constellation Gate
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave6-social-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_BINARY: "Godot_v4.6.3-stable_linux.x86_64"
+
+jobs:
+  validate:
+    name: Consent-first pairing and shared activities
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@v4
+
+      - name: Validate project contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          python3 -m py_compile tools/*.py
+          python3 tools/project_integrity.py | tee logs/project-integrity.log
+
+      - name: Install Godot 4.6.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_BINARY}.zip"
+          unzip -q godot.zip
+          chmod +x "${GODOT_BINARY}"
+          mv "${GODOT_BINARY}" godot
+          ./godot --version
+
+      - name: Import and parse Wave 6 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 ./godot --headless --path . --import --quit --log-file logs/import.log
+          timeout 60 ./godot --headless --path . --script res://tests/wave6_social_constellation_test.gd --check-only --log-file logs/parse-wave6.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/import.log logs/parse-wave6.log; then
+            cat logs/import.log logs/parse-wave6.log
+            exit 1
+          fi
+
+      - name: Boot main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60 ./godot --headless --path . --quit-after 10 --log-file logs/boot.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/boot.log; then
+            cat logs/boot.log
+            exit 1
+          fi
+
+      - name: Run Wave 6 regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120 ./godot --headless --path . --script res://tests/wave6_social_constellation_test.gd --log-file logs/tests-wave6-social.log
+          if grep -E "SCRIPT ERROR|^ERROR:" logs/tests-wave6-social.log; then
+            cat logs/tests-wave6-social.log
+            exit 1
+          fi
+          grep -F "[CI-WAVE6] PASS" logs/tests-wave6-social.log
+
+      - name: Upload Wave 6 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave6-social-constellation-diagnostics
+          path: logs
+          if-no-files-found: ignore
+          retention-days: 14
