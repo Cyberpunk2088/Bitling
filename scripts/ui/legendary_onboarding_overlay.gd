@@ -47,6 +47,8 @@ func open_onboarding(force: bool = false) -> void:
 	if layer != null:
 		return
 	var state := get_node_or_null("/root/GameState")
+	if state != null and bool(state.get("save_blocked")):
+		return
 	if not force and state != null and bool(state.story_flags.get("legendary_slice_started", false)):
 		return
 	_build_ui()
@@ -203,11 +205,13 @@ func _on_name_changed(value: String) -> void:
 	confirm_button.disabled = value.strip_edges().length() > 20
 
 func _confirm() -> void:
+	var state := get_node_or_null("/root/GameState")
+	if state != null and bool(state.get("save_blocked")):
+		return
 	confirm_button.disabled = true
 	var chosen_name := name_input.text.strip_edges()
 	if chosen_name.is_empty():
 		chosen_name = "BITLING"
-	var state := get_node_or_null("/root/GameState")
 	if state != null and state.has_method("hatch"):
 		state.hatch()
 	var director := get_node_or_null("/root/LegendarySlice")
@@ -220,7 +224,8 @@ func _confirm() -> void:
 			audio.play_action("level", 1.0)
 		if audio.has_method("play_voice_chirp"):
 			audio.play_voice_chirp("Ich bin da. Gemeinsam finden wir heraus, wer ich werde.", "ECSTATIC")
-	status_label.text = "%s hat geantwortet. Eure erste Erinnerung wurde gespeichert." % chosen_name
+	var saved := state != null and bool(state.call("save_game_state"))
+	status_label.text = ("%s hat geantwortet. Eure erste Erinnerung wurde gespeichert." if saved else "%s hat geantwortet. Speichern war nicht möglich – beachte den Speicherhinweis.") % chosen_name
 	onboarding_completed.emit(snapshot)
 	await get_tree().create_timer(1.1, true, false, true).timeout
 	_close()

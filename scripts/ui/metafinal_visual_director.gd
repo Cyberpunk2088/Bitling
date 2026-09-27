@@ -71,11 +71,11 @@ func _upgrade_primary_actions() -> void:
 		"rest": GOLD
 	}
 	var titles := {
-		"feed": ["FÜTTERN", "Sättigung"],
-		"play": ["SPIELEN", "Abenteuer"],
-		"learn": ["LERNEN", "IQ & Wissen"],
-		"care": ["PFLEGEN", "Vertrauen"],
-		"rest": ["SCHLAFEN", "Energie"]
+		"feed": ["NAHRUNG", "Anbieten & wählen"],
+		"play": ["SPIEL", "Impulse & Regeln"],
+		"learn": ["FRAGEN", "Muster entdecken"],
+		"care": ["NÄHE", "Begleiten & pflegen"],
+		"rest": ["RUHE", "Ritual & Schlaf"]
 	}
 	for key_variant in buttons.keys():
 		var key := str(key_variant)
@@ -118,8 +118,16 @@ func _upgrade_primary_actions() -> void:
 		subtitle.add_theme_color_override("font_color", MUTED)
 		subtitle.add_theme_font_size_override("font_size", 9)
 		content.add_child(subtitle)
+		button.resized.connect(_fit_action_content.bind(button, title, subtitle))
+		_fit_action_content(button, title, subtitle)
 		button.mouse_entered.connect(_animate_button.bind(button, true))
 		button.mouse_exited.connect(_animate_button.bind(button, false))
+
+func _fit_action_content(button: Button, title: Label, subtitle: Label) -> void:
+	var compact := get_viewport().get_visible_rect().size.x < 760.0
+	button.custom_minimum_size.y = 112.0 if compact else 94.0
+	title.add_theme_font_size_override("font_size", 22 if compact else 12)
+	subtitle.add_theme_font_size_override("font_size", 16 if compact else 9)
 
 func _upgrade_header() -> void:
 	var header_variant: Variant = _dashboard.get("header_panel")

@@ -33,15 +33,22 @@ var _selected_approach: String = "observe"
 var _answer_buttons: Array[Button] = []
 var _approach_buttons: Dictionary = {}
 var _compact: bool = false
+var _previous_focus: WeakRef
 
 func _ready() -> void:
 	layer = 49
 	_build_ui()
 	_backdrop.visible = false
 	get_viewport().size_changed.connect(_apply_responsive_layout)
+	get_viewport().gui_focus_changed.connect(_on_modal_focus_changed)
 	call_deferred("_connect_service")
 
 func open_adventures() -> void:
+	if is_open():
+		_repair_modal_focus()
+		return
+	var focused := get_viewport().gui_get_focus_owner()
+	_previous_focus = weakref(focused) if focused != null else null
 	_show_catalog()
 	_backdrop.visible = true
 	if _reduce_motion_enabled():
@@ -54,6 +61,7 @@ func open_adventures() -> void:
 		tween.tween_property(_backdrop, "modulate:a", 1.0, 0.18)
 		tween.tween_property(_shell, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	_apply_responsive_layout()
+	_close_button.grab_focus()
 
 func close_adventures() -> void:
 	if not is_open():
@@ -62,6 +70,10 @@ func close_adventures() -> void:
 	if service != null and service.has_method("abandon_session"):
 		service.call("abandon_session")
 	_backdrop.visible = false
+	var previous := _previous_focus.get_ref() as Control if _previous_focus != null else null
+	_previous_focus = null
+	if previous != null and previous.is_visible_in_tree() and previous.focus_mode != Control.FOCUS_NONE:
+		previous.grab_focus()
 
 func is_open() -> bool:
 	return _backdrop != null and _backdrop.visible
@@ -78,10 +90,47 @@ func get_layout_snapshot() -> Dictionary:
 		"reduced_motion": _reduce_motion_enabled()
 	}
 
-func _unhandled_input(event: InputEvent) -> void:
-	if is_open() and event.is_action_pressed("ui_cancel"):
+func _input(event: InputEvent) -> void:
+	if not is_open():
+		return
+	if event.is_action_pressed("ui_cancel"):
 		close_adventures()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev"):
+		var controls := _modal_focus_controls()
+		if not controls.is_empty():
+			var current := controls.find(get_viewport().gui_get_focus_owner())
+			var direction := -1 if event.is_action_pressed("ui_focus_prev") else 1
+			var next := posmod(current + direction, controls.size()) if current >= 0 else controls.size() - 1 if direction < 0 else 0
+			controls[next].grab_focus()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey or event is InputEventAction:
+		_repair_modal_focus()
+
+func _modal_focus_controls() -> Array[Control]:
+	var controls: Array[Control] = []
+	for node in _backdrop.find_children("*", "Control", true, false):
+		var control := node as Control
+		if _valid_modal_focus(control):
+			controls.append(control)
+	return controls
+
+func _valid_modal_focus(control: Control) -> bool:
+	return control != null and _backdrop.is_ancestor_of(control) and control.is_visible_in_tree() and not control.is_queued_for_deletion() and control.focus_mode != Control.FOCUS_NONE and (not control is BaseButton or not (control as BaseButton).disabled)
+
+func _on_modal_focus_changed(control: Control) -> void:
+	if is_open() and not _valid_modal_focus(control):
+		call_deferred("_repair_modal_focus")
+
+func _repair_modal_focus() -> void:
+	if not is_open() or _valid_modal_focus(get_viewport().gui_get_focus_owner()):
+		return
+	var current_content: Control = _answer_box if _session_panel.visible else _catalog_grid
+	for control in _modal_focus_controls():
+		if current_content.is_ancestor_of(control):
+			control.grab_focus()
+			return
+	_close_button.grab_focus()
 
 func _build_ui() -> void:
 	_backdrop = ColorRect.new()
@@ -104,6 +153,9 @@ func _build_ui() -> void:
 	_content.add_child(_build_header())
 	_catalog_scroll = ScrollContainer.new()
 	_catalog_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_catalog_scroll.follow_focus = true
+	_catalog_scroll.get_h_scroll_bar().focus_mode = Control.FOCUS_NONE
+	_catalog_scroll.get_v_scroll_bar().focus_mode = Control.FOCUS_NONE
 	_catalog_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(_catalog_scroll)
 	_catalog_grid = GridContainer.new()
@@ -221,6 +273,7 @@ func _show_catalog() -> void:
 	var snapshot: Dictionary = service.call("get_snapshot")
 	_summary.text = "MEISTERSCHAFT %d%% · %d/12 GEMEISTERT · %d SITZUNGEN" % [int(snapshot.get("average_mastery", 0.0)), int(snapshot.get("mastered_count", 0)), int(snapshot.get("total_sessions", 0))]
 	_rebuild_catalog(snapshot.get("catalog", []) as Array)
+	call_deferred("_repair_modal_focus")
 
 func _rebuild_catalog(catalog: Array) -> void:
 	for child: Node in _catalog_grid.get_children():
@@ -287,6 +340,7 @@ func _show_challenge(challenge: Dictionary, session: Dictionary = {}) -> void:
 		button.pressed.connect(_submit_answer.bind(index))
 		_answer_box.add_child(button)
 		_answer_buttons.append(button)
+	call_deferred("_repair_modal_focus")
 
 func _select_approach(approach_id: String) -> void:
 	_selected_approach = approach_id
@@ -298,6 +352,7 @@ func _update_approach_buttons() -> void:
 		var approach_id: String = str(approach_id_variant)
 		var button: Button = _approach_buttons[approach_id]
 		button.disabled = approach_id == _selected_approach
+	call_deferred("_repair_modal_focus")
 
 func _submit_answer(index: int) -> void:
 	for button: Button in _answer_buttons:
@@ -342,6 +397,7 @@ func _show_completion(result: Dictionary) -> void:
 	continue_button.pressed.connect(_show_catalog)
 	_answer_box.add_child(continue_button)
 	_approach_row.visible = false
+	call_deferred("_repair_modal_focus")
 
 func _on_catalog_changed(_snapshot: Dictionary) -> void:
 	if is_open() and _catalog_scroll.visible:

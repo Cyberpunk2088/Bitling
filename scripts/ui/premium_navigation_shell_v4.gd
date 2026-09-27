@@ -19,6 +19,19 @@ func _build_navigation() -> PanelContainer:
 	return panel
 
 func _on_page_pressed(page_name: String) -> void:
+	if _dashboard != null and _dashboard.has_method("_has_modal_screen") and bool(_dashboard.call("_has_modal_screen")):
+		return
+	if page_name == "HOME":
+		_active_page = "HOME"
+		_apply_layout()
+		_update_button_states()
+		if _scroll != null:
+			_scroll.scroll_vertical = 0
+		if _dashboard != null:
+			var active_stage := _dashboard.get("stage") as Control
+			if active_stage != null:
+				active_stage.grab_focus()
+		return
 	if page_name != "WELT":
 		super._on_page_pressed(page_name)
 		return

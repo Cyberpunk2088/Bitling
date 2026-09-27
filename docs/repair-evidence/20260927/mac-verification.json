@@ -1,0 +1,73 @@
+{
+  "engine": "Godot 4.6.3 stable macOS Intel",
+  "os": "macOS 12.7.6",
+  "native_renderer": "Vulkan 1.2.283 / Forward Mobile / AMD Radeon R9 M370X",
+  "results": [
+    {
+      "test": "playable_journey_regression_test",
+      "exit": 0,
+      "errors": [],
+      "tail": [
+        "",
+        "[JOURNEY] PASS: 40 assertions; 0 failures",
+        "WARNING: ObjectDB instances leaked at exit (run with --verbose for details).",
+        "   at: cleanup (core/object/object.cpp:2663)"
+      ]
+    },
+    {
+      "test": "profile_input_regression_test",
+      "exit": 0,
+      "errors": [],
+      "tail": [
+        "[PROFILE-INPUT] PASS: reading scroll remains inside short phone viewport",
+        "[PROFILE-INPUT] PASS: keyboard scrolls the profile contents",
+        "[PROFILE-INPUT] PASS: closing tolerates a freed prior focus owner",
+        "[PROFILE-INPUT] 24 checks, 0 failures"
+      ]
+    },
+    {
+      "test": "learning_focus_regression_test",
+      "exit": 0,
+      "errors": [],
+      "tail": [
+        "[LEARNING-FOCUS] PASS: external focus cannot escape an open learning modal",
+        "[LEARNING-FOCUS] PASS: repeated open preserves the return focus",
+        "[LEARNING-FOCUS] PASS: close tolerates a destroyed previous focus control",
+        "[LEARNING-FOCUS] 41 checks, 0 failures"
+      ]
+    },
+    {
+      "test": "activity_session_regression_test",
+      "exit": 124,
+      "errors": [],
+      "tail": [
+        "[ACTIVITY-SESSION] PASS: current-session round 2 advances exactly once",
+        "[ACTIVITY-SESSION] PASS: current-session round 3 advances exactly once",
+        "[ACTIVITY-SESSION] PASS: three played rounds reach one completion and return control",
+        "[ACTIVITY-SESSION] 8 checks, 0 failures"
+      ]
+    },
+    {
+      "test": "save_recovery_regression_test",
+      "exit": 0,
+      "errors": [],
+      "tail": [
+        "PASS: Legacy dictionary binary migration remains supported",
+        "PASS: Migration preserves legacy source",
+        "PASS: Migration writes validated current JSON",
+        "[SAVE-REGRESSION] 59 assertions, 0 failures; isolated macOS fixture"
+      ]
+    },
+    {
+      "test": "activity_session_regression_test_rendered",
+      "exit": 0,
+      "errors": [],
+      "tail": [
+        "[ACTIVITY-SESSION] PASS: three played rounds reach one completion and return control",
+        "[ACTIVITY-SESSION] 8 checks, 0 failures",
+        "WARNING: ObjectDB instances leaked at exit (run with --verbose for details).",
+        "   at: cleanup (core/object/object.cpp:2663)"
+      ]
+    }
+  ]
+}

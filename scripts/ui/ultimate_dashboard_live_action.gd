@@ -8,6 +8,8 @@ var live_action_phase_label: Label
 var live_action_instruction_label: Label
 var _moment_card: Control
 var _choice_card: Control
+var _activity_shortcuts: GridContainer
+var _play_choices: VBoxContainer
 
 func _build_center_panel() -> PanelContainer:
 	var panel := super._build_center_panel()
@@ -45,7 +47,70 @@ func _build_center_panel() -> PanelContainer:
 	var stage_parent := stage.get_parent()
 	if stage_parent == column:
 		column.move_child(rail, stage.get_index() + 1)
+	_activity_shortcuts = GridContainer.new()
+	_activity_shortcuts.name = "PlayableDestinations"
+	_activity_shortcuts.columns = 3
+	_activity_shortcuts.add_theme_constant_override("h_separation", 8)
+	_activity_shortcuts.add_theme_constant_override("v_separation", 8)
+	column.add_child(_activity_shortcuts)
+	column.move_child(_activity_shortcuts, rail.get_index() + 1)
+	for destination in [["SPIELE", "OpenPlayActivities", "LegendaryActivities", "open_activity"], ["LERNABENTEUER", "OpenLearningAdventures", "LearningAdventureOverlay", "open_adventures"], ["RAUM GESTALTEN", "OpenRoomDesign", "LivingHomeOverlay", "open_home"]]:
+		var button := Button.new()
+		button.name = destination[1]
+		button.text = destination[0]
+		button.custom_minimum_size = Vector2(0, 54)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 13)
+		button.add_theme_stylebox_override("normal", _button_style(COLOR_PANEL_ALT, COLOR_CYAN, 14))
+		button.add_theme_stylebox_override("focus", _button_style(COLOR_PANEL_BRIGHT, Color.WHITE, 14))
+		button.pressed.connect(_open_playable_destination.bind(str(destination[2]), str(destination[3])))
+		_activity_shortcuts.add_child(button)
+	_play_choices = VBoxContainer.new()
+	_play_choices.name = "PlayActivityChoices"
+	_play_choices.visible = false
+	column.add_child(_play_choices)
+	column.move_child(_play_choices, _activity_shortcuts.get_index() + 1)
+	for activity in [["Musterfunken · Beobachten und Erinnern", "pattern_focus"], ["Signalwörter · Bedeutungen entdecken", "signal_translation"], ["Resonanztakt · Timing und Rhythmus", "resonance_rhythm"]]:
+		var button := Button.new()
+		button.name = str(activity[1])
+		button.text = str(activity[0])
+		button.custom_minimum_size.y = 76
+		button.add_theme_font_size_override("font_size", 19)
+		button.pressed.connect(_open_activity.bind(str(activity[1])))
+		_play_choices.add_child(button)
 	return panel
+
+func _open_playable_destination(service_name: String, method: String) -> void:
+	if _has_modal_screen():
+		return
+	var service := get_node_or_null("/root/" + service_name)
+	if service == null or not service.has_method(method):
+		message_label.text = "Dieser Bereich konnte nicht geöffnet werden. Bitte kehre zur Insel zurück."
+		return
+	if method == "open_activity":
+		_play_choices.visible = not _play_choices.visible
+	else:
+		service.call(method)
+
+func _open_activity(activity_id: String) -> void:
+	if _has_modal_screen():
+		return
+	_play_choices.visible = false
+	get_node("/root/LegendaryActivities").call("open_activity", activity_id)
+
+func _select_lens(lens_id: String) -> void:
+	if _has_modal_screen():
+		return
+	super._select_lens(lens_id)
+	var service := _habitat()
+	if service == null:
+		return
+	var live: Dictionary = service.call("get_live_action_snapshot") as Dictionary
+	# A deliberate attitude selection begins a real encounter. It never chooses
+	# an answer or awards progress; the player still decides in the room.
+	if not bool(live.get("active", false)):
+		_on_hotspot_pressed(str(live.get("hotspot", "bitling")))
+	message_label.text = "%s: Beobachte Xogot, dann wähle eine der drei Möglichkeiten im Raum." % _lens_label(lens_id)
 
 func _connect_runtime_signals() -> void:
 	super._connect_runtime_signals()
@@ -75,6 +140,8 @@ func _apply_lens(lens_id: String, options: Array) -> void:
 		_apply_live_action(service.call("get_live_action_snapshot") as Dictionary)
 
 func _on_hotspot_pressed(hotspot_id: String) -> void:
+	if _has_modal_screen():
+		return
 	var service := _habitat()
 	if service == null or not service.has_method("start_encounter"):
 		super._on_hotspot_pressed(hotspot_id)
@@ -89,6 +156,11 @@ func _on_hotspot_pressed(hotspot_id: String) -> void:
 func _on_stage_pressed() -> void:
 	_on_hotspot_pressed("bitling")
 
+func _on_navigation_pressed(destination: String) -> void:
+	if _has_modal_screen():
+		return
+	super._on_navigation_pressed(destination)
+
 func _on_habitat_choice_index(index: int) -> void:
 	if index < 0 or index >= habitat_choice_buttons.size():
 		return
@@ -96,6 +168,8 @@ func _on_habitat_choice_index(index: int) -> void:
 	_on_live_action_choice_pressed(choice_id)
 
 func _on_live_action_choice_pressed(choice_id: String) -> void:
+	if _has_modal_screen():
+		return
 	if choice_id.is_empty():
 		return
 	var service := _habitat()
@@ -147,6 +221,11 @@ func _apply_responsive_layout() -> void:
 		stage.custom_minimum_size = Vector2(0.0, 590.0 if _compact else 650.0)
 	if live_action_instruction_label != null:
 		live_action_instruction_label.add_theme_font_size_override("font_size", 10 if _compact else 11)
+	if _activity_shortcuts != null:
+		_activity_shortcuts.columns = 1 if _compact else 3
+		for button: Button in _activity_shortcuts.get_children():
+			button.custom_minimum_size.y = 76 if _compact else 62
+			button.add_theme_font_size_override("font_size", 22 if _compact else 16)
 
 func get_live_action_ui_snapshot() -> Dictionary:
 	var service := _habitat()

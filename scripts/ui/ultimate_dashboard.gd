@@ -56,14 +56,37 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 	_apply_responsive_layout()
 	_refresh_all()
+	add_child(preload("res://scripts/ui/storage_status_overlay.gd").new())
 	call_deferred("_hide_legacy_profile_launcher")
-	if not bool(_game_state().story_flags.get("hatched", false)):
+	if not _game_state().save_blocked and not bool(_game_state().story_flags.get("hatched", false)):
 		_game_state().hatch()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _has_modal_screen():
+		return
 	if event.is_action_pressed("ui_accept"):
 		_on_stage_pressed()
 		get_viewport().set_input_as_handled()
+
+func _has_modal_screen() -> bool:
+	if _game_state().save_blocked:
+		return true
+	for service_name in ["LearningAdventureOverlay", "LivingHomeOverlay", "SignalSettlementOverlay", "ProfileOverlay"]:
+		var service := get_node_or_null("/root/" + service_name)
+		if service != null and service.has_method("is_open") and bool(service.call("is_open")):
+			return true
+	for service_name in ["PartnerWorldOverlay", "ProfileOverlay", "ExplorationOverlay", "EvolutionOverlay", "LearningOverlay"]:
+		var service := get_node_or_null("/root/" + service_name)
+		if service == null:
+			continue
+		var backdrop: Variant = service.get("backdrop")
+		if backdrop is Control and backdrop.is_visible_in_tree():
+			return true
+	for service_name in ["LegendaryOnboarding", "LegendaryPromise", "LegendaryActivities"]:
+		var service := get_node_or_null("/root/" + service_name)
+		if service != null and is_instance_valid(service.get("layer")):
+			return true
+	return false
 
 func _build_interface() -> void:
 	ui_root = Control.new()
@@ -748,6 +771,8 @@ func _on_navigation_pressed(destination: String) -> void:
 	stage.call("play_reaction")
 
 func _on_profile_pressed() -> void:
+	if _has_modal_screen():
+		return
 	var overlay := get_node_or_null("/root/ProfileOverlay")
 	if overlay != null and overlay.has_method("open_profile"):
 		overlay.call("open_profile")

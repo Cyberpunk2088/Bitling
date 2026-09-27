@@ -129,6 +129,20 @@ jobs:
           fi
           grep -F "[CI] PASS" logs/tests-core.log
 
+      - name: Verify repaired input, playable journeys and save recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in playable_journey_regression profile_input_regression learning_focus_regression activity_session_regression save_recovery_regression; do
+            test_data="$(mktemp -d /tmp/bitling-ci-XXXXXXXX)"
+            log="logs/${suite}.log"
+            BITLING_TEST_ISOLATED=1 XDG_DATA_HOME="$test_data" timeout 90 ./godot --headless --path . --script "res://tests/${suite}_test.gd" --log-file "$log"
+            if grep -E "SCRIPT ERROR|^ERROR:" "$log"; then
+              cat "$log"
+              exit 1
+            fi
+          done
+
       - name: Run experience and social regression tests
         shell: bash
         run: |

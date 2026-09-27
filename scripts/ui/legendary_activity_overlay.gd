@@ -49,6 +49,7 @@ var _translation_order: Array[int] = []
 var _rhythm_value := 0.0
 var _rhythm_direction := 1.0
 var _rhythm_attempts := 0
+var _session_serial := 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -233,10 +234,10 @@ func _start_pattern_round() -> void:
 		button.pressed.connect(_on_pattern_symbol.bind(index))
 		option_grid.add_child(button)
 	var timer := get_tree().create_timer(1.35 + float(length) * 0.18, true, false, true)
-	timer.timeout.connect(_unlock_pattern_input)
+	timer.timeout.connect(_unlock_pattern_input.bind(_session_serial, _round))
 
-func _unlock_pattern_input() -> void:
-	if layer == null or _activity_id != "pattern_focus":
+func _unlock_pattern_input(session_serial: int, round_index: int) -> void:
+	if not _is_current_round(session_serial, round_index) or _activity_id != "pattern_focus":
 		return
 	prompt_label.text = "Wiederhole die Folge"
 	feedback_label.text = "Tippe die Symbole in der richtigen Reihenfolge."
@@ -330,10 +331,10 @@ func _round_complete(success: bool, score: float, feedback: String) -> void:
 	feedback_label.add_theme_color_override("font_color", COLOR_GREEN if success else COLOR_YELLOW)
 	_play_feedback(success)
 	var timer := get_tree().create_timer(0.85, true, false, true)
-	timer.timeout.connect(_continue_after_round)
+	timer.timeout.connect(_continue_after_round.bind(_session_serial, _round))
 
-func _continue_after_round() -> void:
-	if layer == null:
+func _continue_after_round(session_serial: int, round_index: int) -> void:
+	if not _is_current_round(session_serial, round_index):
 		return
 	_round += 1
 	primary_button.disabled = false
@@ -436,12 +437,18 @@ func _clear_options() -> void:
 			primary_button.pressed.connect(_on_primary_pressed)
 
 func _close_overlay() -> void:
+	# SceneTreeTimers outlive their screen. Invalidate their callbacks before
+	# another activity can reuse this autoload and its round counter.
+	_session_serial += 1
 	set_process(false)
 	_activity_id = ""
 	if layer != null:
 		layer.queue_free()
 	layer = null
 	panel = null
+
+func _is_current_round(session_serial: int, round_index: int) -> bool:
+	return layer != null and session_serial == _session_serial and round_index == _round
 
 func _style(fill: Color, border: Color, radius: int, width: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

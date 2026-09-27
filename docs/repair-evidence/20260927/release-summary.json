@@ -1,0 +1,40 @@
+{
+  "counts": {
+    "error": 0,
+    "blocker": 5,
+    "warning": 87
+  },
+  "blockers": [
+    {
+      "code": "LOCALIZATION_PIPELINE_MISSING",
+      "severity": "blocker",
+      "message": "No Godot translation resources or internationalization configuration exist",
+      "path": "project.godot"
+    },
+    {
+      "code": "IOS_TEAM_ID_MISSING",
+      "severity": "blocker",
+      "message": "Apple App Store Team ID is required for an iOS release",
+      "path": "export_presets.cfg"
+    },
+    {
+      "code": "APP_ICON_MISSING",
+      "severity": "blocker",
+      "message": "No production app icon is present",
+      "path": ""
+    },
+    {
+      "code": "LICENSE_MISSING",
+      "severity": "blocker",
+      "message": "Public repository has no explicit software/content license",
+      "path": ""
+    },
+    {
+      "code": "PRIVACY_POLICY_MISSING",
+      "severity": "blocker",
+      "message": "No publishable in-app/store privacy policy is present",
+      "path": ""
+    }
+  ],
+  "interpretation": "Development checks do not establish store or authored-content release readiness."
+}

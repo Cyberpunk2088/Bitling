@@ -9,6 +9,15 @@ signal identity_updated(snapshot: Dictionary)
 const PASSPORT_VERSION := 2
 const DEFAULT_NAME := "Bitling"
 
+# Public input contract for the identity migration owned by this service.
+# The central save preflight consumes it before import_state can mutate data.
+const SAVE_IMPORT_SHAPE: Dictionary = {"passport": {
+	"passport_version": "integer", "bitling_id": "string", "display_name": "string", "born_at": "integer", "birth_label": "string",
+	"generation": "integer", "development_phase": "string", "form_id": "string", "level": "integer", "height_cm": "number",
+	"weight_g": "number", "intelligence_quotient": "integer", "cognitive_index": "number", "voice_seed": "integer",
+	"portrait_reference": "string", "last_updated_at": "integer"
+}}
+
 var passport: Dictionary = {}
 
 func _ready() -> void:
