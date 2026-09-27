@@ -439,24 +439,51 @@ func _apply_world_transfer(result: Dictionary) -> void:
 
 func _build_challenge(adventure_id: String, difficulty: int, seed_value: int, round_index: int) -> Dictionary:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = seed_value + round_index * 7919 + difficulty * 101
+	# The authored bank shares one seeded order for all rounds of this session.
+	# This samples without replacement instead of rolling the same prompt twice.
+	rng.seed = seed_value + difficulty * 101
 	var domain: String = str((ADVENTURES[adventure_id] as Dictionary).get("domain", "logic"))
+	var challenge: Dictionary
 	match domain:
 		"logic", "math", "systems":
-			return _build_numeric_challenge(adventure_id, domain, difficulty, rng, round_index)
+			rng.seed += round_index * 7919
+			challenge = _build_numeric_challenge(adventure_id, domain, difficulty, rng, round_index)
 		"language", "media", "reasoning":
-			return _build_context_challenge(adventure_id, domain, difficulty, rng, round_index)
+			challenge = _build_context_challenge(adventure_id, domain, difficulty, rng, round_index)
 		"empathy", "science", "creativity":
-			return _build_scenario_challenge(adventure_id, domain, difficulty, rng, round_index)
+			challenge = _build_scenario_challenge(adventure_id, domain, difficulty, rng, round_index)
 		_:
-			return _build_sequence_challenge(adventure_id, domain, difficulty, rng, round_index)
+			challenge = _build_sequence_challenge(adventure_id, domain, difficulty, rng, round_index)
+	# Shuffle positions separately from content and preserve every correct index.
+	rng.seed = seed_value + round_index * 7919 + difficulty * 101
+	return _shuffle_answer_order(challenge, rng)
+
+func _session_entry(pool: Array, rng: RandomNumberGenerator, round_index: int) -> Array:
+	var order: Array = range(pool.size())
+	_shuffle(order, rng)
+	return pool[int(order[posmod(round_index, pool.size())])] as Array
+
+func _shuffle_answer_order(challenge: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+	var original_answers: Array = challenge.get("answers", []) as Array
+	var original_correct: Array = challenge.get("correct_indices", []) as Array
+	var order: Array = range(original_answers.size())
+	_shuffle(order, rng)
+	var answers: Array = []
+	var correct: Array = []
+	for new_index: int in range(order.size()):
+		var old_index: int = int(order[new_index])
+		answers.append(original_answers[old_index])
+		if original_correct.has(old_index):
+			correct.append(new_index)
+	challenge["answers"] = answers
+	challenge["correct_indices"] = correct
+	return challenge
 
 func _build_numeric_challenge(adventure_id: String, domain: String, difficulty: int, rng: RandomNumberGenerator, round_index: int) -> Dictionary:
 	var start: int = rng.randi_range(2, 7 + difficulty)
 	var step: int = rng.randi_range(2, 3 + difficulty)
 	var correct: int = start + step * 4
 	var answers: Array = [correct, correct + step, maxi(correct - step, 0)]
-	_shuffle(answers, rng)
 	var prompt: String = "Welche Zahl vervollständigt das System?\n%d · %d · %d · %d · ?" % [start, start + step, start + step * 2, start + step * 3]
 	if domain == "systems":
 		prompt = "Ein Leuchtknoten gewinnt pro Runde %d Energie. Er startet bei %d. Wie viel besitzt er nach vier Verstärkungen?" % [step, start]
@@ -464,45 +491,51 @@ func _build_numeric_challenge(adventure_id: String, domain: String, difficulty: 
 		prompt = "Ein Expeditionsteam sammelt viermal je %d Signale und startet mit %d. Welche Gesamtsumme entsteht?" % [step, start]
 	return _challenge(adventure_id, round_index, prompt, answers, [answers.find(correct)], "Jeder Schritt verändert den Wert um %d." % step, "Diese Regel kann später bei Ressourcen und Wegen helfen.", {"compare": 0.08, "explain": 0.12})
 
-func _build_context_challenge(adventure_id: String, domain: String, difficulty: int, _rng: RandomNumberGenerator, round_index: int) -> Dictionary:
+func _build_context_challenge(adventure_id: String, domain: String, _difficulty: int, rng: RandomNumberGenerator, round_index: int) -> Dictionary:
 	var prompts: Dictionary = {
 		"language": [
-			["Zumi sagt: ‘Luma’ und zeigt auf ein warmes Licht. Später sagt Zumi ‘Luma’ zur aufgehenden Sonne. Was bedeutet es wahrscheinlich?", ["hell oder warm leuchtend", "laut und gefährlich", "klein und versteckt"], 0],
-			["Das Wort ‘Nari’ erscheint immer, wenn jemand wartet und genau zuhört. Welche Bedeutung passt?", ["aufmerksam sein", "schnell weglaufen", "etwas zerbrechen"], 0]
+			["Zumi sagt: ‘Luma’ und zeigt auf ein warmes Licht. Später sagt Zumi ‘Luma’ zur aufgehenden Sonne. Was bedeutet es wahrscheinlich?", ["hell oder warm leuchtend", "laut und gefährlich", "klein und versteckt"], 0, "Licht und Sonne leuchten beide. Diese Gemeinsamkeit stützt die vermutete Bedeutung des erfundenen Wortes; ein weiterer Kontext könnte sie prüfen."],
+			["Das Wort ‘Nari’ erscheint immer, wenn jemand wartet und genau zuhört. Welche Bedeutung passt?", ["aufmerksam sein", "schnell weglaufen", "etwas zerbrechen"], 0, "Warten und genaues Zuhören passen zu Aufmerksamkeit. Die beobachteten Handlungen liefern Hinweise auf das erfundene Wort."],
+			["Zwei Bewohner sagen ‘Tavo’, wenn sie gemeinsam einen Tisch tragen. Später sagen sie ‘Tavo’, während sie zusammen eine Kiste tragen. Was passt zu beiden Situationen?", ["gemeinsam etwas tragen", "allein etwas verstecken", "leise einschlafen"], 0, "Der Gegenstand wechselt, aber beide tragen ihn zusammen. Diese gemeinsame Handlung ist ein guter Hinweis auf die erfundene Bedeutung."]
 		],
 		"media": [
-			["Eine Nachricht behauptet: ‘Alle Gartensignale sind gefährlich’, nennt aber keine Quelle. Was ist der beste nächste Schritt?", ["Quelle und Gegenbelege prüfen", "sofort weiterleiten", "nur die Überschrift glauben"], 0],
-			["Ein Bild zeigt einen dunklen Bezirk, aber nicht den hellen Bereich daneben. Welche Frage hilft am meisten?", ["Was wurde außerhalb des Bildes weggelassen?", "Welche Farbe ist am schönsten?", "Wie oft wurde es geteilt?"], 0]
+			["Eine Nachricht behauptet: ‘Alle Gartensignale sind gefährlich’, nennt aber keine Quelle. Was ist der beste nächste Schritt?", ["Quelle und Gegenbelege prüfen", "sofort weiterleiten", "nur die Überschrift glauben"], 0, "Ohne Quelle lässt sich die Behauptung noch nicht prüfen. Suche nach der ursprünglichen Information und nach unabhängigen Belegen, auch solchen, die widersprechen."],
+			["Ein Bild zeigt einen dunklen Bezirk, aber nicht den hellen Bereich daneben. Welche Frage hilft am meisten?", ["Was wurde außerhalb des Bildes weggelassen?", "Welche Farbe ist am schönsten?", "Wie oft wurde es geteilt?"], 0, "Ein Bildausschnitt zeigt nur einen Teil der Umgebung. Der fehlende Bereich kann den Eindruck verändern; viele Weiterleitungen ersetzen diesen Kontext nicht."],
+			["Eine alte Meldung über eine gesperrte Brücke wird heute als aktuelle Warnung geteilt. Was solltest du zuerst prüfen?", ["Datum und ursprünglichen Zusammenhang prüfen", "an vielen Weiterleitungen erkennen, dass sie aktuell ist", "die Warnung ungeprüft weiterleiten"], 0, "Eine Meldung kann für ihren damaligen Zeitpunkt stimmen und heute überholt sein. Prüfe Datum und Originalquelle, bevor du sie als aktuell behandelst."]
 		],
 		"reasoning": [
-			["Kai sagt: ‘Die Brücke ist sicher, weil drei Tests bestanden wurden.’ Was ist der Beleg?", ["die drei bestandenen Tests", "Kais Lautstärke", "die Farbe der Brücke"], 0],
-			["Zwei Bewohner wollen denselben Raum nutzen. Welche Lösung berücksichtigt beide Perspektiven?", ["Zeiten aufteilen und Bedürfnisse prüfen", "der Lautere entscheidet", "beide ignorieren"], 0]
+			["Kai sagt: ‘Die Brücke ist sicher, weil drei Tests bestanden wurden.’ Was ist der Beleg?", ["die drei bestandenen Tests", "Kais Lautstärke", "die Farbe der Brücke"], 0, "Die Testergebnisse sollen die Behauptung stützen. Wie aussagekräftig sie sind, hängt davon ab, was und unter welchen Bedingungen getestet wurde."],
+			["Zwei Bewohner wollen denselben Raum nutzen. Welche Lösung berücksichtigt beide Perspektiven?", ["Zeiten aufteilen und Bedürfnisse prüfen", "der Lautere entscheidet", "beide ignorieren"], 0, "Wenn beide ihre Bedürfnisse nennen, können sie eine passende Aufteilung suchen. Lautstärke allein sagt nichts darüber aus, welche Lösung fair ist."],
+			["Seit eine neue Lampe im Garten steht, wachsen die Pflanzen schneller. Kai sagt: ‘Nur die Lampe kann der Grund sein.’ Was hilft, diese Behauptung zu prüfen?", ["prüfen, ob die Beobachtung auch anders erklärbar ist", "zustimmen, weil Kai sicher klingt", "die schönste Lampe auswählen"], 0, "Zwei Veränderungen zur gleichen Zeit beweisen noch keine Ursache. Auch Wasser oder Temperatur könnten sich geändert haben; diese Möglichkeiten müssen geprüft werden."]
 		]
 	}
 	var pool: Array = prompts.get(domain, []) as Array
-	var entry: Array = pool[round_index % pool.size()] as Array
+	var entry: Array = _session_entry(pool, rng, round_index)
 	var answers: Array = (entry[1] as Array).duplicate()
 	var correct_index: int = int(entry[2])
-	return _challenge(adventure_id, round_index, str(entry[0]), answers, [correct_index], "Die beste Lösung nutzt Kontext oder überprüfbare Belege.", "Wende diese Prüfung auf Dialoge und Expeditionshinweise an.", {"observe": 0.06, "explain": 0.10})
+	return _challenge(adventure_id, round_index, str(entry[0]), answers, [correct_index], str(entry[3]), "Wende diese Prüfung auf Dialoge und Expeditionshinweise an.", {"observe": 0.06, "explain": 0.10})
 
-func _build_scenario_challenge(adventure_id: String, domain: String, _difficulty: int, _rng: RandomNumberGenerator, round_index: int) -> Dictionary:
+func _build_scenario_challenge(adventure_id: String, domain: String, _difficulty: int, rng: RandomNumberGenerator, round_index: int) -> Dictionary:
 	var prompts: Dictionary = {
 		"empathy": [
-			["Ein Bitling zieht sich nach einem Fehler zurück. Welche Reaktion hilft wahrscheinlich am meisten?", ["ruhig nachfragen und Wahlmöglichkeiten geben", "sofort erneut prüfen", "den Fehler verspotten"], [0]],
-			["Eine Bewohnerin wirkt überfordert und spricht sehr kurz. Was ist ein guter erster Schritt?", ["Tempo senken und Unterstützung anbieten", "mehr Aufgaben geben", "ihre Reaktion ignorieren"], [0]]
+			["Ein Bitling zieht sich nach einem Fehler zurück. Welche Reaktion hilft wahrscheinlich am meisten?", ["ruhig nachfragen und Wahlmöglichkeiten geben", "sofort erneut prüfen", "den Fehler verspotten"], [0], "Ruhiges Nachfragen lässt dem Bitling Raum, sein Bedürfnis zu erklären. Wahlmöglichkeiten können helfen; Druck oder Spott machen eine schwierige Situation nicht leichter."],
+			["Eine Bewohnerin wirkt überfordert und spricht sehr kurz. Was ist ein guter erster Schritt?", ["Tempo senken und Unterstützung anbieten", "mehr Aufgaben geben", "ihre Reaktion ignorieren"], [0], "Weniger Tempo und ein Hilfsangebot können entlasten. Kurze Antworten allein verraten nicht sicher, wie sie sich fühlt; frage nach, was sie braucht."],
+			["Ein Freund ist nach einem Streit still. Du weißt nicht, ob er reden oder allein sein möchte. Wie kannst du sein Bedürfnis herausfinden?", ["fragen, ob Nähe oder etwas Ruhe gewünscht ist", "ohne zu fragen eine Umarmung erzwingen", "allen erzählen, was er bestimmt fühlt"], [0], "Frage nach, statt ein Gefühl sicher zu unterstellen. So kann dein Freund selbst entscheiden, ob ein Gespräch, Nähe oder Abstand gerade passt."]
 		],
 		"science": [
-			["Eine Pflanze leuchtet nach dem Gießen stärker. Was ist die beste überprüfbare Hypothese?", ["Wasser beeinflusst die Leuchtstärke", "die Pflanze mag Musik", "alle Pflanzen leuchten immer"], [0]],
-			["Zwei Kristalle reagieren unterschiedlich. Welche Untersuchung ist am fairsten?", ["nur eine Bedingung gleichzeitig verändern", "beide gleichzeitig erhitzen und bewegen", "nur den schönsten wählen"], [0]]
+			["Eine Pflanze leuchtet nach dem Gießen stärker. Was ist die beste überprüfbare Hypothese?", ["Wasser beeinflusst die Leuchtstärke", "die Pflanze mag Musik", "alle Pflanzen leuchten immer"], [0], "Die Wasser-Hypothese knüpft direkt an die Beobachtung an und lässt sich testen. Eine einzelne Beobachtung beweist aber noch nicht, dass Wasser die Ursache war."],
+			["Zwei Kristalle reagieren unterschiedlich. Welche Untersuchung ist am fairsten?", ["nur eine Bedingung gleichzeitig verändern", "beide gleichzeitig erhitzen und bewegen", "nur den schönsten wählen"], [0], "Wenn nur eine Bedingung verändert wird und die anderen gleich bleiben, lässt sich ihr möglicher Einfluss besser vergleichen."],
+			["Du willst prüfen, ob zusätzliches Wasser die Leuchtstärke von Pflanzen verändert. Ein einzelner Messwert ist höher. Wie kannst du die Untersuchung verbessern?", ["bei gleicher Lichtmenge mehrere Messungen vergleichen", "gleichzeitig Wasser und Licht verändern", "nur den höchsten Wert behalten"], [0], "Gleiche Lichtbedingungen helfen, den Einfluss von Wasser zu prüfen. Mehrere Messungen zeigen, ob sich ein Ergebnis wiederholt; nur den höchsten Wert auszuwählen würde das Bild verzerren."]
 		],
 		"creativity": [
-			["Eine Brücke ist zu schwer. Welche Ideen sind brauchbare neue Ansätze?", ["leichteres Material testen", "Stützpunkte neu verteilen", "das Problem ignorieren"], [0, 1]],
-			["Ein Lernraum wirkt unruhig. Welche Änderungen könnten helfen?", ["Licht und Geräusche anpassen", "klare Zonen schaffen", "alle Hinweise entfernen"], [0, 1]]
+			["Eine Brücke ist zu schwer. Wähle einen brauchbaren Ansatz zum Untersuchen. Mehrere Antworten sind möglich.", ["leichteres Material testen", "Stützpunkte neu verteilen", "das Problem ignorieren"], [0, 1], "Leichtere Materialien könnten die Masse senken; andere Stützpunkte könnten eine leichtere Bauweise ermöglichen. Beide Ideen müssen auf Tragfähigkeit geprüft werden."],
+			["Ein Lernraum wirkt unruhig. Wähle eine Änderung, die helfen könnte. Mehrere Antworten sind möglich.", ["Licht und Geräusche anpassen", "klare Zonen schaffen", "alle Hinweise entfernen"], [0, 1], "Passende Licht- und Geräuschbedingungen oder übersichtliche Zonen können unterschiedliche Bedürfnisse unterstützen. Frage die Nutzer und probiere aus, was ihnen hilft."],
+			["Ein Behälter soll aus vorhandenen Resten entstehen und gut transportierbar sein. Wähle einen Ansatz zum Erproben. Mehrere Antworten sind möglich.", ["Materialreste neu kombinieren", "eine faltbare Form ausprobieren", "sofort aufgeben"], [0, 1], "Neue Materialkombinationen und faltbare Formen sind zwei mögliche Ansätze. Ein kleiner Prototyp zeigt, ob der Behälter stabil, praktisch und transportierbar ist."]
 		]
 	}
 	var pool: Array = prompts.get(domain, []) as Array
-	var entry: Array = pool[round_index % pool.size()] as Array
-	return _challenge(adventure_id, round_index, str(entry[0]), (entry[1] as Array).duplicate(), (entry[2] as Array).duplicate(), "Mehrere Lösungen können richtig sein, wenn sie das Ziel nachvollziehbar verbessern.", "Nutze dieselbe Denkweise beim Bauen, Pflegen und Erkunden.", {"experiment": 0.08, "explain": 0.10})
+	var entry: Array = _session_entry(pool, rng, round_index)
+	return _challenge(adventure_id, round_index, str(entry[0]), (entry[1] as Array).duplicate(), (entry[2] as Array).duplicate(), str(entry[3]), "Nutze dieselbe Denkweise beim Bauen, Pflegen und Erkunden.", {"experiment": 0.08, "explain": 0.10})
 
 func _build_sequence_challenge(adventure_id: String, domain: String, difficulty: int, rng: RandomNumberGenerator, round_index: int) -> Dictionary:
 	var patterns: Array = [
@@ -510,7 +543,7 @@ func _build_sequence_challenge(adventure_id: String, domain: String, difficulty:
 		["▲ ▲ ■ ▲ ▲ ■ ?", ["▲", "■", "●"], 0, "Nach zwei Dreiecken folgt ein Quadrat."],
 		["links · oben · rechts · unten · ?", ["links", "oben", "rechts"], 0, "Die Richtung dreht sich im Kreis."]
 	]
-	var entry: Array = patterns[(round_index + rng.randi_range(0, patterns.size() - 1)) % patterns.size()] as Array
+	var entry: Array = _session_entry(patterns, rng, round_index)
 	return _challenge(adventure_id, round_index, "Setze die Folge fort:\n%s" % str(entry[0]), (entry[1] as Array).duplicate(), [int(entry[2])], str(entry[3]), "Muster helfen bei Rhythmus, Gedächtnis und sicheren Wegen.", {"observe": 0.08, "compare": 0.08})
 
 func _challenge(adventure_id: String, round_index: int, prompt: String, answers: Array, correct_indices: Array, explanation: String, transfer_tip: String, approach_bonus: Dictionary) -> Dictionary:

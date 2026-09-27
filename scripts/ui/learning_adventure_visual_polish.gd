@@ -59,7 +59,7 @@ func _install() -> void:
 func _install_catalog_hero(content: VBoxContainer) -> void:
 	_catalog_hero = PanelContainer.new()
 	_catalog_hero.name = "LearningCatalogHero"
-	_catalog_hero.add_theme_stylebox_override("panel", _panel_style(Color("071328"), Color("42e8ff66"), 20))
+	_catalog_hero.add_theme_stylebox_override("panel", _panel_style(Color("142b2c"), Color("e6bd7566"), 20))
 	var margin := MarginContainer.new()
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_%s" % side, 12)
@@ -121,6 +121,9 @@ func _install_session_composition(session_panel: PanelContainer) -> void:
 
 	var scroll := ScrollContainer.new()
 	scroll.name = "LearningSessionScroll"
+	scroll.follow_focus = true
+	scroll.get_h_scroll_bar().focus_mode = Control.FOCUS_NONE
+	scroll.get_v_scroll_bar().focus_mode = Control.FOCUS_NONE
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -135,8 +138,8 @@ func _install_session_composition(session_panel: PanelContainer) -> void:
 	_session_grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(_session_grid)
 
-	_visual_card = _make_card(Color("071328"), Color("42e8ff55"))
-	_decision_card = _make_card(Color("0d1730"), Color("ffc85a4d"))
+	_visual_card = _make_card(Color("142b2c"), Color("e6bd7555"))
+	_decision_card = _make_card(Color("182d2e"), Color("e6bd754d"))
 	_session_grid.add_child(_visual_card)
 	_session_grid.add_child(_decision_card)
 	var visual_column := _card_column(_visual_card)
@@ -163,9 +166,9 @@ func _connect_learning_signals() -> void:
 	var service := get_node_or_null("/root/LearningAdventures")
 	if service == null:
 		return
+	_overlay.connect("challenge_presented", _update_stage)
+	_overlay.connect("approach_selected", _session_stage.set_approach)
 	for pair: Array in [
-		["session_started", "_on_session_started"],
-		["challenge_changed", "_on_challenge_changed"],
 		["round_resolved", "_on_round_resolved"]
 	]:
 		var signal_name := str(pair[0])
@@ -201,8 +204,8 @@ func _apply_layout() -> void:
 	var stacked := width < 1040.0
 	_session_grid.columns = 1 if stacked else 2
 	_catalog_hero_grid.columns = 1 if compact else 2
-	_catalog_stage.custom_minimum_size = Vector2(0, 135 if compact else 175)
-	_session_stage.custom_minimum_size = Vector2(0, 195 if compact else 280 if stacked else 430)
+	_catalog_stage.custom_minimum_size = Vector2(0, 180 if compact else 175)
+	_session_stage.custom_minimum_size = Vector2(0, 235 if compact else 280 if stacked else 430)
 	_visual_card.custom_minimum_size = Vector2(0, 350 if compact else 480 if stacked else 620)
 	_decision_card.custom_minimum_size = Vector2(0, 300 if compact else 330 if stacked else 620)
 	var prompt := _overlay.get("_prompt") as Label

@@ -13,12 +13,23 @@ const COLOR_ACCENT := Color("b783ff")
 var launcher: Button
 var backdrop: ColorRect
 var content: RichTextLabel
+var _panel: PanelContainer
+var _close_button: Button
+var _scroll: ScrollContainer
+var _previous_focus: WeakRef
+var _launcher_was_visible := false
+var _license_button: Button
+var _license_dialog: Control
 
 func _ready() -> void:
-	layer = 32
+	# Above the story HUD and regular destination sheets; onboarding remains first.
+	layer = 50
 	_build_ui()
 	_connect_services()
 	_refresh()
+	get_viewport().size_changed.connect(_apply_layout)
+	get_viewport().gui_focus_changed.connect(_on_focus_changed)
+	_apply_layout()
 
 func _build_ui() -> void:
 	launcher = Button.new()
@@ -47,7 +58,7 @@ func _build_ui() -> void:
 	backdrop.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(340, 620)
+	_panel = panel
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BORDER, 22))
@@ -68,6 +79,8 @@ func _build_ui() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
 	var close_button := Button.new()
+	_close_button = close_button
+	close_button.name = "ProfileClose"
 	close_button.text = "×"
 	close_button.tooltip_text = "Profil schließen"
 	close_button.custom_minimum_size = Vector2(48, 48)
@@ -75,17 +88,27 @@ func _build_ui() -> void:
 	header.add_child(close_button)
 
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(300, 520)
+	_scroll = scroll
+	scroll.name = "ProfileReadingArea"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.focus_mode = Control.FOCUS_ALL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(scroll)
 
 	content = RichTextLabel.new()
 	content.bbcode_enabled = true
 	content.fit_content = true
-	content.custom_minimum_size = Vector2(300, 0)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_color_override("default_color", COLOR_TEXT)
 	content.add_theme_font_size_override("normal_font_size", 15)
 	scroll.add_child(content)
+
+	_license_button = Button.new()
+	_license_button.name = "OpenSourceLicenses"
+	_license_button.text = "OPEN-SOURCE-LIZENZEN"
+	_license_button.custom_minimum_size.y = 48
+	_license_button.pressed.connect(_open_licenses)
+	column.add_child(_license_button)
 
 func _connect_services() -> void:
 	var profile := get_node_or_null("/root/DevelopmentProfile")
@@ -97,17 +120,78 @@ func _connect_services() -> void:
 
 func open_profile() -> void:
 	_refresh()
+	if is_open():
+		return
+	var focused := get_viewport().gui_get_focus_owner()
+	_previous_focus = weakref(focused) if focused != null else null
+	_launcher_was_visible = launcher.visible
 	backdrop.visible = true
 	launcher.visible = false
+	_apply_layout()
+	_close_button.grab_focus()
 
 func close_profile() -> void:
+	if not is_open():
+		return
+	if _licenses_open():
+		_license_dialog.call("close_licenses")
 	backdrop.visible = false
-	launcher.visible = true
+	launcher.visible = _launcher_was_visible
+	var previous := _previous_focus.get_ref() as Control if _previous_focus != null else null
+	_previous_focus = null
+	if previous != null and previous.is_visible_in_tree() and previous.focus_mode != Control.FOCUS_NONE:
+		previous.grab_focus()
+	elif launcher.is_visible_in_tree():
+		launcher.grab_focus()
 
-func _unhandled_input(event: InputEvent) -> void:
-	if backdrop.visible and event.is_action_pressed("ui_cancel"):
+func is_open() -> bool:
+	return backdrop != null and backdrop.visible
+
+func _input(event: InputEvent) -> void:
+	if not is_open() or _licenses_open() or not (event is InputEventKey or event is InputEventAction):
+		return
+	# This sheet is read-only: its keyboard actions belong to the close control
+	# and reading area. Consume them before background shortcuts see the event.
+	get_viewport().set_input_as_handled()
+	if event.is_action_pressed("ui_cancel"):
 		close_profile()
-		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev"):
+		var controls: Array[Control] = [_close_button, _scroll, _license_button]
+		var current := controls.find(get_viewport().gui_get_focus_owner())
+		var direction := -1 if event.is_action_pressed("ui_focus_prev") else 1
+		controls[posmod(current + direction, controls.size())].grab_focus()
+	elif event.is_action_pressed("ui_accept"):
+		if get_viewport().gui_get_focus_owner() == _close_button:
+			close_profile()
+		elif get_viewport().gui_get_focus_owner() == _license_button:
+			_license_button.pressed.emit()
+	elif event.is_action_pressed("ui_down"):
+		_scroll.scroll_vertical += 48
+	elif event.is_action_pressed("ui_up"):
+		_scroll.scroll_vertical -= 48
+	elif event.is_action_pressed("ui_page_down"):
+		_scroll.scroll_vertical += int(_scroll.size.y * 0.8)
+	elif event.is_action_pressed("ui_page_up"):
+		_scroll.scroll_vertical -= int(_scroll.size.y * 0.8)
+
+func _on_focus_changed(control: Control) -> void:
+	if is_open() and not _licenses_open() and control != null and not backdrop.is_ancestor_of(control):
+		_close_button.call_deferred("grab_focus")
+
+func _licenses_open() -> bool:
+	return _license_dialog != null and _license_dialog.is_visible_in_tree()
+
+func _open_licenses() -> void:
+	if _license_dialog == null:
+		_license_dialog = load("res://scripts/ui/open_source_license_dialog.gd").new() as Control
+		backdrop.add_child(_license_dialog)
+	_license_dialog.call("open_licenses")
+
+func _apply_layout() -> void:
+	if _panel == null:
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	_panel.custom_minimum_size = Vector2(minf(480.0, maxf(280.0, viewport_size.x - 24.0)), minf(700.0, maxf(150.0, viewport_size.y - 24.0)))
 
 func _refresh() -> void:
 	if content == null:

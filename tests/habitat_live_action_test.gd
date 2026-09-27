@@ -136,6 +136,11 @@ func _test_live_action_dashboard(service: Node) -> void:
 	var main := packed.instantiate()
 	root.add_child(main)
 	await _settle(10)
+	# Earlier service scenarios can open an expedition. Test the habitat after
+	# leaving that screen and first-contact UI, as a real player would.
+	root.get_node("LegendaryOnboarding").call("_close")
+	root.get_node("ExplorationOverlay").call("_close")
+	_check(not bool(main.call("_has_modal_screen")), "habitat fixture has no covering modal")
 	_check(main.has_method("get_live_action_ui_snapshot"), "main scene exposes the live action UI contract")
 	var stage: Control = main.get("stage") as Control
 	_check(stage != null, "production stage remains the central surface")

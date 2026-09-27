@@ -149,7 +149,7 @@ func _refresh_context() -> void:
 			str(data.get("expedition", "Weltpfad")).replace("_", " ").to_upper()
 		]
 		_evolution_label.text = "Erfolgreiche Runden erhöhen die Affinität %s." % str(data.get("evolution_affinity", "WACHSTUM")).replace("_", " ")
-	_adaptive_label.text = "Fehler entfernen keinen Fortschritt. Schwierigkeit und nächste Aufgabe folgen der gezeigten Meisterschaft."
+	_adaptive_label.text = "Du bestimmst dein Tempo. Lies die Erklärung und probiere anschließend die nächste Aufgabe."
 
 func _apply_layout() -> void:
 	if not _installed:

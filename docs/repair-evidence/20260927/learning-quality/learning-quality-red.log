@@ -1,0 +1,36 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[LEARNING-QUALITY] FAIL: signal_translation: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: signal_translation: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: signal_translation: replay seeds change the first prompt
+[LEARNING-QUALITY] FAIL: signal_translation: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: media_lens: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: media_lens: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: media_lens: replay seeds change the first prompt
+[LEARNING-QUALITY] FAIL: media_lens: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: debate_circle: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: debate_circle: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: debate_circle: replay seeds change the first prompt
+[LEARNING-QUALITY] FAIL: debate_circle: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: emotion_compass: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: emotion_compass: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: emotion_compass: replay seeds change the first prompt
+[LEARNING-QUALITY] FAIL: emotion_compass: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: science_garden: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: science_garden: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: science_garden: replay seeds change the first prompt
+[LEARNING-QUALITY] FAIL: science_garden: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: creative_forge: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: creative_forge: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: creative_forge: replay seeds change the first prompt
+[LEARNING-QUALITY] FAIL: creative_forge: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: resonance_rhythm: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: resonance_rhythm: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: resonance_rhythm: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: spatial_bridge: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: spatial_bridge: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: spatial_bridge: each prompt has its own explanation
+[LEARNING-QUALITY] FAIL: memory_archive: a fixed answer position cannot win every seeded challenge
+[LEARNING-QUALITY] FAIL: memory_archive: three rounds have three different prompts
+[LEARNING-QUALITY] FAIL: memory_archive: each prompt has its own explanation
+[LEARNING-QUALITY] 69 assertions, 33 failures

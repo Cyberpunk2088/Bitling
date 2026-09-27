@@ -1,0 +1,27 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[OPEN-SOURCE-LICENSES] PASS: profile offers a visible license entry
+[OPEN-SOURCE-LICENSES] PASS: Tab reaches the license entry
+[OPEN-SOURCE-LICENSES] PASS: Enter on the entry opens licenses
+[OPEN-SOURCE-LICENSES] PASS: license view has readable content and a close control
+[OPEN-SOURCE-LICENSES] PASS: complete engine license is included verbatim
+[OPEN-SOURCE-LICENSES] PASS: all engine component names and copyright holders are present
+[OPEN-SOURCE-LICENSES] PASS: all engine third-party license texts are included verbatim
+[OPEN-SOURCE-LICENSES] PASS: legal text is shown literally without markup interpretation
+[OPEN-SOURCE-LICENSES] PASS: opening licenses focuses the close control
+[OPEN-SOURCE-LICENSES] PASS: Tab remains within the license modal
+[OPEN-SOURCE-LICENSES] PASS: Tab remains within the license modal
+[OPEN-SOURCE-LICENSES] PASS: Tab remains within the license modal
+[OPEN-SOURCE-LICENSES] PASS: Tab remains within the license modal
+[OPEN-SOURCE-LICENSES] PASS: Tab remains within the license modal
+[OPEN-SOURCE-LICENSES] PASS: Tab remains within the license modal
+[OPEN-SOURCE-LICENSES] PASS: Shift-Tab reaches the reading area
+[OPEN-SOURCE-LICENSES] PASS: keyboard scrolls the legal text
+[OPEN-SOURCE-LICENSES] PASS: external focus cannot escape the license modal
+[OPEN-SOURCE-LICENSES] PASS: close remains within a short phone viewport
+[OPEN-SOURCE-LICENSES] PASS: license reading area fits a short phone viewport
+[OPEN-SOURCE-LICENSES] PASS: Escape closes licenses and keeps the profile open
+[OPEN-SOURCE-LICENSES] PASS: closing licenses restores focus to the entry
+[OPEN-SOURCE-LICENSES] PASS: Enter opens and closes through the actual controls
+[OPEN-SOURCE-LICENSES] PASS: closing profile restores original gameplay focus
+[OPEN-SOURCE-LICENSES] 24 checks, 0 failures

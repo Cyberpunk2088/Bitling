@@ -1,6 +1,10 @@
 # BITLING OMNI
 
-BITLING OMNI is an original living-companion game for Xogot and Godot 4.6. The current `0.5.0` foundation combines expressive 3D companionship, individual development, recoverable care, adaptive learning, exploration, explainable evolution, settlement growth, legacy systems, local-first persistence and consent-first social architecture.
+BITLING OMNI is an original living-companion game for Xogot and Godot 4.6. The current `0.9.0` development build combines expressive 3D companionship, individual development, recoverable care, adaptive learning, exploration, explainable evolution, settlement growth, legacy systems, local-first persistence and consent-first social architecture.
+
+## Repair review
+
+The focused repair and its evidence, remaining defects, and Mac testing instructions are tracked in [`docs/REPAIR_REVIEW_20260927.md`](docs/REPAIR_REVIEW_20260927.md). This is a review build, not a store release.
 
 ## Product constitution
 
@@ -15,13 +19,15 @@ The roadmap is part of the AAA development baseline. It cannot be removed or red
 
 ## Core experience
 
-| Action | Immediate effect | Long-term direction |
-|---|---|---|
-| `FÜTTERN` | restores satiation and happiness | preferences and care history |
-| `SPIELEN` | opens playful activities and expeditions | coordination, creativity and humor |
-| `LERNEN` | opens adaptive learning challenges | IQ, logic, curiosity and techniques |
-| `PFLEGEN` | improves health, happiness and trust | empathy, relationship and self-care |
-| `SCHLAFEN` | restores energy | routine, wellbeing and self-control |
+| Entry | What it actually does |
+|---|---|
+| HOME | returns to the interactive habitat |
+| NAHRUNG / SPIEL / FRAGEN / NÄHE / RUHE | selects an attitude and starts a visible encounter; choose one of three approaches in the room |
+| SPIELE | opens the three playable activities: memory patterns, invented signal words and rhythm |
+| LERNABENTEUER | opens the learning-adventure catalog |
+| RAUM GESTALTEN | opens the separate room customization screen |
+
+Progress from habitat choices is committed after the character performs the chosen action. Selecting an attitude alone does not grant rewards. Signal words are fictional vocabulary, not a real-language course. In-game IQ is a character stat, not a psychological assessment of the player.
 
 The UI reads authoritative gameplay services and does not own duplicate progression state.
 
@@ -88,4 +94,4 @@ A separate strict release workflow remains blocked until final character, enviro
 
 ## Release boundary
 
-Version `0.5.0` is a tested systemic production foundation. It is not a claim that the full game or final AAA art package is complete. Version 1.0 requires the milestones and exit gates in the legendary roadmap, external playtests, professional content production, real-device profiling, accessibility review, learning evaluation, privacy review and operational readiness.
+Version `0.9.0` is a systemic development build. It is not a claim that the full game or final AAA art package is complete. Version 1.0 requires the milestones and exit gates in the legendary roadmap, external playtests, professional content production, real-device profiling, accessibility review, learning evaluation, privacy review and operational readiness.

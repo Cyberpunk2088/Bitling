@@ -1,7 +1,7 @@
 extends Control
 
-## Lightweight authored-looking learning stage. It keeps the Bitling emotionally
-## present during catalog browsing and every challenge without requiring final art.
+## Learning stage with an original reference-directed companion illustration.
+## Decorative only: questions and controls remain live Godot UI.
 
 const COLOR_VOID := Color("030713")
 const COLOR_INK := Color("07111f")
@@ -19,10 +19,18 @@ var _round: int = 0
 var _pulse: float = 0.0
 var _result_state: int = 0
 var _reduced_motion: bool = false
+var _companion_art: Texture2D
+var _illustrated_actor: Control
+const COMPANION_ART_PATH := "res://assets/learning/lumo_companion_island.png"
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
+	if ResourceLoader.exists(COMPANION_ART_PATH):
+		_companion_art = load(COMPANION_ART_PATH) as Texture2D
+		_illustrated_actor = preload("res://scripts/ui/learning_companion_actor.gd").new()
+		add_child(_illustrated_actor)
+		_illustrated_actor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	set_process(true)
 
 func set_catalog_mode() -> void:
@@ -31,29 +39,39 @@ func set_catalog_mode() -> void:
 	_approach = "observe"
 	_round = 0
 	_result_state = 0
+	if _illustrated_actor != null:
+		_illustrated_actor.call("set_context", "catalog")
 	queue_redraw()
 
 func set_context(adventure_id: String, domain: String, round_number: int, approach: String) -> void:
 	_adventure_id = adventure_id
 	_domain = domain
 	_round = maxi(round_number, 1)
+	if _illustrated_actor != null:
+		_illustrated_actor.call("set_context", adventure_id, domain, round_number, approach)
 	_approach = approach
 	_result_state = 0
 	queue_redraw()
 
 func set_approach(approach: String) -> void:
 	_approach = approach
+	if _illustrated_actor != null:
+		_illustrated_actor.call("set_context", _adventure_id, _domain, _round, approach)
 	_result_state = 0
 	queue_redraw()
 
 func set_result(success: bool) -> void:
 	_result_state = 1 if success else -1
+	if _illustrated_actor != null:
+		_illustrated_actor.call("set_result", success)
 	queue_redraw()
 
 func set_reduced_motion(enabled: bool) -> void:
 	if _reduced_motion == enabled:
 		return
 	_reduced_motion = enabled
+	if _illustrated_actor != null:
+		_illustrated_actor.call("set_reduced_motion", enabled)
 	set_process(not enabled)
 	queue_redraw()
 
@@ -65,6 +83,8 @@ func get_visual_snapshot() -> Dictionary:
 		"round": _round,
 		"result_state": _result_state,
 		"bitling_visible": true,
+		"illustrated_companion": _companion_art != null,
+		"animation": _illustrated_actor.call("get_animation_snapshot") if _illustrated_actor != null else {},
 		"processing": is_processing(),
 		"reduced_motion": _reduced_motion
 	}
@@ -77,11 +97,18 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var accent: Color = _domain_color(_domain)
-	draw_rect(Rect2(Vector2.ZERO, size), COLOR_VOID)
-	_draw_grid(accent)
-	_draw_orbits(accent)
-	_draw_platform(accent)
-	_draw_bitling(accent)
+	if _companion_art != null:
+		draw_rect(Rect2(Vector2.ZERO, size), Color("11252a"))
+		var glow_center := Vector2(size.x * 0.5, size.y * 0.43)
+		for ring: int in range(8, 0, -1):
+			draw_circle(glow_center, minf(size.x, size.y) * (0.12 + float(ring) * 0.05), Color(1.0, 0.78, 0.40, 0.012))
+		# The child actor renders independently articulated body regions.
+	else:
+		draw_rect(Rect2(Vector2.ZERO, size), COLOR_VOID)
+		_draw_grid(accent)
+		_draw_orbits(accent)
+		_draw_platform(accent)
+		_draw_bitling(accent)
 	_draw_symbols(accent)
 	_draw_caption(accent)
 
@@ -197,7 +224,9 @@ func _draw_symbols(accent: Color) -> void:
 
 func _draw_caption(accent: Color) -> void:
 	var font: Font = ThemeDB.fallback_font
-	var caption := "ZWÖLF WEGE · EIN WACHSENDER VERSTAND" if _adventure_id == "catalog" else "%s · RUNDE %d" % [_domain.to_upper(), _round]
+	var caption := "KLEINE ENTDECKUNGEN. GEMEINSAM WACHSEN." if _adventure_id == "catalog" else "GEMEINSAM ENTDECKEN · RUNDE %d" % _round
+	if _result_state != 0:
+		caption = "DAS HABEN WIR ENTDECKT." if _result_state > 0 else "WIR FINDEN ES GEMEINSAM HERAUS."
 	draw_string(font, Vector2(12.0, size.y - 13.0), caption, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, 11, Color(accent, 0.78))
 
 func _domain_color(domain: String) -> Color:

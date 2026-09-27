@@ -17,6 +17,54 @@ const BACKUP_SAVE_PATH := "user://bitling_save.backup.json"
 const PHASE_THRESHOLDS := [0, 10, 25, 40, 60, 80, 95]
 const ERA_THRESHOLDS := [0, 15, 35, 55, 75]
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
+const MAX_SAVE_BYTES := 4 * 1024 * 1024
+const IdentityMigration := preload("res://scripts/social/bitling_identity.gd")
+
+# All fields are optional for older saves. Present fields must match their
+# domain shape before ANY live state or service is changed.
+const SAVE_SHAPE: Dictionary = {
+	"schema_version": "integer", "level": "integer", "xp": "integer", "total_xp": "integer",
+	"phase": "integer", "era": "integer", "mood": "integer", "play_time_seconds": "number",
+	"play_time": "number", "days_played": "integer", "hunger": "number", "energy": "number",
+	"happiness": "number", "curiosity": "number", "health": "number", "skill_points": "integer",
+	"memories": [{"type": "string", "text": "string", "timestamp": "integer", "day": "integer", "level": "integer"}],
+	"story_flags": "dictionary", "last_saved_at": "string",
+	"settings": {
+		"music_volume": "number", "sfx_volume": "number", "notifications_enabled": "bool",
+		"quiet_hours_start": "integer", "quiet_hours_end": "integer", "haptics_enabled": "bool",
+		"language": "string", "theme": "string", "font_scale": "number", "high_contrast": "bool",
+		"reduce_motion": "bool", "screen_reader": "bool", "auto_save": "bool",
+		"social_discovery_enabled": "bool", "voice_chat_enabled": "bool", "video_chat_enabled": "bool", "share_public_passport": "bool"
+	},
+	"streak": {"current_streak": "integer", "longest_streak": "integer", "last_active_date": "string", "streak_repairs": "integer", "pending_missed_days": "integer"},
+	"quests": {"active_date": "string", "active_quests": [{"id": "string", "title": "string", "event": "string", "target": "integer", "xp": "integer", "weight": "integer", "progress": "integer", "completed": "bool", "claimed": "bool"}]},
+	"companion": {
+		"relationship_score": "number", "trust": "number", "familiarity": "number", "current_intention": "string",
+		"last_interaction": "string", "last_interaction_timestamp": "integer", "interaction_counts": "numbers", "personality": "numbers",
+		"recent_interactions": [{"action": "string", "timestamp": "integer", "context": "dictionary"}]
+	},
+	"identity": IdentityMigration.SAVE_IMPORT_SHAPE,
+	"development": {
+		"save_version": "integer", "intelligence_quotient": "integer", "iq_growth_points": "number", "attributes": "numbers",
+		"skills": {"*": {"level": "integer", "xp": "number", "rating": "number"}}, "abilities": "booleans",
+		"specializations": {"*": {"xp": "number", "rank": "integer"}}, "upbringing": "numbers",
+		"preferences": {"hobbies": "strings", "favorite_food": "string", "favorite_topic": "string", "conversation_style": "string"},
+		"favorite_bitling_id": "string", "favorite_bitling_affinity": "number", "player_age_band": "string",
+		"social_history": {"*": {"encounters": "integer", "last_affinity": "number", "best_affinity": "number", "last_seen_at": "integer"}},
+		"rarity": {"tier": "string", "growth_multiplier": "number", "roll": "integer", "visual": {"shimmer": "number", "glow": "number", "sparkles": "bool", "hue_shift": "number"}}
+	},
+	"emotion": {"valence": "number", "arousal": "number", "social_safety": "number", "confidence": "number", "empathy": "number", "emotion_weights": "numbers", "recent_events": [{"event_id": "string", "intensity": "number", "context": "dictionary", "timestamp": "integer"}]},
+	"learning": {"challenge_counter": "integer", "skills": {"*": {"rating": "number", "attempts": "integer", "successes": "integer", "current_streak": "integer", "best_streak": "integer", "last_difficulty": "integer", "last_response_seconds": "number", "last_played_at": "integer"}}},
+	"evolution": {"current_form": "string", "discovered_forms": "strings", "evolution_history": [{"from": "string", "to": "string", "timestamp": "integer"}]},
+	"vitality": {"last_update_unix": "integer"},
+	"exploration": {"completed_expeditions": "integer", "discovered_events": "strings", "choice_history": [{"event": "string", "choice": "integer", "xp": "integer", "timestamp": "integer"}], "expedition_counter": "integer"},
+	"dialogue": {"recent_line_ids": "strings", "recent_text_hashes": "integers", "trigger_counts": "numbers"},
+	"lineage": {"last_egg_created_at": "integer", "lineage_history": [{"event": "string", "egg_id": "string", "hatchling_id": "string", "timestamp": "integer"}], "eggs": [{
+		"accepted": "bool", "egg_id": "string", "created_at": "integer", "generation": "integer", "parent_ids": "strings", "parent_names": "strings",
+		"incubation": "number", "ready": "bool", "hatched": "bool", "origin_session": "string", "hatched_at": "integer", "hatchling_id": "string",
+		"genome": {"curiosity": "number", "creativity": "number", "empathy": "number", "courage": "number", "humor": "number", "order": "number", "independence": "number", "color_seed": "integer", "voice_seed": "integer", "quirk_seed": "integer", "inherited_forms": "strings"}
+	}]}
+}
 
 var level: int = 1
 var xp: int = 0
@@ -55,6 +103,10 @@ var settings: Dictionary = {
 }
 
 var _autosave_elapsed: float = 0.0
+var save_blocked: bool = false
+var storage_status: String = "new"
+var storage_message: String = "Noch nicht gespeichert."
+var _loading_state: bool = false
 
 signal state_changed(key: String, value: Variant)
 signal level_up(new_level: int)
@@ -64,6 +116,8 @@ signal mood_changed(new_mood: Mood)
 
 func _ready() -> void:
 	var loaded := load_game_state()
+	if save_blocked:
+		return
 	if not loaded:
 		initialize_new_game()
 	_register_daily_activity()
@@ -73,6 +127,8 @@ func _ready() -> void:
 		get_node("/root/SocialSessionService").reset_state()
 
 func _process(delta: float) -> void:
+	if save_blocked:
+		return
 	play_time_seconds += maxf(delta, 0.0)
 	_autosave_elapsed += maxf(delta, 0.0)
 	if _autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
@@ -81,6 +137,8 @@ func _process(delta: float) -> void:
 			save_game_state()
 
 func initialize_new_game() -> void:
+	if save_blocked:
+		return
 	level = 1
 	xp = 0
 	total_xp = 0
@@ -114,7 +172,6 @@ func initialize_new_game() -> void:
 			var service := get_node(service_path)
 			if service.has_method("reset_state"):
 				service.reset_state()
-
 	# DevelopmentProfile listens for this signal and resets against the newly
 	# created Bitling identity before the authoritative save is written.
 	state_changed.emit("new_game", true)
@@ -123,7 +180,7 @@ func initialize_new_game() -> void:
 	save_game_state()
 
 func hatch() -> void:
-	if bool(story_flags.get("hatched", false)):
+	if save_blocked or bool(story_flags.get("hatched", false)):
 		return
 	story_flags["hatched"] = true
 	level = maxi(level, 10)
@@ -136,7 +193,7 @@ func hatch() -> void:
 	save_game_state()
 
 func gain_xp(amount: int, source: String = "unknown") -> void:
-	if amount <= 0 or level >= MAX_LEVEL:
+	if save_blocked or amount <= 0 or level >= MAX_LEVEL:
 		return
 	var old_level := level
 	xp += amount
@@ -159,7 +216,7 @@ func gain_xp(amount: int, source: String = "unknown") -> void:
 	_refresh_identity_and_emotion()
 
 func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward: int, tags: Array[String] = []) -> Dictionary:
-	if interaction_id.is_empty():
+	if save_blocked or interaction_id.is_empty():
 		return get_state_summary()
 	_apply_need_delta("hunger", float(effects.get("hunger", 0.0)))
 	_apply_need_delta("energy", float(effects.get("energy", 0.0)))
@@ -185,7 +242,7 @@ func perform_interaction(interaction_id: String, effects: Dictionary, xp_reward:
 	return summary
 
 func apply_learning_result(result: Dictionary) -> Dictionary:
-	if not bool(result.get("accepted", false)):
+	if save_blocked or not bool(result.get("accepted", false)):
 		return get_state_summary()
 	var success := bool(result.get("success", false))
 	var reward := maxi(int(result.get("xp_reward", 0)), 0)
@@ -205,6 +262,8 @@ func update_stats(
 	curiosity_delta: float = 0.0,
 	health_delta: float = 0.0
 ) -> void:
+	if save_blocked:
+		return
 	_apply_need_delta("hunger", hunger_delta)
 	_apply_need_delta("energy", energy_delta)
 	_apply_need_delta("happiness", happiness_delta)
@@ -215,7 +274,7 @@ func update_stats(
 	state_changed.emit("stats", get_state_summary())
 
 func add_memory(type: String, text: String) -> void:
-	if type.is_empty() or text.is_empty():
+	if save_blocked or type.is_empty() or text.is_empty():
 		return
 	if memories.any(func(item: Dictionary) -> bool: return item.get("type") == type and item.get("text") == text):
 		return
@@ -233,44 +292,127 @@ func add_memory(type: String, text: String) -> void:
 		get_node("/root/EventBus").memory_created.emit(memory.duplicate(true))
 
 func save_game_state() -> bool:
+	if _loading_state:
+		return false
+	if save_blocked:
+		_push_save_failure(storage_message)
+		return false
+	var snapshots := _scan_saves()
+	if _contains_status(snapshots, "future"):
+		return _block_storage("Spielstand einer neueren Version erkannt. Vorhandene Dateien bleiben unverändert.")
+	var valid_exists := _contains_status(snapshots, "valid")
+	if not valid_exists and _contains_status(snapshots, "invalid"):
+		return _block_storage("Der Spielstand ist beschädigt; ohne gültige Sicherung ist Speichern gesperrt.")
 	_refresh_identity_and_emotion()
+	var outgoing := get_save_data()
+	if not _is_supported_save(outgoing):
+		_push_save_failure("Der aktuelle Zustand ist ungültig. Vorhandene Dateien bleiben unverändert.")
+		return false
+	var serialized := JSON.stringify(outgoing)
+	if serialized.to_utf8_buffer().size() > MAX_SAVE_BYTES:
+		_push_save_failure("Der Spielstand überschreitet das Speicherlimit.")
+		return false
+	var main: Dictionary = snapshots[SAVE_PATH]
+	var backup: Dictionary = snapshots[BACKUP_SAVE_PATH]
+	var pending: Dictionary = snapshots[TEMP_SAVE_PATH]
+	var recover_pending: bool = pending.status == "valid" and main.status != "valid" and backup.status != "valid"
+	var damaged_paths: Array[String] = []
+	for path: String in [SAVE_PATH, BACKUP_SAVE_PATH]:
+		if snapshots[path].status == "invalid":
+			if FileAccess.file_exists(path + ".damaged") or DirAccess.dir_exists_absolute(path + ".damaged"):
+				return _block_storage("Eine beschädigte Originaldatei ist bereits gesichert. Bitte die Spielstände prüfen; es wird nichts überschrieben.")
+			damaged_paths.append(path)
+	if recover_pending:
+		if not _preserve_damaged(damaged_paths):
+			return false
+		if DirAccess.rename_absolute(TEMP_SAVE_PATH, SAVE_PATH) != OK:
+			_push_save_failure("Die temporäre Wiederherstellung konnte nicht übernommen werden. Ihre Daten bleiben erhalten.")
+			return false
+		main = _inspect_save(SAVE_PATH)
+		if main.status != "valid":
+			_push_save_failure("Die temporäre Wiederherstellung konnte nicht bestätigt werden.")
+			return false
 	var temporary := FileAccess.open(TEMP_SAVE_PATH, FileAccess.WRITE)
 	if temporary == null:
-		_push_save_failure("Could not open temporary save file")
+		_push_save_failure("Die temporäre Spielstanddatei ist nicht schreibbar.")
 		return false
-	temporary.store_string(JSON.stringify(get_save_data()))
+	temporary.store_string(serialized)
+	temporary.flush()
+	var write_error := temporary.get_error()
 	temporary.close()
-
-	# Preserve only a known-good primary as backup. A corrupt primary must never
-	# replace the last recoverable snapshot.
-	if FileAccess.file_exists(SAVE_PATH) and not _read_save(SAVE_PATH).is_empty():
-		_copy_file(SAVE_PATH, BACKUP_SAVE_PATH)
-	if FileAccess.file_exists(SAVE_PATH):
-		var remove_error := DirAccess.remove_absolute(SAVE_PATH)
-		if remove_error != OK:
-			_push_save_failure("Could not replace existing save: %s" % remove_error)
-			return false
-
-	var rename_error := DirAccess.rename_absolute(TEMP_SAVE_PATH, SAVE_PATH)
-	if rename_error != OK:
-		if FileAccess.file_exists(BACKUP_SAVE_PATH):
-			_copy_file(BACKUP_SAVE_PATH, SAVE_PATH)
-		_push_save_failure("Atomic save replacement failed: %s" % rename_error)
+	if write_error != OK or _inspect_save(TEMP_SAVE_PATH).status != "valid" or FileAccess.get_file_as_string(TEMP_SAVE_PATH) != serialized:
+		_push_save_failure("Der neue Spielstand konnte nicht vollständig bestätigt werden. Bisherige Daten bleiben erhalten.")
 		return false
+	if not recover_pending and not _preserve_damaged(damaged_paths):
+		return false
+	if main.status == "valid":
+		if DirAccess.rename_absolute(SAVE_PATH, BACKUP_SAVE_PATH) != OK:
+			_push_save_failure("Die vorherige Generation konnte nicht gesichert werden.")
+			return false
+	if DirAccess.rename_absolute(TEMP_SAVE_PATH, SAVE_PATH) != OK:
+		_push_save_failure("Der neue Spielstand konnte nicht übernommen werden. Gültige Wiederherstellungsdaten bleiben erhalten.")
+		return false
+	if _inspect_save(SAVE_PATH).status != "valid" or FileAccess.get_file_as_string(SAVE_PATH) != serialized:
+		_push_save_failure("Der gespeicherte Spielstand konnte nicht bestätigt werden.")
+		return false
+	storage_status = "saved"
+	storage_message = "Lokal gespeichert."
+	if not damaged_paths.is_empty():
+		storage_message += " Beschädigte Originaldateien wurden erhalten."
 	if has_node("/root/EventBus"):
 		get_node("/root/EventBus").save_completed.emit(SAVE_PATH)
 	return true
 
 func load_game_state() -> bool:
-	for path in [SAVE_PATH, BACKUP_SAVE_PATH, LEGACY_SAVE_PATH]:
-		var data := _read_save(path)
-		if data.is_empty():
+	if save_blocked:
+		return false
+	var snapshots := _scan_saves()
+	if _contains_status(snapshots, "future"):
+		return _block_storage("Dieser Spielstand stammt aus einer neueren Version. Speichern ist gesperrt; die Dateien bleiben unverändert.")
+	# Prefer a committed generation. A pending file can be stale and is used
+	# only when no main, backup or compatible legacy generation survives.
+	for path: String in [SAVE_PATH, BACKUP_SAVE_PATH, LEGACY_SAVE_PATH, TEMP_SAVE_PATH]:
+		var snapshot: Dictionary = snapshots[path]
+		if snapshot.status != "valid":
 			continue
-		apply_save_data(data)
+		if not apply_save_data(snapshot.data):
+			continue
+		storage_status = "loaded" if path == SAVE_PATH else "recovered"
+		storage_message = "Spielstand geladen." if path == SAVE_PATH else "Gültiger Spielstand wiederhergestellt. Vorhandene Originaldateien bleiben erhalten."
 		if path == LEGACY_SAVE_PATH:
 			save_game_state()
 		return true
+	if _contains_status(snapshots, "invalid"):
+		return _block_storage("Der Spielstand ist nicht lesbar und es gibt keine gültige Sicherung. Speichern ist gesperrt.")
+	storage_status = "new"
+	storage_message = "Neues Abenteuer."
 	return false
+
+func _scan_saves() -> Dictionary:
+	var result: Dictionary = {}
+	for path: String in [SAVE_PATH, BACKUP_SAVE_PATH, LEGACY_SAVE_PATH, TEMP_SAVE_PATH]:
+		result[path] = _inspect_save(path)
+	return result
+
+func _contains_status(snapshots: Dictionary, status: String) -> bool:
+	for snapshot: Dictionary in snapshots.values():
+		if snapshot.status == status:
+			return true
+	return false
+
+func _block_storage(message: String) -> bool:
+	save_blocked = true
+	storage_status = "blocked"
+	storage_message = message
+	_push_save_failure(message)
+	return false
+
+func _preserve_damaged(paths: Array[String]) -> bool:
+	for path: String in paths:
+		if DirAccess.rename_absolute(path, path + ".damaged") != OK:
+			_push_save_failure("Eine beschädigte Originaldatei konnte nicht erhalten werden. Speichern wurde angehalten.")
+			return false
+	return true
 
 func get_save_data() -> Dictionary:
 	return {
@@ -307,7 +449,10 @@ func get_save_data() -> Dictionary:
 		"last_saved_at": Time.get_datetime_string_from_system()
 	}
 
-func apply_save_data(data: Dictionary) -> void:
+func apply_save_data(data: Dictionary) -> bool:
+	if save_blocked or not _is_supported_save(data):
+		return false
+	_loading_state = true
 	level = clampi(int(data.get("level", 1)), 1, MAX_LEVEL)
 	xp = maxi(int(data.get("xp", 0)), 0)
 	total_xp = maxi(int(data.get("total_xp", 0)), 0)
@@ -351,10 +496,12 @@ func apply_save_data(data: Dictionary) -> void:
 	_update_mood()
 	_evaluate_evolution()
 	_refresh_identity_and_emotion()
+	_loading_state = false
 	state_changed.emit("loaded", true)
+	return true
 
 func has_save_file() -> bool:
-	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(BACKUP_SAVE_PATH) or FileAccess.file_exists(LEGACY_SAVE_PATH)
+	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(BACKUP_SAVE_PATH) or FileAccess.file_exists(LEGACY_SAVE_PATH) or FileAccess.file_exists(TEMP_SAVE_PATH)
 
 func get_state_summary() -> Dictionary:
 	var form_id := "signal"
@@ -511,29 +658,38 @@ func _import_service(path: String, data: Variant) -> void:
 			service.import_state(data)
 
 func _read_save(path: String) -> Dictionary:
+	var snapshot := _inspect_save(path)
+	return snapshot.data if snapshot.status == "valid" else {}
+
+func _inspect_save(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		return {}
-
-	# Legacy .dat files may be Variant-encoded binary. Detect that format before
-	# any UTF-8 conversion so malformed or binary input never pollutes engine logs.
-	if path == LEGACY_SAVE_PATH and not _legacy_file_looks_like_json(path):
-		var legacy := FileAccess.open(path, FileAccess.READ)
-		if legacy == null:
-			return {}
-		var legacy_value: Variant = legacy.get_var(true)
-		legacy.close()
-		return legacy_value if legacy_value is Dictionary and _is_supported_save(legacy_value) else {}
-
+		return {"status": "invalid" if DirAccess.dir_exists_absolute(path) else "missing", "data": {}}
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return {}
-	var text := file.get_as_text()
+		return {"status": "invalid", "data": {}}
+	if file.get_length() <= 0 or file.get_length() > MAX_SAVE_BYTES:
+		file.close()
+		return {"status": "invalid", "data": {}}
+	var parsed: Variant
+	if path == LEGACY_SAVE_PATH and not _legacy_file_looks_like_json(path):
+		# Legacy saves contain data dictionaries. Never instantiate objects from
+		# file contents while migrating the previous binary format.
+		parsed = file.get_var(false)
+	else:
+		var parser := JSON.new()
+		if parser.parse(file.get_as_text()) != OK:
+			file.close()
+			return {"status": "invalid", "data": {}}
+		parsed = parser.data
 	file.close()
-	var parser := JSON.new()
-	if parser.parse(text) != OK:
-		return {}
-	var parsed: Variant = parser.data
-	return parsed if parsed is Dictionary and _is_supported_save(parsed) else {}
+	if not parsed is Dictionary:
+		return {"status": "invalid", "data": {}}
+	var schema: Variant = parsed.get("schema_version", 0)
+	if (schema is int or schema is float) and is_finite(float(schema)) and float(schema) > SAVE_SCHEMA_VERSION:
+		return {"status": "future", "data": {}}
+	if not _is_supported_save(parsed):
+		return {"status": "invalid", "data": {}}
+	return {"status": "valid", "data": parsed}
 
 func _legacy_file_looks_like_json(path: String) -> bool:
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -549,12 +705,81 @@ func _legacy_file_looks_like_json(path: String) -> bool:
 	return false
 
 func _is_supported_save(data: Dictionary) -> bool:
-	if data.is_empty():
+	if data.is_empty() or not (data.has("level") or data.has("story_flags")):
 		return false
-	var schema := int(data.get("schema_version", 0))
-	if schema > SAVE_SCHEMA_VERSION:
+	var schema: Variant = data.get("schema_version", 0)
+	if not _matches_shape(schema, "integer") or int(schema) < 0 or int(schema) > SAVE_SCHEMA_VERSION:
 		return false
-	return data.has("level") or data.has("story_flags") or schema > 0
+	# First bound and validate every nested value, including extension fields.
+	# Then validate the known structures used by every imported service.
+	return _safe_json_value(data, 0) and _matches_shape(data, SAVE_SHAPE)
+
+func _safe_json_value(value: Variant, depth: int) -> bool:
+	if depth > 16:
+		return false
+	if value == null or value is bool:
+		return true
+	if value is String:
+		return value.length() <= 131072
+	if value is int or value is float:
+		return is_finite(float(value)) and absf(float(value)) <= 9007199254740991.0
+	if value is Array:
+		if value.size() > 5000:
+			return false
+		for item: Variant in value:
+			if not _safe_json_value(item, depth + 1):
+				return false
+		return true
+	if value is Dictionary:
+		if value.size() > 5000:
+			return false
+		for key: Variant in value:
+			if not key is String or not _safe_json_value(key, depth + 1) or not _safe_json_value(value[key], depth + 1):
+				return false
+		return true
+	return false
+
+func _matches_shape(value: Variant, shape: Variant) -> bool:
+	if shape is Dictionary:
+		if not value is Dictionary:
+			return false
+		if shape.has("*"):
+			for child: Variant in value.values():
+				if not _matches_shape(child, shape["*"]):
+					return false
+		else:
+			for key: String in shape:
+				if value.has(key) and not _matches_shape(value[key], shape[key]):
+					return false
+		return true
+	if shape is Array:
+		if not value is Array:
+			return false
+		for child: Variant in value:
+			if not _matches_shape(child, shape[0]):
+				return false
+		return true
+	match str(shape):
+		"number": return (value is int or value is float) and is_finite(float(value))
+		"integer": return (value is int or value is float) and is_finite(float(value)) and float(value) == floor(float(value)) and absf(float(value)) <= 9007199254740991.0
+		"string": return value is String
+		"bool": return value is bool
+		"dictionary": return value is Dictionary
+		"numbers", "booleans":
+			if not value is Dictionary:
+				return false
+			for child: Variant in value.values():
+				if not _matches_shape(child, "number" if shape == "numbers" else "bool"):
+					return false
+			return true
+		"strings", "integers":
+			if not value is Array:
+				return false
+			for child: Variant in value:
+				if not _matches_shape(child, "string" if shape == "strings" else "integer"):
+					return false
+			return true
+	return false
 
 func _copy_file(source_path: String, destination_path: String) -> bool:
 	var source := FileAccess.open(source_path, FileAccess.READ)
@@ -570,6 +795,9 @@ func _copy_file(source_path: String, destination_path: String) -> bool:
 	return true
 
 func _push_save_failure(reason: String) -> void:
-	push_error("[GameState] %s" % reason)
+	storage_message = reason
+	if not save_blocked:
+		storage_status = "error"
+	push_warning("[GameState] %s" % reason)
 	if has_node("/root/EventBus"):
 		get_node("/root/EventBus").save_failed.emit(reason)

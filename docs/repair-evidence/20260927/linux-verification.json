@@ -1,0 +1,263 @@
+{
+  "engine": "Godot 4.6.3 stable Linux x86_64",
+  "suite_count": 26,
+  "passed": 26,
+  "results": [
+    {
+      "suite": "aaa_production_test",
+      "exit": 0,
+      "seconds": 1.9,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[CI-AAA] PASS: 14 assertions"
+      ]
+    },
+    {
+      "suite": "activity_session_regression_test",
+      "exit": 0,
+      "seconds": 9.11,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[ACTIVITY-SESSION] 8 checks, 0 failures"
+      ]
+    },
+    {
+      "suite": "ci_smoke_test",
+      "exit": 0,
+      "seconds": 2.1,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI] PASS: 61 assertions"
+      ]
+    },
+    {
+      "suite": "development_profile_test",
+      "exit": 0,
+      "seconds": 1.92,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[CI-DEV] PASS: 31 assertions"
+      ]
+    },
+    {
+      "suite": "experience_systems_test",
+      "exit": 0,
+      "seconds": 2.12,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-XP] PASS: 67 assertions"
+      ]
+    },
+    {
+      "suite": "habitat_behavior_test",
+      "exit": 0,
+      "seconds": 3.11,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[BEHAVIOR-GATE] PASS: 51 assertions"
+      ]
+    },
+    {
+      "suite": "habitat_gameplay_test",
+      "exit": 0,
+      "seconds": 3.24,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[HABITAT-GATE] PASS: 125 assertions"
+      ]
+    },
+    {
+      "suite": "habitat_live_action_layout_test",
+      "exit": 0,
+      "seconds": 1.91,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[LIVE-LAYOUT-GATE] PASS: 16 assertions"
+      ]
+    },
+    {
+      "suite": "habitat_live_action_test",
+      "exit": 0,
+      "seconds": 3.49,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[LIVE-ACTION-GATE] PASS: 61 assertions"
+      ]
+    },
+    {
+      "suite": "habitat_world_consequence_test",
+      "exit": 0,
+      "seconds": 3.23,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[WORLD-GATE] PASS: 46 assertions"
+      ]
+    },
+    {
+      "suite": "learning_focus_regression_test",
+      "exit": 0,
+      "seconds": 3.1,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[LEARNING-FOCUS] 41 checks, 0 failures"
+      ]
+    },
+    {
+      "suite": "legendary_vertical_slice_test",
+      "exit": 0,
+      "seconds": 1.97,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-SLICE] PASS: 24 assertions"
+      ]
+    },
+    {
+      "suite": "partner_world_test",
+      "exit": 0,
+      "seconds": 2.0,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[CI-PARTNER] PASS: 31 assertions"
+      ]
+    },
+    {
+      "suite": "playable_journey_regression_test",
+      "exit": 0,
+      "seconds": 3.47,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[JOURNEY] PASS: 40 assertions; 0 failures"
+      ]
+    },
+    {
+      "suite": "profile_input_regression_test",
+      "exit": 0,
+      "seconds": 2.82,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[PROFILE-INPUT] 24 checks, 0 failures"
+      ]
+    },
+    {
+      "suite": "release_readiness_test",
+      "exit": 0,
+      "seconds": 2.45,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-RELEASE] PASS: 456 assertions"
+      ]
+    },
+    {
+      "suite": "save_recovery_regression_test",
+      "exit": 0,
+      "seconds": 1.98,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[SAVE-REGRESSION] 59 assertions, 0 failures; isolated fixture"
+      ]
+    },
+    {
+      "suite": "visual_layout_test",
+      "exit": 0,
+      "seconds": 3.22,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-VISUAL] PASS: 180 assertions"
+      ]
+    },
+    {
+      "suite": "wave1_visual_production_test",
+      "exit": 0,
+      "seconds": 2.27,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-WAVE1-VISUAL] PASS: 24 assertions"
+      ]
+    },
+    {
+      "suite": "wave2_character_performance_test",
+      "exit": 0,
+      "seconds": 2.86,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[CI-WAVE2] PASS: 41 assertions"
+      ]
+    },
+    {
+      "suite": "wave3_fullscreen_home_test",
+      "exit": 0,
+      "seconds": 2.64,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": []
+    },
+    {
+      "suite": "wave3_living_home_test",
+      "exit": 0,
+      "seconds": 2.75,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": []
+    },
+    {
+      "suite": "wave4_partner_world_test",
+      "exit": 0,
+      "seconds": 2.64,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-WAVE4] PASS: 48 assertions"
+      ]
+    },
+    {
+      "suite": "wave5_learning_adventures_test",
+      "exit": 0,
+      "seconds": 3.66,
+      "errors": [],
+      "shutdown_warning": true,
+      "summary": [
+        "[CI-WAVE5] PASS: 77 assertions"
+      ]
+    },
+    {
+      "suite": "wave5_learning_visual_polish_test",
+      "exit": 0,
+      "seconds": 2.3,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[CI-WAVE5-VISUAL] PASS: 25 assertions"
+      ]
+    },
+    {
+      "suite": "wave6_social_constellation_test",
+      "exit": 0,
+      "seconds": 1.8,
+      "errors": [],
+      "shutdown_warning": false,
+      "summary": [
+        "[CI-WAVE6] PASS: 30 assertions"
+      ]
+    }
+  ]
+}
