@@ -50,6 +50,7 @@ var _rhythm_value := 0.0
 var _rhythm_direction := 1.0
 var _rhythm_attempts := 0
 var _session_serial := 0
+var _save_retry_button: Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -355,11 +356,10 @@ func _finish_current_activity() -> void:
 	var success := _successes >= 2
 	var activity := _activity_id
 	var result := _commit_result(activity, success, score, _round_target, true)
-	title_label.text = "VERBINDUNG GESPEICHERT"
 	prompt_label.text = "%d%% Resonanz" % int(round(score * 100.0))
 	progress_label.text = "%d von %d Runden gelungen" % [_successes, _round_target]
-	feedback_label.text = "Dein Bitling erinnert sich an diesen gemeinsamen Versuch."
 	_clear_options()
+	_show_save_result(bool(result.get("saved", false)))
 	primary_button.visible = true
 	primary_button.disabled = false
 	primary_button.text = "ZURÜCK ZUM BITLING"
@@ -368,29 +368,63 @@ func _finish_current_activity() -> void:
 	primary_button.pressed.connect(_close_overlay, CONNECT_ONE_SHOT)
 	activity_finished.emit(activity, result)
 
+func _show_save_result(saved: bool) -> void:
+	title_label.text = "VERBINDUNG GESPEICHERT" if saved else "NOCH NICHT GESPEICHERT"
+	feedback_label.text = "Dein Bitling erinnert sich an diesen gemeinsamen Versuch." if saved else "XP und Ergebnis sind noch nicht vollständig gesichert. Bitte erneut speichern, bevor du das Spiel schließt."
+	if saved:
+		if is_instance_valid(_save_retry_button):
+			_save_retry_button.queue_free()
+		_save_retry_button = null
+	elif not is_instance_valid(_save_retry_button):
+		_save_retry_button = _option_button("SPEICHERN ERNEUT VERSUCHEN", COLOR_YELLOW)
+		_save_retry_button.name = "RetryActivitySave"
+		_save_retry_button.pressed.connect(_retry_activity_save)
+		option_grid.add_child(_save_retry_button)
+
+func _retry_activity_save() -> void:
+	if layer == null:
+		return
+	# Retry only persistence: never award XP or record the attempt a second time.
+	_show_save_result(_save_activity_progress())
+
+func _save_activity_progress() -> bool:
+	var state := get_node_or_null("/root/GameState")
+	var director := get_node_or_null("/root/LegendarySlice")
+	if state == null or director == null or bool(state.get("save_blocked")):
+		return false
+	if not bool(state.call("save_game_state")):
+		return false
+	return bool(director.call("save_state"))
+
 func _commit_result(activity: String, success: bool, score: float, attempts: int, apply_rewards: bool) -> Dictionary:
 	var result := {
 		"accepted": true,
 		"success": success,
 		"score": clampf(score, 0.0, 1.0),
 		"attempts": maxi(attempts, 1),
-		"xp_reward": int(round(12.0 + score * 18.0))
+		"xp_reward": int(round(12.0 + score * 18.0)),
+		"saved": false
 	}
 	if apply_rewards:
 		var state := get_node_or_null("/root/GameState")
+		if state == null or bool(state.get("save_blocked")):
+			result["accepted"] = false
+			return result
 		if state != null:
 			if activity in ["pattern_focus", "signal_translation"] and state.has_method("apply_learning_result"):
 				state.apply_learning_result(result)
 			elif state.has_method("perform_interaction"):
+				var tags: Array[String] = ["legendary_slice", "activity", activity]
 				state.perform_interaction(
 					"legendary_%s" % activity,
 					{"energy": -5.0, "happiness": 8.0 if success else 3.0, "curiosity": 7.0, "quest_event": "discovery_completed"},
 					int(result["xp_reward"]),
-					["legendary_slice", "activity", activity]
+					tags
 				)
 		var director := get_node_or_null("/root/LegendarySlice")
 		if director != null and director.has_method("record_activity"):
 			director.record_activity(activity, result)
+		result["saved"] = _save_activity_progress()
 	return result
 
 func _play_feedback(success: bool) -> void:
@@ -440,6 +474,7 @@ func _close_overlay() -> void:
 	# SceneTreeTimers outlive their screen. Invalidate their callbacks before
 	# another activity can reuse this autoload and its round counter.
 	_session_serial += 1
+	_save_retry_button = null
 	set_process(false)
 	_activity_id = ""
 	if layer != null:

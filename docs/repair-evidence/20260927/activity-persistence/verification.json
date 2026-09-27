@@ -1,0 +1,106 @@
+{
+  "base_commit": "90e133ab8c6ca0d27d39b349db08339089646327",
+  "engine": "Godot 4.6.3",
+  "linux": [
+    {
+      "suite": "activity_persistence_regression_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[ACTIVITY-SAVE] 24 assertions, 0 failures"
+      ]
+    },
+    {
+      "suite": "activity_persistence_regression_test",
+      "phase": "restart",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[ACTIVITY-SAVE] 4 assertions, 0 failures"
+      ]
+    },
+    {
+      "suite": "activity_session_regression_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[ACTIVITY-SESSION] 8 checks, 0 failures"
+      ]
+    },
+    {
+      "suite": "legendary_vertical_slice_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[CI-SLICE] PASS: 24 assertions"
+      ]
+    },
+    {
+      "suite": "playable_journey_regression_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[JOURNEY] PASS: 40 assertions; 0 failures"
+      ]
+    },
+    {
+      "suite": "save_recovery_regression_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[SAVE-REGRESSION] 59 assertions, 0 failures; isolated fixture"
+      ]
+    },
+    {
+      "suite": "ci_smoke_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[CI] PASS: 61 assertions"
+      ]
+    },
+    {
+      "suite": "release_readiness_test",
+      "phase": "main",
+      "exit": 0,
+      "errors": [],
+      "summary": [
+        "[CI-RELEASE] PASS: 456 assertions"
+      ]
+    }
+  ],
+  "mac": [
+    {
+      "phase": "import",
+      "exit": 0,
+      "errors": []
+    },
+    {
+      "phase": "native_activity_persistence",
+      "assertions": 24,
+      "exit": 0,
+      "errors": []
+    },
+    {
+      "phase": "fresh_process_restart",
+      "assertions": 4,
+      "exit": 0,
+      "errors": []
+    }
+  ],
+  "source_sha256": {
+    "scripts/ui/legendary_activity_overlay.gd": "cb2fa2ce2be11ab818e3f5e23824b7709fd83cf1bc77063a65dc7e88911b58d6",
+    "tests/activity_persistence_regression_test.gd": "d17aae98eb2844e6c3e77e76db26d5a7edd306f6be8a2612b24f7c1a9e65ea63"
+  },
+  "limits": [
+    "Existing ObjectDB shutdown warning remains.",
+    "No cross-store atomic transaction or crash-at-every-write-boundary guarantee.",
+    "No physical iPhone/Android test."
+  ]
+}

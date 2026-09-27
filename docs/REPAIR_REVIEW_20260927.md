@@ -7,6 +7,16 @@
 - Ziel: den bestehenden Bitling-Spielkern durchgängig bedienbar machen und die Änderungen mit reproduzierbaren Regressionen absichern.
 - Prüfgrundlage: tatsächlicher Code, gezielte Fehlerreproduktionen und ausgeführte Godot-Tests. Frühere Qualitätsbezeichnungen im Repository ersetzen diese Nachweise nicht.
 
+## Nachtrag: Minispiel-Abschluss und Neustart
+
+Die erneute Prüfung fand einen bisher nicht abgedeckten Typfehler beim echten Abschluss von Resonanztakt: Die Interaktions-Tags wurden als untypisiertes Array übergeben. Außerdem wurden XP und Pflegewerte der Minispiele nicht unmittelbar gespeichert, obwohl die Oberfläche dies behauptete.
+
+Der Abschluss speichert nun zentrale Werte und Ergebnishistorie, bevor die Erfolgsmeldung erscheint. Bei einem Schreibfehler bleibt die Meldung ehrlich und bietet erneutes Speichern an. Dieser Versuch vergibt keine weitere Belohnung und zählt keine weitere Spielrunde. Blockierte zentrale Spielstände verhindern auch Änderungen an der Minispielhistorie. Simulationen vergeben weiterhin keine Belohnungen.
+
+Nachweis: Die erste Reproduktion meldete 10 fehlgeschlagene Assertions und den Rhythmus-Typfehler. Nach der Korrektur bestehen 24 Abschluss-/Fehlerpfadprüfungen und 4 Prüfungen in einem neu gestarteten Prozess unter Linux und macOS. Auf dem Mac lief die Abschlusssuite mit echter Darstellung. Die vorhandenen Activity-Session-, Legendary-Slice-, Journey-, Save-Recovery-, Core- und Release-Tests bestanden ebenfalls unter Linux. Die neue Suite samt Prozessneustart ist in CI eingetragen. [Nachtrag-Evidenz](repair-evidence/20260927/activity-persistence/verification.json).
+
+Dies schließt den konkreten Minispielverlust beim normalen Neustart. Ein atomarer Gesamtspielstand über alle getrennten Stores und die bisherigen Storeblocker bleiben offen. Der dokumentierte GitHub-Actions-Lauf des Ausgangscommits konnte wegen einer Abrechnungssperre keine Testschritte starten.
+
 ## Reparierter Umfang
 
 | Bereich | Fehler und Änderung |
@@ -37,7 +47,7 @@ Die fünf neuen Regressionssuiten enthalten zusammen **172 Assertions**:
 
 **Mac: alle 172 Assertions der fünf neuen Suiten bestanden.** Vier Suiten liefen headless mit Exit 0; der Minispieltest erreichte headless 8/8 Assertions, blieb aber beim Beenden hängen (Timeout/Exit 124). Derselbe Test bestand anschließend mit echter Vulkan-Darstellung und Exit 0. Der Timeout wird nicht als bestandener Prozess ausgegeben. [Mac-Protokollzusammenfassung](repair-evidence/20260927/mac-verification.json).
 
-Die Prüfungen betreffen den durch [SHA-256-Dateihashes](repair-evidence/20260927/source-sha256.json) dokumentierten Quellstand dieses Review-Commits. Auf dem Mac weicht ausschließlich die lokale Spielstandkonfiguration für die isolierte Vorschau beziehungsweise die Testdaten ab. Import und gerenderte Desktop-/Telefonansichten endeten mit Exit 0. Die Telefonansicht wurde auf dem Mac bei 430 × 932 gerendert; sie ist kein iPhone-Hardwaretest.
+Die Prüfungen betreffen den durch [SHA-256-Dateihashes](repair-evidence/20260927/source-sha256.json) dokumentierten Quellstand des ersten Reparaturcommits `90e133ab8c6ca0d27d39b349db08339089646327`. Auf dem Mac weicht ausschließlich die lokale Spielstandkonfiguration für die isolierte Vorschau beziehungsweise die Testdaten ab. Import und gerenderte Desktop-/Telefonansichten endeten mit Exit 0. Die Telefonansicht wurde auf dem Mac bei 430 × 932 gerendert; sie ist kein iPhone-Hardwaretest.
 
 Der Entwicklungs-Releasecheck meldet 0 Codefehler, 5 Blocker und 87 Warnungen. Die Architekturprüfungen für Habitat, Verhalten, Live-Aktionen und Weltfolgen sowie der Roadmap- und AAA-Entwicklungscheck bestanden. Der Live-Aktions-Mutationstest wies alle 19 absichtlichen Sabotagen zurück. [Release-Zusammenfassung](repair-evidence/20260927/release-summary.json).
 
