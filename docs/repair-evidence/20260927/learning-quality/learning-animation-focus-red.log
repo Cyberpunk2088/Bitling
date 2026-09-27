@@ -1,0 +1,4 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[COMPANION-ANIMATION] FAIL: real tap focus uses a separate visible outline without the blink material
+[COMPANION-ANIMATION] 35 assertions, 1 failures

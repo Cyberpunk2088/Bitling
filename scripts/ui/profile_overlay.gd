@@ -18,6 +18,8 @@ var _close_button: Button
 var _scroll: ScrollContainer
 var _previous_focus: WeakRef
 var _launcher_was_visible := false
+var _license_button: Button
+var _license_dialog: Control
 
 func _ready() -> void:
 	# Above the story HUD and regular destination sheets; onboarding remains first.
@@ -101,6 +103,13 @@ func _build_ui() -> void:
 	content.add_theme_font_size_override("normal_font_size", 15)
 	scroll.add_child(content)
 
+	_license_button = Button.new()
+	_license_button.name = "OpenSourceLicenses"
+	_license_button.text = "OPEN-SOURCE-LIZENZEN"
+	_license_button.custom_minimum_size.y = 48
+	_license_button.pressed.connect(_open_licenses)
+	column.add_child(_license_button)
+
 func _connect_services() -> void:
 	var profile := get_node_or_null("/root/DevelopmentProfile")
 	if profile != null and not profile.profile_changed.is_connected(_on_profile_changed):
@@ -124,6 +133,8 @@ func open_profile() -> void:
 func close_profile() -> void:
 	if not is_open():
 		return
+	if _licenses_open():
+		_license_dialog.call("close_licenses")
 	backdrop.visible = false
 	launcher.visible = _launcher_was_visible
 	var previous := _previous_focus.get_ref() as Control if _previous_focus != null else null
@@ -137,7 +148,7 @@ func is_open() -> bool:
 	return backdrop != null and backdrop.visible
 
 func _input(event: InputEvent) -> void:
-	if not is_open() or not (event is InputEventKey or event is InputEventAction):
+	if not is_open() or _licenses_open() or not (event is InputEventKey or event is InputEventAction):
 		return
 	# This sheet is read-only: its keyboard actions belong to the close control
 	# and reading area. Consume them before background shortcuts see the event.
@@ -145,13 +156,15 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		close_profile()
 	elif event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev"):
-		if get_viewport().gui_get_focus_owner() == _close_button:
-			_scroll.grab_focus()
-		else:
-			_close_button.grab_focus()
+		var controls: Array[Control] = [_close_button, _scroll, _license_button]
+		var current := controls.find(get_viewport().gui_get_focus_owner())
+		var direction := -1 if event.is_action_pressed("ui_focus_prev") else 1
+		controls[posmod(current + direction, controls.size())].grab_focus()
 	elif event.is_action_pressed("ui_accept"):
 		if get_viewport().gui_get_focus_owner() == _close_button:
 			close_profile()
+		elif get_viewport().gui_get_focus_owner() == _license_button:
+			_license_button.pressed.emit()
 	elif event.is_action_pressed("ui_down"):
 		_scroll.scroll_vertical += 48
 	elif event.is_action_pressed("ui_up"):
@@ -162,8 +175,17 @@ func _input(event: InputEvent) -> void:
 		_scroll.scroll_vertical -= int(_scroll.size.y * 0.8)
 
 func _on_focus_changed(control: Control) -> void:
-	if is_open() and control != null and not backdrop.is_ancestor_of(control):
+	if is_open() and not _licenses_open() and control != null and not backdrop.is_ancestor_of(control):
 		_close_button.call_deferred("grab_focus")
+
+func _licenses_open() -> bool:
+	return _license_dialog != null and _license_dialog.is_visible_in_tree()
+
+func _open_licenses() -> void:
+	if _license_dialog == null:
+		_license_dialog = load("res://scripts/ui/open_source_license_dialog.gd").new() as Control
+		backdrop.add_child(_license_dialog)
+	_license_dialog.call("open_licenses")
 
 func _apply_layout() -> void:
 	if _panel == null:

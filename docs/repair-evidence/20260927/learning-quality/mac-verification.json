@@ -1,0 +1,99 @@
+{
+  "project": "/Users/zxhimvitija/Projects/Bitling-Learning-Review-20260927-jx2g1aj6",
+  "results": [
+    {
+      "label": "import",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [],
+      "shutdown_warning": false
+    },
+    {
+      "label": "learning_companion_animation_test",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [
+        "[COMPANION-ANIMATION] 35 assertions, 0 failures"
+      ],
+      "shutdown_warning": false
+    },
+    {
+      "label": "learning_challenge_quality_test",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [
+        "[LEARNING-QUALITY] 69 assertions, 0 failures"
+      ],
+      "shutdown_warning": false
+    },
+    {
+      "label": "learning_feedback_regression_test",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [
+        "[LEARNING-FEEDBACK] 40 checks, 0 failures"
+      ],
+      "shutdown_warning": true
+    },
+    {
+      "label": "open_source_licenses_test",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [
+        "[OPEN-SOURCE-LICENSES] 24 checks, 0 failures"
+      ],
+      "shutdown_warning": false
+    },
+    {
+      "label": "profile_input_regression_test",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [
+        "[PROFILE-INPUT] 24 checks, 0 failures"
+      ],
+      "shutdown_warning": false
+    },
+    {
+      "label": "learning_focus_regression_test",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [
+        "[LEARNING-FOCUS] 41 checks, 0 failures"
+      ],
+      "shutdown_warning": false
+    },
+    {
+      "label": "motion-capture",
+      "exit": 0,
+      "script_errors": false,
+      "engine_errors": false,
+      "results": [],
+      "shutdown_warning": false
+    }
+  ],
+  "files_sha256": {
+    "scripts/core/learning_adventure_service.gd": "d35f380e1222ff382ee9bcf74e28c754754282c35c8732b0d62bc7018bc50a87",
+    "scripts/ui/learning_adventure_overlay.gd": "661c5db6d73844c28a790f793b9fbc09114dc374a880b08175038d0dfdb16341",
+    "scripts/ui/learning_adventure_overlay_v3.gd": "49505b05bc19752e00e6356dca043f76a00b6123bd743b01add7ffa88c3461b7",
+    "scripts/ui/learning_adventure_visual_polish.gd": "50661af9c1e0801c6ac721606fa312b7c701a5b59359b09a69da246680b852c7",
+    "scripts/ui/learning_companion_stage.gd": "9fc1901b139242dc96a576031cd6042cf6d18439256ceb0a9bfaa98646efd816",
+    "scripts/ui/learning_decision_context_polish.gd": "98d2c17ff8f3f416f22a2eb8c7f2cc21aa819f75d375e49998b4f37fe75e33fd",
+    "scripts/ui/profile_overlay.gd": "9a0c47392bd4da4ce9774bcb903b21d900c9494eec5186769b16f0613b2abf34",
+    "scripts/ui/learning_companion_actor.gd": "a25bb693840e0e076a0c52166e4bc55d706e4adc844e2a447cfd941e19984551",
+    "scripts/ui/open_source_license_dialog.gd": "865481984771ef3fe6e6e76cc3925ec9d601b2c26549bb2b699aab90c1c06ee3",
+    "tests/learning_challenge_quality_test.gd": "8250232680a1ba66111e9fabf70ff09d52b8cecfd484b71effc29f3430e2f03b",
+    "tests/learning_companion_animation_test.gd": "da24f6794d2ad0be3e1711a887da8b2e46ea7ce5bdd0aa378433c37004493d1a",
+    "tests/learning_feedback_regression_test.gd": "10caf2b3e6b5824e71c4da05f7ac437d2906a11371e58cdb3eb49117232f10f5",
+    "tests/open_source_licenses_test.gd": "13c994e1409fd362b1e96f3650e9bf5c7007acf7c81094673211495ed73f223a",
+    "tools/capture_learning_motion.gd": "f97b8070f40915b4183a8ba781b3be641eff5687bf989bca5edd19196a557704"
+  },
+  "art_blob_sha": "71c99c558b81c6b764ded8cd63f0ef19cb40c97b",
+  "blink_blob_sha": "ca72feaf1c7d161c248bb2b8fe084a716e8197d3"
+}

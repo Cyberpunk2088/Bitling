@@ -1,0 +1,17 @@
+{
+  "engine": "Godot4.6.3 on macOS12.7.6 / AMD Radeon R9 M370X Vulkan",
+  "capture": "Isolated component recording, same LearningCompanionStage and actor used by learning screens; not full gameplay or phone hardware",
+  "frames": 180,
+  "fps": 30,
+  "duration_seconds": 6,
+  "width": 560,
+  "height": 700,
+  "tap_frame": 45,
+  "success_frame": 90,
+  "think_frame": 135,
+  "initial_state": "think from set_context (caption Ruhe refers to quiet observation phase)",
+  "native_encoder": "AVFoundation H264; independently decoded180 frames and6seconds",
+  "ffprobe_verified": true,
+  "sha256": "1b07c45d381ce7d96784e0c0c894f193d51177792c5b4ec6b6200c6782a3adcf",
+  "known_limits": "Only2D mesh-deformed learning companion; walking/feeding/building and full habitat replacement are pending."
+}

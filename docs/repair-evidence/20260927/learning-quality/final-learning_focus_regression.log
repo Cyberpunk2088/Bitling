@@ -1,0 +1,44 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[LEARNING-FOCUS] PASS: opening learning moves focus to its close control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Tab stays on a visible enabled modal control
+[LEARNING-FOCUS] PASS: catalog Shift-Tab stays within the modal
+[LEARNING-FOCUS] PASS: catalog Shift-Tab stays within the modal
+[LEARNING-FOCUS] PASS: catalog Shift-Tab stays within the modal
+[LEARNING-FOCUS] PASS: catalog Shift-Tab stays within the modal
+[LEARNING-FOCUS] PASS: catalog Shift-Tab stays within the modal
+[LEARNING-FOCUS] PASS: native Enter on close closes the learning screen
+[LEARNING-FOCUS] PASS: close restores the previous dashboard focus
+[LEARNING-FOCUS] PASS: Tab reaches an unlocked catalog activity
+[LEARNING-FOCUS] PASS: native Enter opens the focused adventure
+[LEARNING-FOCUS] PASS: starting an adventure transfers focus to an active session control
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: session Tab skips hidden catalog and disabled approach controls
+[LEARNING-FOCUS] PASS: Escape closes and restores the original focus
+[LEARNING-FOCUS] PASS: external focus cannot escape an open learning modal
+[LEARNING-FOCUS] PASS: repeated open preserves the return focus
+[LEARNING-FOCUS] PASS: close tolerates a destroyed previous focus control
+[LEARNING-FOCUS] 41 checks, 0 failures

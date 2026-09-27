@@ -1,0 +1,5 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[COMPANION-ANIMATION] FAIL: disjoint nested clips stop animation despite intersecting the actor individually
+[COMPANION-ANIMATION] FAIL: a fully clipped actor does not change render geometry
+[COMPANION-ANIMATION] 28 assertions, 2 failures

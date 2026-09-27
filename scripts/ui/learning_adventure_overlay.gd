@@ -1,15 +1,18 @@
 extends CanvasLayer
 
+signal challenge_presented(challenge: Dictionary, session: Dictionary)
+signal approach_selected(approach: String)
+
 ## Wave 5 fullscreen learning destination. Catalog, challenge and result states are
 ## presented as a game flow rather than a passive quiz window.
 
-const COLOR_VOID := Color("02040d")
-const COLOR_PANEL := Color("091126")
-const COLOR_CARD := Color("111b38")
+const COLOR_VOID := Color("07151b")
+const COLOR_PANEL := Color("102428")
+const COLOR_CARD := Color("183035")
 const COLOR_TEXT := Color("f4f7ff")
 const COLOR_MUTED := Color("9ba8c7")
-const COLOR_CYAN := Color("42e8ff")
-const COLOR_VIOLET := Color("a855f7")
+const COLOR_CYAN := Color("87dcd1")
+const COLOR_VIOLET := Color("cfbce8")
 const COLOR_MAGENTA := Color("f044d4")
 const COLOR_GREEN := Color("64e6a2")
 const COLOR_GOLD := Color("ffc85a")
@@ -27,6 +30,7 @@ var _progress: Label
 var _mastery: ProgressBar
 var _answer_box: VBoxContainer
 var _approach_row: HBoxContainer
+var _approach_title: Label
 var _feedback: Label
 var _close_button: Button
 var _selected_approach: String = "observe"
@@ -34,6 +38,12 @@ var _answer_buttons: Array[Button] = []
 var _approach_buttons: Dictionary = {}
 var _compact: bool = false
 var _previous_focus: WeakRef
+var _submitting_answer := false
+var _pending_feedback: Dictionary = {}
+var _feedback_serial := 0
+var _feedback_continue: Button
+var _profile_launcher: WeakRef
+var _profile_launcher_was_visible := false
 
 func _ready() -> void:
 	layer = 49
@@ -49,6 +59,12 @@ func open_adventures() -> void:
 		return
 	var focused := get_viewport().gui_get_focus_owner()
 	_previous_focus = weakref(focused) if focused != null else null
+	var profile := get_node_or_null("/root/ProfileOverlay")
+	var launcher := profile.get("launcher") as Control if profile != null else null
+	_profile_launcher = weakref(launcher) if launcher != null else null
+	_profile_launcher_was_visible = launcher.visible if launcher != null else false
+	if launcher != null:
+		launcher.hide()
 	_show_catalog()
 	_backdrop.visible = true
 	if _reduce_motion_enabled():
@@ -66,10 +82,15 @@ func open_adventures() -> void:
 func close_adventures() -> void:
 	if not is_open():
 		return
+	_clear_feedback()
 	var service: Node = get_node_or_null("/root/LearningAdventures")
 	if service != null and service.has_method("abandon_session"):
 		service.call("abandon_session")
 	_backdrop.visible = false
+	var launcher := _profile_launcher.get_ref() as Control if _profile_launcher != null else null
+	if launcher != null:
+		launcher.visible = _profile_launcher_was_visible
+	_profile_launcher = null
 	var previous := _previous_focus.get_ref() as Control if _previous_focus != null else null
 	_previous_focus = null
 	if previous != null and previous.is_visible_in_tree() and previous.focus_mode != Control.FOCUS_NONE:
@@ -109,10 +130,15 @@ func _input(event: InputEvent) -> void:
 
 func _modal_focus_controls() -> Array[Control]:
 	var controls: Array[Control] = []
+	var companions: Array[Control] = []
 	for node in _backdrop.find_children("*", "Control", true, false):
 		var control := node as Control
 		if _valid_modal_focus(control):
-			controls.append(control)
+			if control.name == "LearningCompanionActor":
+				companions.append(control)
+			else:
+				controls.append(control)
+	controls.append_array(companions)
 	return controls
 
 func _valid_modal_focus(control: Control) -> bool:
@@ -182,6 +208,7 @@ func _build_header() -> Control:
 	_summary.text = "Zwölf Wege, Wissen in Weltwirkung zu verwandeln."
 	_summary.add_theme_color_override("font_color", COLOR_MUTED)
 	_summary.add_theme_font_size_override("font_size", 11)
+	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(_summary)
 	_close_button = Button.new()
 	_close_button.text = "×"
@@ -220,11 +247,11 @@ func _build_session_panel() -> PanelContainer:
 	_prompt.add_theme_color_override("font_color", COLOR_TEXT)
 	_prompt.add_theme_font_size_override("font_size", 23)
 	column.add_child(_prompt)
-	var approach_title: Label = Label.new()
-	approach_title.text = "WÄHLE DEINEN DENKWEG"
-	approach_title.add_theme_color_override("font_color", COLOR_GOLD)
-	approach_title.add_theme_font_size_override("font_size", 11)
-	column.add_child(approach_title)
+	_approach_title = Label.new()
+	_approach_title.text = "WÄHLE DEINEN DENKWEG"
+	_approach_title.add_theme_color_override("font_color", COLOR_GOLD)
+	_approach_title.add_theme_font_size_override("font_size", 11)
+	column.add_child(_approach_title)
 	_approach_row = HBoxContainer.new()
 	_approach_row.add_theme_constant_override("separation", 6)
 	column.add_child(_approach_row)
@@ -264,6 +291,7 @@ func _connect_service() -> void:
 			service.connect(signal_name, callback)
 
 func _show_catalog() -> void:
+	_clear_feedback()
 	_catalog_scroll.visible = true
 	_session_panel.visible = false
 	_title.text = "LERNABENTEUER"
@@ -312,6 +340,10 @@ func _start_adventure(adventure_id: String) -> void:
 	_play_feedback("learn", 0.8)
 
 func _show_challenge(challenge: Dictionary, session: Dictionary = {}) -> void:
+	_clear_feedback()
+	_answer_box.show()
+	_approach_row.visible = true
+	_approach_title.show()
 	var service: Node = get_node_or_null("/root/LearningAdventures")
 	var snapshot: Dictionary = service.call("get_snapshot") if service != null else {}
 	var active: Dictionary = snapshot.get("active_session", {}) as Dictionary
@@ -319,7 +351,7 @@ func _show_challenge(challenge: Dictionary, session: Dictionary = {}) -> void:
 		active = session
 	_progress.text = "RUNDE %d/%d · SCHWIERIGKEIT %d/10" % [int(challenge.get("round", 1)), int(active.get("rounds", 3)), int(active.get("difficulty", 1))]
 	_prompt.text = str(challenge.get("prompt", "Welche Lösung passt?"))
-	_feedback.text = "Fehler kosten keinen Fortschritt. Unterschiedliche Denkwege können zusätzliche Stärke geben."
+	_feedback.text = "Nimm dir Zeit. Nach deiner Wahl schauen wir uns die Lösung gemeinsam an."
 	_feedback.add_theme_color_override("font_color", COLOR_MUTED)
 	var adventure_id: String = str(challenge.get("adventure_id", ""))
 	for entry_variant: Variant in snapshot.get("catalog", []):
@@ -336,14 +368,18 @@ func _show_challenge(challenge: Dictionary, session: Dictionary = {}) -> void:
 		button.custom_minimum_size = Vector2(0, 58)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.add_theme_font_size_override("font_size", 16)
-		button.add_theme_stylebox_override("normal", _panel_style(Color("17223a"), Color(COLOR_CYAN, 0.38), 15, 1))
-		button.pressed.connect(_submit_answer.bind(index))
+		button.add_theme_stylebox_override("normal", _panel_style(Color("1d383d"), Color(COLOR_CYAN, 0.38), 15, 1))
+		button.pressed.connect(_submit_answer.bind(index, _feedback_serial))
 		_answer_box.add_child(button)
 		_answer_buttons.append(button)
+	challenge_presented.emit(challenge.duplicate(true), active.duplicate(true))
 	call_deferred("_repair_modal_focus")
 
 func _select_approach(approach_id: String) -> void:
+	if _submitting_answer or not _pending_feedback.is_empty():
+		return
 	_selected_approach = approach_id
+	approach_selected.emit(approach_id)
 	_update_approach_buttons()
 	_play_feedback("navigation", 0.45)
 
@@ -354,19 +390,46 @@ func _update_approach_buttons() -> void:
 		button.disabled = approach_id == _selected_approach
 	call_deferred("_repair_modal_focus")
 
-func _submit_answer(index: int) -> void:
-	for button: Button in _answer_buttons:
-		button.disabled = true
+func _submit_answer(index: int, displayed_serial: int = -1) -> void:
+	if not is_open() or _submitting_answer or not _pending_feedback.is_empty():
+		return
+	if displayed_serial >= 0 and displayed_serial != _feedback_serial:
+		return
 	var service: Node = get_node_or_null("/root/LearningAdventures")
 	if service == null:
 		return
+	_submitting_answer = true
+	for button: Button in _answer_buttons:
+		button.disabled = true
 	var result: Dictionary = service.call("submit_solution", index, _selected_approach)
+	_submitting_answer = false
 	if not bool(result.get("accepted", false)):
-		_feedback.text = "Die Lösung konnte nicht ausgewertet werden."
+		_feedback.text = "Die Lösung konnte nicht ausgewertet werden. Bitte wähle erneut."
+		for button: Button in _answer_buttons:
+			button.disabled = false
+		call_deferred("_repair_modal_focus")
 		return
+	_pending_feedback = result.duplicate(true)
 	var success: bool = bool(result.get("success", false))
 	_feedback.add_theme_color_override("font_color", COLOR_GREEN if success else COLOR_VIOLET)
-	_feedback.text = "%s %s\n%s" % ["STARK." if success else "FAST.", str(result.get("explanation", "")), str(result.get("transfer_tip", ""))]
+	var correct_labels := PackedStringArray()
+	for answer: Variant in result.get("correct_answers", []):
+		correct_labels.append(str(answer))
+	_feedback.text = "%s\nDeine Wahl: %s\nPassend: %s\n%s\n%s" % ["DAS PASST." if success else "SCHAUEN WIR GEMEINSAM.", str(result.get("selected_answer", "")), " / ".join(correct_labels), str(result.get("explanation", "")), str(result.get("transfer_tip", ""))]
+	_approach_row.visible = false
+	_approach_title.hide()
+	_answer_box.hide()
+	_feedback_continue = Button.new()
+	_feedback_continue.name = "LearningFeedbackContinue"
+	_feedback_continue.text = "ERGEBNIS ANSEHEN" if bool(result.get("completed", false)) else "WEITER"
+	_feedback_continue.custom_minimum_size = Vector2(0, 62)
+	_feedback_continue.add_theme_font_size_override("font_size", 17)
+	_feedback_continue.pressed.connect(_continue_feedback.bind(_feedback_serial))
+	var feedback_parent := _feedback.get_parent()
+	feedback_parent.add_child(_feedback_continue)
+	feedback_parent.move_child(_feedback_continue, _feedback.get_index() + 1)
+	_feedback_continue.grab_focus()
+	_focus_feedback_after_layout(_feedback_serial)
 	_play_feedback("level" if success else "learn", 0.95 if success else 0.65)
 	var haptics: Node = get_node_or_null("/root/HapticService")
 	if haptics != null:
@@ -374,16 +437,41 @@ func _submit_answer(index: int) -> void:
 			haptics.call("success")
 		elif not success and haptics.has_method("light"):
 			haptics.call("light")
+
+func _focus_feedback_after_layout(serial: int) -> void:
+	# Containers need to finish sorting before follow_focus can scroll accurately.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_open() or serial != _feedback_serial or not is_instance_valid(_feedback_continue):
+		return
+	var scroll := find_child("LearningSessionScroll", true, false) as ScrollContainer
+	if scroll != null:
+		scroll.ensure_control_visible(_feedback_continue)
+
+func _continue_feedback(serial: int) -> void:
+	if not is_open() or serial != _feedback_serial or _pending_feedback.is_empty():
+		return
+	var result := _pending_feedback.duplicate(true)
+	_clear_feedback()
 	if bool(result.get("completed", false)):
-		await get_tree().create_timer(1.1).timeout
 		_show_completion(result)
 	elif result.has("next_challenge"):
-		await get_tree().create_timer(1.0).timeout
 		_selected_approach = "observe"
 		_update_approach_buttons()
 		_show_challenge(result.get("next_challenge", {}) as Dictionary)
 
+func _clear_feedback() -> void:
+	_feedback_serial += 1
+	_pending_feedback.clear()
+	if is_instance_valid(_feedback_continue):
+		_feedback_continue.disabled = true
+		_feedback_continue.hide()
+		_feedback_continue.queue_free()
+	_feedback_continue = null
+
 func _show_completion(result: Dictionary) -> void:
+	_clear_feedback()
+	_answer_box.show()
 	_progress.text = "ABENTEUER ABGESCHLOSSEN"
 	_mastery.value = float(result.get("mastery", 0.0))
 	_prompt.text = "%s\nMEISTERSCHAFT %d%% · %s" % [str(result.get("title", "Lernabenteuer")), int(result.get("mastery", 0.0)), str(result.get("mastery_level", "WACHSEND"))]
@@ -397,6 +485,7 @@ func _show_completion(result: Dictionary) -> void:
 	continue_button.pressed.connect(_show_catalog)
 	_answer_box.add_child(continue_button)
 	_approach_row.visible = false
+	_approach_title.hide()
 	call_deferred("_repair_modal_focus")
 
 func _on_catalog_changed(_snapshot: Dictionary) -> void:
@@ -404,6 +493,8 @@ func _on_catalog_changed(_snapshot: Dictionary) -> void:
 		_show_catalog()
 
 func _on_challenge_changed(challenge: Dictionary) -> void:
+	if _submitting_answer:
+		return
 	if is_open() and _session_panel.visible:
 		_show_challenge(challenge)
 
@@ -413,7 +504,14 @@ func _on_session_completed(_result: Dictionary) -> void:
 func _apply_responsive_layout() -> void:
 	if _catalog_grid == null:
 		return
-	var design_width: float = get_viewport().get_visible_rect().size.x
+	# Keep logical touch sizes legible when a narrow desktop preview shrinks
+	# the project-wide 720px canvas. Scope compensation to this modal layer.
+	var stretch := get_viewport().get_stretch_transform().get_scale()
+	var correction := 1.0 / maxf(minf(stretch.x, stretch.y), 0.01) if minf(stretch.x, stretch.y) < 1.0 else 1.0
+	scale = Vector2.ONE * correction
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_backdrop.size = get_viewport().get_visible_rect().size / correction
+	var design_width: float = _backdrop.size.x
 	var physical_width: float = float(get_tree().root.size.x)
 	var width: float = minf(design_width, physical_width) if physical_width > 0.0 else design_width
 	_compact = width < 760.0

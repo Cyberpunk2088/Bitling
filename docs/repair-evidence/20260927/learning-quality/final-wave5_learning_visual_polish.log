@@ -1,0 +1,28 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[CI-WAVE5-VISUAL] PASS: learning service exists
+[CI-WAVE5-VISUAL] PASS: learning overlay exists
+[CI-WAVE5-VISUAL] PASS: visual polish exists
+[CI-WAVE5-VISUAL] PASS: decision context exists
+[CI-WAVE5-VISUAL] PASS: transfer constellation exists
+[CI-WAVE5-VISUAL] PASS: polish installs
+[CI-WAVE5-VISUAL] PASS: catalog hero is present
+[CI-WAVE5-VISUAL] PASS: decision context installs
+[CI-WAVE5-VISUAL] PASS: four useful context cards replace empty space
+[CI-WAVE5-VISUAL] PASS: transfer constellation installs
+[CI-WAVE5-VISUAL] PASS: transfer constellation exposes four connected nodes
+[CI-WAVE5-VISUAL] PASS: session starts
+[CI-WAVE5-VISUAL] PASS: phone layout is stacked
+[CI-WAVE5-VISUAL] PASS: Bitling is visible in the session
+[CI-WAVE5-VISUAL] PASS: learning stage respects reduced motion
+[CI-WAVE5-VISUAL] PASS: learning stage stops decorative processing under reduced motion
+[CI-WAVE5-VISUAL] PASS: context follows the active adventure
+[CI-WAVE5-VISUAL] PASS: phone transfer context text stays readable
+[CI-WAVE5-VISUAL] PASS: constellation follows the learning domain
+[CI-WAVE5-VISUAL] PASS: transfer constellation respects reduced motion
+[CI-WAVE5-VISUAL] PASS: transfer constellation stops decorative processing under reduced motion
+[CI-WAVE5-VISUAL] PASS: phone visual polish preserves two-column Denkweg layout
+[CI-WAVE5-VISUAL] PASS: phone visual polish keeps Denkweg labels readable
+[CI-WAVE5-VISUAL] PASS: laptop layout is two-column
+[CI-WAVE5-VISUAL] PASS: desktop constellation fills the decision space
+[CI-WAVE5-VISUAL] PASS: 25 assertions

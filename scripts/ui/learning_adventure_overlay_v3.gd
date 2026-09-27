@@ -104,7 +104,7 @@ func _show_completion(result: Dictionary) -> void:
 
 func _on_session_completed(result: Dictionary) -> void:
 	if is_open() and _session_panel != null and _session_panel.visible:
-		if _has_internal_answer_submission() or _completion_button_count() > 0:
+		if _submitting_answer or not _pending_feedback.is_empty() or _completion_button_count() > 0:
 			return
 		_show_completion(result)
 	elif _approach_row != null:

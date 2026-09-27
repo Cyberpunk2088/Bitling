@@ -1,0 +1,82 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[CI-WAVE5] PASS: LearningAdventures autoload exists
+[CI-WAVE5] PASS: catalog exposes twelve adventures
+[CI-WAVE5] PASS: catalog spans ten learning domains
+[CI-WAVE5] PASS: six adventures are playable immediately
+[CI-WAVE5] PASS: adaptive session starts
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: adaptive session starts
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: adaptive session starts
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: adaptive session starts
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: challenge offers four approaches
+[CI-WAVE5] PASS: valid solution is accepted
+[CI-WAVE5] PASS: success creates a mastery curve
+[CI-WAVE5] PASS: sessions are counted
+[CI-WAVE5] PASS: single-emission signal test starts a session
+[CI-WAVE5] PASS: single-emission signal test accepts one solution
+[CI-WAVE5] PASS: next challenge emits exactly one challenge_changed signal
+[CI-WAVE5] PASS: learning transfers into expeditions
+[CI-WAVE5] PASS: learning transfers into evolution
+[CI-WAVE5] PASS: expedition bonus can be consumed
+[CI-WAVE5] PASS: reset clears progression
+[CI-WAVE5] PASS: export and import restore mastery
+[CI-WAVE5] PASS: learning state saves atomically
+[CI-WAVE5] PASS: main scene loads
+[CI-WAVE5] PASS: learning overlay exists
+[CI-WAVE5] PASS: project uses active mobile-readable learning overlay v3
+[CI-WAVE5] PASS: learning overlay opens
+[CI-WAVE5] PASS: overlay renders twelve cards
+[CI-WAVE5] PASS: overlay session starts
+[CI-WAVE5] PASS: overlay renders four approaches
+[CI-WAVE5] PASS: overlay renders three answers
+[CI-WAVE5] PASS: overlay exposes mobile readability contract
+[CI-WAVE5] PASS: phone readability mode activates around 390px
+[CI-WAVE5] PASS: phone Denkweg buttons wrap into two columns
+[CI-WAVE5] PASS: phone Denkweg grid owns all four buttons
+[CI-WAVE5] PASS: phone Denkweg buttons keep readable width
+[CI-WAVE5] PASS: phone Denkweg buttons keep touch height
+[CI-WAVE5] PASS: phone Denkweg labels stay readable
+[CI-WAVE5] PASS: phone answer buttons keep touch height
+[CI-WAVE5] PASS: phone answer labels stay readable
+[CI-WAVE5] PASS: phone task prompt stays visually dominant
+[CI-WAVE5] PASS: phone feedback remains readable
+[CI-WAVE5] PASS: phone close button keeps touch target
+[CI-WAVE5] PASS: tablet Denkweg buttons return to one wide row
+[CI-WAVE5] PASS: tablet Denkweg row owns all four buttons
+[CI-WAVE5] PASS: phone Denkweg grid is restored after resize
+[CI-WAVE5] PASS: phone Denkweg grid keeps four buttons after resize
+[CI-WAVE5] PASS: service-driven completion round is accepted
+[CI-WAVE5] PASS: service-driven completion round is accepted
+[CI-WAVE5] PASS: service-driven completion round is accepted
+[CI-WAVE5] PASS: service submissions reach completion state
+[CI-WAVE5] PASS: completion state replaces answers with continue action
+[CI-WAVE5] PASS: completion state exposes one continue action
+[CI-WAVE5] PASS: completion state removes active answer buttons
+[CI-WAVE5] PASS: completion continue button keeps touch height
+[CI-WAVE5] PASS: duplicate completion signal does not add continue actions
+[CI-WAVE5] PASS: duplicate completion signal keeps completion state stable
+[CI-WAVE5] PASS: 77 assertions
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)

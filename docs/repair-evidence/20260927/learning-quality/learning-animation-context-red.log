@@ -1,0 +1,9 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[COMPANION-ANIMATION] FAIL: the next round replaces the previous success celebration
+[COMPANION-ANIMATION] FAIL: a new round begins its own reaction timeline
+[COMPANION-ANIMATION] FAIL: round changes reset paused offscreen feedback without resuming offscreen processing
+[COMPANION-ANIMATION] FAIL: entering the catalog clears the old adventure reaction
+[COMPANION-ANIMATION] FAIL: closing the visible screen clears its feedback
+[COMPANION-ANIMATION] FAIL: reopening the same adventure and round starts fresh instead of replaying old feedback
+[COMPANION-ANIMATION] 34 assertions, 6 failures

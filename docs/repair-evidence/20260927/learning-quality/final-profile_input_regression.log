@@ -1,0 +1,27 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+[PROFILE-INPUT] PASS: profile exposes its modal state
+[PROFILE-INPUT] PASS: opening profile focuses its close control
+[PROFILE-INPUT] PASS: profile blocks story HUD controls visually and by pointer
+[PROFILE-INPUT] PASS: native Tab enters reading area
+[PROFILE-INPUT] PASS: native Shift-Tab returns to close
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Tab stays inside profile
+[PROFILE-INPUT] PASS: Shift-Tab stays inside profile
+[PROFILE-INPUT] PASS: Shift-Tab stays inside profile
+[PROFILE-INPUT] PASS: Shift-Tab stays inside profile
+[PROFILE-INPUT] PASS: Shift-Tab stays inside profile
+[PROFILE-INPUT] PASS: Enter does not activate background habitat
+[PROFILE-INPUT] PASS: closing restores previous focus
+[PROFILE-INPUT] PASS: Escape closes repeated open and restores focus
+[PROFILE-INPUT] PASS: close control remains inside short phone viewport
+[PROFILE-INPUT] PASS: reading scroll remains inside short phone viewport
+[PROFILE-INPUT] PASS: keyboard scrolls the profile contents
+[PROFILE-INPUT] PASS: closing tolerates a freed prior focus owner
+[PROFILE-INPUT] 24 checks, 0 failures
